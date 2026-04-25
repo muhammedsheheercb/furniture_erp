@@ -1,0 +1,179 @@
+@import "tailwindcss";
+
+/* ── Design Tokens ─────────────────────────────────── */
+:root {
+  --primary:        #2C1810;
+  --primary-light:  #8B5E3C;
+  --gold:           #C9A84C;
+  --gold-light:     #E8C97A;
+  --bg:             #F7F4F0;
+  --surface:        #FFFFFF;
+  --border:         #E5DDD5;
+  --text:           #1A1210;
+  --text-secondary: #7A6055;
+  --text-muted:     #A89080;
+  --nav-bg:         #1A0F0A;
+  --success:        #27AE60;
+  --success-bg:     #EAFAF1;
+  --danger:         #C0392B;
+  --danger-bg:      #FDEDEC;
+  --warning:        #E67E22;
+  --warning-bg:     #FEF5E7;
+  --info:           #2980B9;
+  --info-bg:        #EBF5FB;
+}
+
+/* ── Base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Layout helpers ───────────────────────────────── */
+.page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 100%;
+  min-width: 0;
+}
+
+.card {
+  background-color: var(--surface);
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(44,24,16,0.06);
+  min-width: 0;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  box-shadow: 0 1px 4px rgba(44,24,16,0.06);
+}
+
+/* ── Table cells ──────────────────────────────────── */
+.th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background-color: #FBF9F7;
+  user-select: none;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.td {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.tr-hover:hover {
+  background-color: #FBF9F7;
+  transition: background-color 150ms;
+}
+
+/* ── Input base ───────────────────────────────────── */
+.input-base {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+
+.input-base:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201,168,76,0.2);
+}
+
+.input-base:disabled {
+  background-color: #F7F4F0;
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* ── Section title ────────────────────────────────── */
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* ── Filter bar ───────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* ── Scrollbar ────────────────────────────────────── */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 3px;
+}
+
+/* ── Status badges ────────────────────────────────── */
+.badge-quote    { background: #EBF5FB; color: #2980B9; border: 1px solid #AED6F1; }
+.badge-sale     { background: #EAFAF1; color: #1E8449; border: 1px solid #A9DFBF; }
+.badge-reject   { background: #FDEDEC; color: #C0392B; border: 1px solid #F5B7B1; }
+.badge-pending  { background: #FEF5E7; color: #CA6F1E; border: 1px solid #FAD7A0; }
+.badge-delivered{ background: #EAFAF1; color: #1E8449; border: 1px solid #A9DFBF; }
+
+/* ── Top nav ──────────────────────────────────────── */
+.topnav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: var(--nav-bg);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+}
+
+/* ── Mobile nav ───────────────────────────────────── */
+@media (max-width: 767px) {
+  .topnav-links {
+    display: none !important;
+  }
+  .mobile-nav {
+    display: flex !important;
+  }
+  main {
+    padding-bottom: 80px !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-nav {
+    display: none !important;
+  }
+}
