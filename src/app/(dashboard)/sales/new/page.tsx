@@ -49,6 +49,11 @@ export default function NewSalePage() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [isTaxInvoice, setIsTaxInvoice] = useState(false);
+    const [advancePaid, setAdvancePaid] = useState(0);
+    const [deliveryDate, setDeliveryDate] = useState("");
+    const [deliveryAddress, setDeliveryAddress] = useState("");
+    const [customerMobile, setCustomerMobile] = useState("");
+    const [customerAddress, setCustomerAddress] = useState("");
     
     // Batch selection state
     const [batchSelectionItem, setBatchSelectionItem] = useState<IItem | null>(null);
@@ -112,6 +117,19 @@ export default function NewSalePage() {
         setBatchSelectionItem(null);
         toast.success(`Selected batch: ${batch.batchNumber || 'Oldest'}`);
     };
+
+    useEffect(() => {
+        if (selCustomer) {
+            const customer = selCustomer.data as ICustomer;
+            setCustomerMobile(customer.mobile || "");
+            setCustomerAddress(customer.address || "");
+            setDeliveryAddress(customer.address || "");
+        } else {
+            setCustomerMobile("");
+            setCustomerAddress("");
+            setDeliveryAddress("");
+        }
+    }, [selCustomer]);
 
     const addItem = useCallback(async (opt: ISelectOption | null) => {
         if (!opt) return;
@@ -219,14 +237,7 @@ export default function NewSalePage() {
     const handleSave = async (shouldPrint: boolean = false) => {
         if (!selCustomer || cart.length === 0) return;
         
-        // Validation: Manufacturing and Expiry dates are mandatory
-        for (const item of cart) {
-          if (!item.manufacturingDate || !item.expiryDate) {
-            alert(`Please provide manufacturing and expiry dates for ${item.itemName}`);
-            setConfirmOpen(false);
-            return;
-          }
-        }
+        // Validation: No longer mandatory for furniture ERP
 
         setSaving(true);
         const customer = selCustomer.data as ICustomer;
@@ -242,6 +253,9 @@ export default function NewSalePage() {
             paymentType,
             date,
             isTaxInvoice,
+            advancePaid,
+            deliveryDate,
+            deliveryAddress,
         };
 
         const response = await fetch("/api/sales", {
@@ -268,7 +282,11 @@ export default function NewSalePage() {
                     tax,
                     total,
                     type: "Sale",
-                    isTaxInvoice
+                    isTaxInvoice,
+                    advancePaid,
+                    customerAddress: customerAddress,
+                    deliveryAddress: deliveryAddress,
+                    deliveryDate: deliveryDate,
                 });
             }
             router.push("/sales");
@@ -292,7 +310,11 @@ export default function NewSalePage() {
             tax,
             total,
             type: "Sale",
-            isTaxInvoice
+            isTaxInvoice,
+            advancePaid,
+            customerAddress: customerAddress,
+            deliveryAddress: deliveryAddress,
+            deliveryDate: deliveryDate,
         });
     };
 
@@ -302,7 +324,7 @@ export default function NewSalePage() {
 
             <div className="card p-6 flex flex-col gap-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-1">
                         <SearchSelect
                             label="Customer"
                             placeholder="Select customer..."
@@ -311,8 +333,31 @@ export default function NewSalePage() {
                             onChange={setSelCustomer}
                             required
                         />
+                        {selCustomer && (
+                            <div className="mt-2 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100 flex flex-col gap-1">
+                                <div className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Customer Details</div>
+                                <div className="text-sm font-medium text-indigo-900">Mobile: {customerMobile || '—'}</div>
+                                <div className="text-sm font-medium text-indigo-900">Address: {customerAddress || '—'}</div>
+                            </div>
+                        )}
                     </div>
-                    <Input label="Date" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Input label="Sale Date" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                        <Input label="Delivery Date" type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                    <div>
+                        <label className="text-sm font-medium text-gray-700 block mb-1.5">Delivery Address</label>
+                        <textarea
+                            value={deliveryAddress}
+                            onChange={e => setDeliveryAddress(e.target.value)}
+                            placeholder="Enter delivery address..."
+                            rows={3}
+                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none text-sm"
+                        />
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -373,6 +418,14 @@ export default function NewSalePage() {
                     </div>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input label="Advance Paid" type="number" min={0} value={advancePaid} onChange={e => setAdvancePaid(Number(e.target.value))} placeholder="0" />
+                    <div className="flex items-center gap-2 mt-7">
+                        <span className="text-sm font-medium text-gray-500">Balance:</span>
+                        <span className="text-lg font-bold text-rose-600">{formatCurrency(total - advancePaid)}</span>
+                    </div>
+                </div>
+
                 <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1.5">Search & Add Items</label>
                     <SearchSelect
@@ -386,7 +439,7 @@ export default function NewSalePage() {
                 {cart.length > 0 ? (
                     <div className="table-wrapper border border-gray-100 rounded-xl overflow-hidden shadow-sm">
                         <table className="w-full">
-                            <thead className="bg-gray-50/50">
+                            <thead className="bg-gray-50/50 hidden md:table-header-group">
                                 <tr className="border-b border-gray-200">
                                     <th className="th text-left w-[25%]">Item Details</th>
                                     <th className="th">Batch</th>
@@ -401,28 +454,32 @@ export default function NewSalePage() {
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {cart.map((c, idx) => (
-                                    <tr key={`${c.itemId}-${idx}`} className="align-top">
-                                        <td className="td text-left">
+                                    <tr key={`${c.itemId}-${idx}`} className="flex flex-col md:table-row p-4 md:p-0 space-y-4 md:space-y-0 relative">
+                                        <td className="td text-left md:align-top">
+                                            <label className="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-1 block">Item Details</label>
                                             <div className="font-semibold text-gray-900">{c.itemName}</div>
                                             <div className="text-[10px] font-mono text-gray-400 mt-0.5">{c.itemNumber}</div>
                                         </td>
-                                        <td className="td">
+                                        <td className="td md:align-top">
+                                            <label className="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-1 block">Batch</label>
                                             <input
                                                 type="text"
                                                 placeholder="Batch"
                                                 value={c.batch}
                                                 readOnly
-                                                className="w-20 px-2 py-1.5 text-[10px] text-center border border-gray-100 bg-gray-50 rounded-md focus:outline-none text-gray-500 font-mono"
+                                                className="w-full md:w-20 px-2 py-1.5 text-[10px] text-left md:text-center border border-gray-100 bg-gray-50 rounded-md focus:outline-none text-gray-500 font-mono"
                                             />
                                         </td>
-                                        <td className="td">
-                                            <div className="flex flex-col gap-0.5 text-[10px] items-center">
+                                        <td className="td md:align-top">
+                                            <label className="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-1 block">Dates</label>
+                                            <div className="flex flex-col gap-0.5 text-[10px] items-start md:items-center">
                                                 <span className="text-gray-400">M: <span className="text-gray-600 font-medium">{c.manufacturingDate ? formatDate(c.manufacturingDate) : '-'}</span></span>
                                                 <span className="text-gray-400">E: <span className="text-rose-600 font-bold">{c.expiryDate ? formatDate(c.expiryDate) : '-'}</span></span>
                                             </div>
                                         </td>
-                                        <td className="td">
-                                            <div className="flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200 p-0.5">
+                                        <td className="td md:align-top">
+                                            <label className="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-1 block">Quantity</label>
+                                            <div className="flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200 p-0.5 max-w-[120px] md:max-w-none">
                                                 <button 
                                                     onClick={() => updateItem(idx, { quantity: c.quantity - 1 })}
                                                     className="p-1 hover:bg-white rounded hover:shadow-xs text-gray-500 transition-all disabled:opacity-30"
@@ -442,19 +499,21 @@ export default function NewSalePage() {
                                                     <PlusIcon size={14} />
                                                 </button>
                                             </div>
-                                            <div className="text-[10px] text-center text-gray-400 mt-1">Stock: {c._itemRef.quantity}</div>
+                                            <div className="text-[10px] text-left md:text-center text-gray-400 mt-1">Stock: {c._itemRef.quantity}</div>
                                         </td>
-                                        <td className="td">
+                                        <td className="td md:align-top">
+                                            <label className="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-1 block">Price</label>
                                             <input
                                                 type="number"
                                                 step="0.001"
                                                 disabled={c.isFOC}
                                                 value={c.price}
                                                 onChange={e => updateItem(idx, { price: e.target.value })}
-                                                className={`w-20 px-2 py-1.5 text-xs text-right border border-gray-200 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${c.isFOC ? 'bg-gray-50 opacity-50 cursor-not-allowed' : ''}`}
+                                                className={`w-full md:w-20 px-2 py-1.5 text-xs text-left md:text-right border border-gray-200 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${c.isFOC ? 'bg-gray-50 opacity-50 cursor-not-allowed' : ''}`}
                                             />
                                         </td>
-                                        <td className="td">
+                                        <td className="td md:align-top">
+                                            <label className="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-1 block">Disc.</label>
                                             <input
                                                 type="number"
                                                 step="0.001"
@@ -462,10 +521,11 @@ export default function NewSalePage() {
                                                 disabled={c.isFOC}
                                                 value={c.discount}
                                                 onChange={e => updateItem(idx, { discount: e.target.value })}
-                                                className={`w-20 px-2 py-1.5 text-xs text-right border border-gray-200 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${c.isFOC ? 'bg-gray-50 opacity-50 cursor-not-allowed' : ''}`}
+                                                className={`w-full md:w-20 px-2 py-1.5 text-xs text-left md:text-right border border-gray-200 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${c.isFOC ? 'bg-gray-50 opacity-50 cursor-not-allowed' : ''}`}
                                             />
                                         </td>
-                                        <td className="td text-center">
+                                        <td className="td md:align-top">
+                                            <label className="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-1 block">FOC</label>
                                             <input
                                                 type="checkbox"
                                                 checked={c.isFOC || false}
@@ -473,17 +533,18 @@ export default function NewSalePage() {
                                                 className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                                             />
                                         </td>
-                                        <td className="td text-right">
+                                        <td className="td text-right md:align-top">
+                                            <label className="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-1 block text-left">Total</label>
                                             {c.isFOC ? (
-                                                <span className="text-emerald-600 font-bold px-1.5 py-0.5 bg-emerald-50 rounded text-[10px] uppercase tracking-wider">FREE</span>
+                                                <span className="text-emerald-600 font-bold px-1.5 py-0.5 bg-emerald-50 rounded text-[10px] uppercase tracking-wider block w-fit ml-auto md:inline">FREE</span>
                                             ) : (
                                                 <input type="number" step="0.01" value={c.total}
                                                     onChange={e => updateItem(idx, { total: e.target.value })}
-                                                    className="w-24 px-2 py-1.5 text-xs text-right font-bold text-gray-900 border border-gray-200 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ml-auto block" />
+                                                    className="w-full md:w-24 px-2 py-1.5 text-xs text-left md:text-right font-bold text-gray-900 border border-gray-200 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ml-auto block" />
                                             )}
                                         </td>
-                                        <td className="td">
-                                            <div className="flex gap-1">
+                                        <td className="td md:align-top">
+                                            <div className="flex gap-1 justify-end md:justify-start">
                                                 <button
                                                     type="button"
                                                     title="Split this row"
@@ -535,6 +596,15 @@ export default function NewSalePage() {
                             <span className="font-mono">{formatCurrency(taxAmt)}</span>
                         </div>
                         <div className="h-px w-48 bg-gray-200 my-1" />
+                        <div className="flex gap-12 text-sm text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+                            <span>Advance Paid</span>
+                            <span className="font-mono">{formatCurrency(advancePaid)}</span>
+                        </div>
+                        <div className="flex gap-12 text-sm text-rose-600 bg-rose-50 px-2 py-0.5 rounded">
+                            <span>Balance Amount</span>
+                            <span className="font-mono">{formatCurrency(total - advancePaid)}</span>
+                        </div>
+                        <div className="h-px w-48 bg-gray-200 my-1" />
                         <div className="flex gap-12 text-xl font-bold text-gray-900">
                             <span>Final Total</span>
                             <span className="text-indigo-600 font-mono underline decoration-indigo-200 decoration-2 underline-offset-4">{formatCurrency(total)}</span>
@@ -559,7 +629,7 @@ export default function NewSalePage() {
                             loading={saving}
                             className="px-10 h-11 w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100"
                         >
-                            Record & Print PDF
+                            Create Order
                         </Button>
                     </div>
                 </div>

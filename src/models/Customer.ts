@@ -13,6 +13,7 @@ export interface ICustomerDocument extends Document {
     paymentMethod?: "cash" | "bank" | "credit";
     note?: string;
   }[];
+  address?: string;
   createdAt: Date;
   updatedAt: Date;
   createdBy?: mongoose.Types.ObjectId;
@@ -35,6 +36,10 @@ const CustomerSchema = new Schema<ICustomerDocument>(
     mobile: {
       type: String,
       required: [true, "Mobile number is required"],
+      trim: true,
+    },
+    address: {
+      type: String,
       trim: true,
     },
     openingBalance: {

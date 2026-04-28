@@ -25,12 +25,14 @@ const UserSchema = new mongoose.Schema(
   {
     name: { type: String },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password: { type: String, required: true },
-    role: { type: String, enum: ["admin", "staff"], default: "staff" },
+    passwordHash: { type: String },
+    password: { type: String },
+    role: { type: String, enum: ["admin", "staff", "owner"], default: "staff" },
     permissions: { type: Map, of: Object, default: {} },
   },
   { timestamps: true }
 );
+
 
 const User = mongoose.models.User || mongoose.model("User", UserSchema);
 
@@ -75,10 +77,11 @@ async function main() {
   await User.create({
     name:     name.trim() || "Admin",
     email:    email.toLowerCase().trim(),
-    password: hashed,
+    passwordHash: hashed,
     role:     "admin",
     permissions: {},
   });
+
 
   console.log(`\n✅  Admin created successfully!`);
   console.log(`   Name  : ${name.trim() || "Admin"}`);

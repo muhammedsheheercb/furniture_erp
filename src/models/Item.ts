@@ -1,28 +1,34 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IItemDocument extends Document {
-  itemNumber: string;
+  itemNumber: string; // SKU
   name: string;
+  category: string;
+  primaryMaterial: string;
+  purchaseAmount: number; // Cost Price
+  salesAmount: number; // Selling Price
+  mrp: number;
+  quantity: number; // Current Stock
+  reorderLevel: number;
   unit: string;
-  category?: string;
-  salesAmount: number;
-  purchaseAmount: number;
-  quantity: number;
-  manufacturingDate?: Date;
-  expiryDate?: Date;
+  status: "active" | "inactive" | "discontinued";
+  isManufactured: boolean;
+  
+  // Optional
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+  };
+  color?: string;
+  finish?: string;
+  description?: string;
+  taxRate?: number;
+  leadTime?: number;
   supplierRef?: mongoose.Types.ObjectId;
   supplierName?: string;
-  batches?: {
-    purchaseId?: mongoose.Types.ObjectId;
-    purchaseNumber?: string;
-    batchNumber?: string;
-    manufacturingDate?: Date;
-    expiryDate?: Date;
-    purchasePrice: number;
-    salePrice: number;
-    quantity: number;
-    createdAt: Date;
-  }[];
+  warrantyPeriod?: string;
+
   createdAt: Date;
   updatedAt: Date;
   createdBy?: mongoose.Types.ObjectId;
@@ -33,63 +39,87 @@ const ItemSchema = new Schema<IItemDocument>(
   {
     itemNumber: {
       type: String,
-      required: [true, "Item number is required"],
+      required: [true, "SKU is required"],
       unique: true,
       trim: true,
     },
     name: {
       type: String,
-      required: [true, "Item name is required"],
+      required: [true, "Product name is required"],
       trim: true,
-    },
-    unit: {
-      type: String,
-      enum: ["pcs", "meters", "sq.meters", "kg", "liters", "box", "set", "roll"],
-      default: "pcs",
     },
     category: {
       type: String,
+      required: [true, "Category is required"],
       trim: true,
     },
-    salesAmount: {
-      type: Number,
-      required: false,
-      default: 0,
+    primaryMaterial: {
+      type: String,
+      required: [true, "Primary material is required"],
+      trim: true,
     },
     purchaseAmount: {
       type: Number,
-      required: false,
+      required: true,
+      default: 0,
+    },
+    salesAmount: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    mrp: {
+      type: Number,
+      required: true,
       default: 0,
     },
     quantity: {
       type: Number,
-      required: false,
-      min: [0, "Quantity cannot be negative"],
+      required: true,
+      min: [0, "Stock cannot be negative"],
       default: 0,
     },
-    manufacturingDate: { type: Date },
-    expiryDate: { type: Date },
+    reorderLevel: {
+      type: Number,
+      required: true,
+      default: 5,
+    },
+    unit: {
+      type: String,
+      required: true,
+      default: "Piece",
+    },
+    status: {
+      type: String,
+      enum: ["active", "inactive", "discontinued"],
+      default: "active",
+    },
+    isManufactured: {
+      type: Boolean,
+      default: false,
+    },
+    
+    // Optional
+    dimensions: {
+      length: Number,
+      width: Number,
+      height: Number,
+    },
+    color: String,
+    finish: String,
+    description: String,
+    taxRate: {
+      type: Number,
+      default: 0,
+    },
+    leadTime: Number,
     supplierRef: {
       type: Schema.Types.ObjectId,
       ref: "Supplier",
     },
-    supplierName: {
-      type: String,
-      trim: true,
-    },
-    batches: [
-      {
-        purchaseId: { type: Schema.Types.ObjectId, ref: "Purchase" },
-        purchaseNumber: String,
-        batchNumber: String,
-        manufacturingDate: Date,
-        expiryDate: Date,
-        purchasePrice: Number,
-        salePrice: Number,
-        quantity: Number,
-        createdAt: { type: Date, default: Date.now },
-      },
-    ],
+    supplierName: String,
+    warrantyPeriod: String,
+
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
@@ -105,10 +135,6 @@ const ItemSchema = new Schema<IItemDocument>(
     toObject: { virtuals: true },
   }
 );
-
-ItemSchema.virtual("stockValue").get(function () {
-  return (this.purchaseAmount || 0) * (this.quantity || 0);
-});
 
 ItemSchema.index({ name: "text", itemNumber: "text" });
 

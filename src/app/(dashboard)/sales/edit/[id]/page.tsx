@@ -45,6 +45,11 @@ export default function EditSalePage() {
     const [saving, setSaving] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [isTaxInvoice, setIsTaxInvoice] = useState(false);
+    const [advancePaid, setAdvancePaid] = useState(0);
+    const [deliveryDate, setDeliveryDate] = useState("");
+    const [deliveryAddress, setDeliveryAddress] = useState("");
+    const [customerMobile, setCustomerMobile] = useState("");
+    const [customerAddress, setCustomerAddress] = useState("");
 
     useEffect(() => {
         const load = async () => {
@@ -72,6 +77,16 @@ export default function EditSalePage() {
                     setTax(s.tax);
                     setDate(formatDateInput(s.date));
                     setIsTaxInvoice(s.isTaxInvoice || false);
+                    setAdvancePaid(s.advancePaid || 0);
+                    setDeliveryDate(s.deliveryDate ? formatDateInput(s.deliveryDate) : "");
+                    setDeliveryAddress(s.deliveryAddress || "");
+                    
+                    // Fetch full customer info for mobile/address
+                    const custRes = await fetch(`/api/customers/${s.customerId}`).then(r => r.json());
+                    if (custRes.success) {
+                        setCustomerMobile(custRes.data.mobile || "");
+                        setCustomerAddress(custRes.data.address || "");
+                    }
                 } else {
                     toast.error("Sale not found");
                     router.push("/sales");
@@ -138,6 +153,16 @@ export default function EditSalePage() {
         }]);
     };
 
+    useEffect(() => {
+        if (selCustomer && customers.length > 0) {
+            const customer = customers.find(c => c._id === selCustomer.value);
+            if (customer) {
+                setCustomerMobile(customer.mobile || "");
+                setCustomerAddress(customer.address || "");
+            }
+        }
+    }, [selCustomer, customers]);
+
     const updateItem = (idx: number, updates: any) => {
         setCart(prev => prev.map((c, i) => {
             if (i !== idx) return c;
@@ -199,6 +224,9 @@ export default function EditSalePage() {
             paymentType, 
             date,
             isTaxInvoice,
+            advancePaid,
+            deliveryDate,
+            deliveryAddress,
         };
 
         const response = await fetch(`/api/sales/${id}`, {
@@ -226,7 +254,11 @@ export default function EditSalePage() {
                     tax,
                     total,
                     type: "Sale",
-                    isTaxInvoice
+                    isTaxInvoice,
+                    advancePaid,
+                    customerAddress: customerAddress,
+                    deliveryAddress: deliveryAddress,
+                    deliveryDate: deliveryDate,
                 });
             }
             router.push("/sales");
@@ -242,8 +274,8 @@ export default function EditSalePage() {
             <TopBar title="Edit Sale" subtitle={`Updating record #${id}`} />
 
             <div className="card p-6 flex flex-col gap-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-1">
                         <SearchSelect
                             label="Customer"
                             options={customerOptions}
@@ -251,8 +283,31 @@ export default function EditSalePage() {
                             onChange={(opt) => setSelCustomer(opt)}
                             required
                         />
+                        {selCustomer && (
+                            <div className="mt-2 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100 flex flex-col gap-1">
+                                <div className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Customer Details</div>
+                                <div className="text-sm font-medium text-indigo-900">Mobile: {customerMobile || '—'}</div>
+                                <div className="text-sm font-medium text-indigo-900">Address: {customerAddress || '—'}</div>
+                            </div>
+                        )}
                     </div>
-                    <Input label="Date" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Input label="Sale Date" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                        <Input label="Delivery Date" type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                    <div>
+                        <label className="text-sm font-medium text-gray-700 block mb-1.5">Delivery Address</label>
+                        <textarea
+                            value={deliveryAddress}
+                            onChange={e => setDeliveryAddress(e.target.value)}
+                            placeholder="Enter delivery address..."
+                            rows={3}
+                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none text-sm"
+                        />
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -289,6 +344,14 @@ export default function EditSalePage() {
                             />
                             <label htmlFor="isTaxInvoice" className="text-sm font-medium text-gray-700 cursor-pointer select-none">Separate Tax Bill Details</label>
                         </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input label="Advance Paid" type="number" min={0} value={advancePaid} onChange={e => setAdvancePaid(Number(e.target.value))} placeholder="0" />
+                    <div className="flex items-center gap-2 mt-7">
+                        <span className="text-sm font-medium text-gray-500">Balance:</span>
+                        <span className="text-lg font-bold text-rose-600">{formatCurrency(total - advancePaid)}</span>
                     </div>
                 </div>
 
@@ -405,6 +468,14 @@ export default function EditSalePage() {
                             <div className="flex gap-10 text-gray-500"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
                             <div className="flex gap-10 text-amber-600"><span>Discount</span><span>-{((totalDiscount as any) === "" ? "0.00" : formatCurrency(totalDiscount))}</span></div>
                             <div className="flex gap-10 text-gray-500"><span>Tax ({(tax as any) === "" ? 0 : tax}%)</span><span>{formatCurrency(taxAmt)}</span></div>
+                            <div className="flex gap-10 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+                                <span>Advance Paid</span>
+                                <span>{formatCurrency(advancePaid)}</span>
+                            </div>
+                            <div className="flex gap-10 text-rose-600 bg-rose-50 px-2 py-0.5 rounded">
+                                <span>Balance Amount</span>
+                                <span>{formatCurrency(total - advancePaid)}</span>
+                            </div>
                             <div className="flex gap-10 text-lg font-bold text-gray-800 border-t border-gray-100 pt-2 mt-2"><span>Grand Total</span><span className="text-emerald-600">{formatCurrency(total)}</span></div>
                 </div>
 

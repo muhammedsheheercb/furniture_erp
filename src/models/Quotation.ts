@@ -5,6 +5,7 @@ export interface IQuotationDocument extends Document {
   customerId?: mongoose.Types.ObjectId;
   customerName: string;
   customerMobile?: string;
+  customerAddress?: string;
   items: {
     itemId?: mongoose.Types.ObjectId;
     itemNumber?: string;
@@ -14,6 +15,9 @@ export interface IQuotationDocument extends Document {
     quantity: number;
     price: number;
     discount: number;
+    color?: string;
+    material?: string;
+    size?: string;
     total: number;
   }[];
   subtotal: number;
@@ -45,6 +49,7 @@ const QuotationSchema = new Schema<IQuotationDocument>(
     customerId: { type: Schema.Types.ObjectId, ref: "Customer" },
     customerName: { type: String, required: true, trim: true },
     customerMobile: { type: String, trim: true },
+    customerAddress: { type: String, trim: true },
     items: [
       {
         itemId: { type: Schema.Types.ObjectId, ref: "Item" },
@@ -55,6 +60,9 @@ const QuotationSchema = new Schema<IQuotationDocument>(
         quantity: { type: Number, required: true, min: 0 },
         price: { type: Number, required: true, min: 0 },
         discount: { type: Number, default: 0, min: 0 },
+        color: String,
+        material: String,
+        size: String,
         total: { type: Number, required: true },
       },
     ],

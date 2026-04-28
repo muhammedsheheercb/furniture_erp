@@ -12,19 +12,22 @@ const variants = {
 };
 
 interface BadgeProps {
-    label: string;
+    label?: string;
+    children?: React.ReactNode;
     variant?: keyof typeof variants;
     className?: string;
 }
 
-export default function Badge({ label, variant = "default", className }: BadgeProps) {
+export function Badge({ label, children, variant = "default", className }: BadgeProps) {
     return (
         <span className={cn(
             "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize",
             variants[variant],
             className,
         )}>
-            {label}
+            {children || label}
         </span>
     );
 }
+
+export default Badge;

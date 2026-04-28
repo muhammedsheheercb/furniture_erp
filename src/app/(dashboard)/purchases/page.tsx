@@ -1,239 +1,225 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
-import { Plus, Search, Trash2, Eye, Pencil } from "lucide-react";
-import Link from "next/link";
-import TopBar from "@/components/layout/TopBar";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import Badge from "@/components/ui/Badge";
-import Pagination from "@/components/ui/Pagination";
+import { 
+  Plus, 
+  Search, 
+  CheckCircle2,
+  Edit,
+  Trash2,
+  ChevronRight
+} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/Badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+} from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { toast } from "sonner";
+import { format } from "date-fns";
+
+import PurchaseModal from "@/components/purchases/PurchaseModal";
 import ConfirmModal from "@/components/ui/ConfirmModal";
-import Spinner from "@/components/ui/Spinner";
-import { usePurchases } from "@/hooks/usePurchases";
-import { IPurchase, PaymentType } from "@/types";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { useSession } from "next-auth/react";
-import InvoiceModal from "@/components/dashboard/InvoiceModal";
-import { generateInvoicePDF } from "@/lib/pdf-utils";
-const LIMIT = 10;
-import { FileDown } from "lucide-react";
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const YEARS = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
-const PAY_TYPES: { label: string; value: PaymentType | "" }[] = [
-    { label: "All types", value: "" },
-    { label: "Cash", value: "cash" },
-    { label: "Credit", value: "credit" },
-];
+import CurrencySymbol from "@/components/ui/CurrencySymbol";
 
 export default function PurchasesPage() {
-    const { purchases, total, totalPages, totalAmount, loading, fetchPurchases, deletePurchase } = usePurchases();
+  const [purchases, setPurchases] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editPurchase, setEditPurchase] = useState<any | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-    const [search, setSearch] = useState("");
-    const [page, setPage] = useState(1);
-    const [month, setMonth] = useState<number | "">("");
-    const [year, setYear] = useState(new Date().getFullYear());
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
-    const [payType, setPayType] = useState<PaymentType | "">("");
-    const [viewPurchase, setViewPurchase] = useState<IPurchase | null>(null);
-    const [deleteId, setDeleteId] = useState<string | null>(null);
-    const [deleting, setDeleting] = useState(false);
-    const [showFilters, setShowFilters] = useState(false);
-    const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "admin";
-    const perms = (session?.user?.permissions as any)?.purchases;
-    const canCreate = isAdmin || perms?.create;
-    const canEdit = isAdmin || perms?.edit;
-    const canDelete = isAdmin || perms?.delete;
+  const fetchPurchases = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`/api/purchases?search=${search}`);
+      if (res.data.success) {
+        setPurchases(res.data.data);
+      }
+    } catch (err) {
+      console.error("Purchases fetch error:", err);
+      toast.error("Failed to load purchases");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const load = useCallback(() => {
-        fetchPurchases({
-            search, page, limit: LIMIT,
-            ...(startDate && endDate ? { startDate, endDate } : month ? { month: Number(month), year } : { year }),
-            ...(payType ? { paymentType: payType } : {}),
-        });
-    }, [search, page, month, year, payType, startDate, endDate, fetchPurchases]);
+  useEffect(() => {
+    fetchPurchases();
+  }, [search]);
 
-    useEffect(() => { load(); }, [load]);
-    useEffect(() => { setPage(1); }, [search, month, year, payType, startDate, endDate]);
+  const handleSubmitPurchase = async (data: any) => {
+    setSaving(true);
+    try {
+      if (editPurchase) {
+        const res = await axios.put(`/api/purchases/${editPurchase._id}`, data);
+        if (res.data.success) {
+          toast.success("Purchase order updated");
+          setModalOpen(false);
+          setEditPurchase(null);
+          fetchPurchases();
+        }
+      } else {
+        const res = await axios.post("/api/purchases", data);
+        if (res.data.success) {
+          toast.success("Purchase order created");
+          setModalOpen(false);
+          fetchPurchases();
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to save order");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    const handleDelete = async () => {
-        if (!deleteId) return;
-        setDeleting(true);
-        const ok = await deletePurchase(deleteId);
-        setDeleting(false);
-        if (ok) { setDeleteId(null); load(); }
-    };
+  const handleEdit = (po: any) => {
+    setEditPurchase(po);
+    setModalOpen(true);
+  };
 
-    const invoiceData = viewPurchase ? {
-        _id: viewPurchase._id,
-        number: viewPurchase.purchaseNumber,
-        customerOrSupplier: viewPurchase.supplierName,
-        customerOrSupplierNumber: viewPurchase.supplierNumber,
-        date: viewPurchase.date,
-        paymentType: viewPurchase.paymentType,
-        items: viewPurchase.items,
-        subtotal: viewPurchase.subtotal,
-        tax: viewPurchase.tax,
-        total: viewPurchase.total,
-        type: "Purchase" as const,
-        isTaxInvoice: viewPurchase.isTaxInvoice
-    } : null;
+  const handleDelete = (id: string) => {
+    setDeleteId(id);
+  };
 
-    return (
-        <div className="page-container">
-            <TopBar
-                title="Purchases"
-                subtitle={`${total} records — Total: ${formatCurrency(totalAmount)}`}
-                actions={
-                    <div className="flex flex-wrap gap-2">
-                        <Button 
-                            variant="outline" 
-                            icon={<Search size={16} />} 
-                            onClick={() => setShowFilters(!showFilters)}
-                            className={showFilters ? "bg-amber-50 border-amber-200 text-amber-600" : ""}
-                        >
-                            {showFilters ? "Hide Filters" : "Filters"}
-                        </Button>
-                        {canCreate && (
-                            <Link href="/purchases/new">
-                                <Button icon={<Plus size={16} />} className="bg-amber-600 hover:bg-amber-700 border-amber-600">New Purchase</Button>
-                            </Link>
-                        )}
-                    </div>
-                }
-            />
+  const handleConfirmDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      const res = await axios.delete(`/api/purchases/${deleteId}`);
+      if (res.data.success) {
+        toast.success("Order deleted successfully");
+        setDeleteId(null);
+        fetchPurchases();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to delete order");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-            {showFilters && (
-                <div className="filter-bar animate-in fade-in slide-in-from-top-2 duration-200">
-                    <Input
-                        placeholder="Search supplier or purchase #…"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        leftIcon={<Search size={15} />}
-                        wrapperClassName="w-64"
-                    />
-                    <select className="input-base w-32" value={month} onChange={e => setMonth(e.target.value ? (e.target.value === "" ? "" as any : Number(e.target.value)) : "")}>
-                        <option value="">All months</option>
-                        {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-                    </select>
-                    <select className="input-base w-28" value={year} onChange={e => setYear((e.target.value === "" ? "" as any : Number(e.target.value)))}>
-                        {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                    
-                    <div className="flex items-center gap-2">
-                        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} 
-                            className="input-base w-36 text-xs h-10" />
-                        <span className="text-gray-400">to</span>
-                        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} 
-                            className="input-base w-36 text-xs h-10" />
-                        {(startDate || endDate) && (
-                            <button onClick={() => { setStartDate(""); setEndDate(""); }} 
-                                className="text-amber-600 text-xs font-semibold px-1">Clear</button>
-                        )}
-                    </div>
-
-                    <select className="input-base w-36" value={payType} onChange={e => setPayType(e.target.value as PaymentType | "")}>
-                        {PAY_TYPES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                    </select>
-                </div>
-            )}
-
-            <div className="card px-5 py-3 flex items-center justify-between">
-                <span className="text-sm text-gray-500">Total Stock Value Purchased</span>
-                <span className="text-lg font-bold text-amber-600">{formatCurrency(totalAmount)}</span>
-            </div>
-
-            <div className="table-wrapper">
-                <table className="w-full">
-                    <thead>
-                        <tr className="border-b border-gray-200">
-                            <th className="th">Purchase #</th>
-                            <th className="th">Supplier</th>
-                            <th className="th">Date</th>
-                            <th className="th text-center">Items</th>
-                            <th className="th text-right">Stock Value</th>
-                            <th className="th text-center">Payment</th>
-                            {isAdmin && <th className="th text-right">Created By</th>}
-                            <th className="th text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {loading ? (
-                            <tr><td colSpan={isAdmin ? 8 : 7} className="py-16 text-center"><Spinner /></td></tr>
-                        ) : purchases.length === 0 ? (
-                            <tr><td colSpan={isAdmin ? 8 : 7} className="py-16 text-center text-gray-400 text-sm">No purchases found</td></tr>
-                        ) : purchases.map((p: IPurchase) => (
-                            <tr key={p._id} className="tr-hover">
-                                <td className="td font-mono text-xs text-gray-500">{p.purchaseNumber}</td>
-                                <td className="td">
-                                    <div className="font-medium text-gray-800">{p.supplierName}</div>
-                                    <div className="text-xs text-gray-400">{p.supplierNumber}</div>
-                                </td>
-                                <td className="td text-gray-500 text-xs">{formatDate(p.date)}</td>
-                                <td className="td">
-                                    <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                        {p.items.map((item, i) => (
-                                            <Badge key={i} label={item.itemName} variant="info" className="text-[10px] px-1.5 py-0" />
-                                        ))}
-                                    </div>
-                                    <div className="text-[10px] text-gray-400 mt-1">{p.items.length} items total</div>
-                                </td>
-                                <td className="td text-right font-semibold text-gray-800">{formatCurrency(p.total)}</td>
-                                <td className="td text-center">
-                                    <Badge
-                                        label={p.paymentType}
-                                        variant={p.paymentType === "cash" ? "success" : p.paymentType === "credit" ? "warning" : "info"}
-                                    />
-                                </td>
-                                {isAdmin && (
-                                    <td className="td text-right">
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-[10px] font-medium text-gray-800">{p.createdBy?.name || "Admin"}</span>
-                                            {p.updatedBy && p.updatedBy.name !== p.createdBy?.name && (
-                                                <span className="text-[9px] text-gray-400 italic">Edit: {p.updatedBy.name}</span>
-                                            )}
-                                        </div>
-                                    </td>
-                                )}
-                                <td className="td text-right">
-                                    <div className="flex items-center justify-end gap-1">
-                                        <Button variant="ghost" size="xs" icon={<Eye size={14} className="text-gray-500" />} onClick={() => setViewPurchase(p)} />
-                                        {canEdit && (
-                                            <Link href={`/purchases/edit/${p._id}`}>
-                                                <Button variant="ghost" size="xs" icon={<Pencil size={14} className="text-amber-500" />} />
-                                            </Link>
-                                        )}
-                                        {canDelete && (
-                                            <Button variant="ghost" size="xs" icon={<Trash2 size={14} className="text-red-500" />}
-                                                onClick={() => setDeleteId(p._id)} />
-                                        )}
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                <div className="border-t border-gray-100 px-2">
-                    <Pagination page={page} totalPages={totalPages} total={total} limit={LIMIT} onPageChange={setPage} />
-                </div>
-            </div>
-
-            <InvoiceModal
-                open={!!viewPurchase}
-                onClose={() => setViewPurchase(null)}
-                data={invoiceData}
-            />
-
-            <ConfirmModal
-                open={!!deleteId}
-                onClose={() => setDeleteId(null)}
-                onConfirm={handleDelete}
-                title="Delete Purchase"
-                message="Are you sure? Item quantities will NOT be automatically reversed."
-                confirmLabel="Delete"
-                loading={deleting}
-            />
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-3xl font-extrabold text-[#1A1210]">Purchase Orders</h2>
+          <p className="text-[#7A6055]">Procure raw materials and track supplier shipments.</p>
         </div>
-    );
+        <Button 
+          className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
+          onClick={() => {
+            setEditPurchase(null);
+            setModalOpen(true);
+          }}
+        >
+          <Plus size={18} className="mr-2" /> Create PO
+        </Button>
+      </div>
+
+      <PurchaseModal 
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          setEditPurchase(null);
+        }}
+        onSubmit={handleSubmitPurchase}
+        purchase={editPurchase}
+        loading={saving}
+      />
+
+      <ConfirmModal 
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Purchase Order"
+        message="Are you sure you want to delete this order? This will also revert the stock quantities."
+        loading={deleting}
+      />
+
+      <Card className="border-[#E5DDD5]">
+        <CardHeader className="p-4 border-b border-[#E5DDD5]">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89080]" size={18} />
+            <Input 
+              placeholder="Search by PO number or supplier..." 
+              className="pl-10 border-[#E5DDD5] bg-[#FAF8F6]"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]"></div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#FAF8F6] border-b border-[#E5DDD5]">
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">PO Number</th>
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">Supplier</th>
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">Order Date</th>
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">Amount</th>
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">Status</th>
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F0EBE5]">
+                  {purchases.length > 0 ? purchases.map((po) => (
+                    <tr key={po._id} className="hover:bg-[#FAF8F6] transition-colors group">
+                      <td className="py-4 px-6 font-mono text-sm text-[#1A1210]">{po.purchaseNumber}</td>
+                      <td className="py-4 px-6 font-semibold text-[#1A1210]">{po.supplierName}</td>
+                      <td className="py-4 px-6 text-sm text-[#7A6055]">{format(new Date(po.date), "dd MMM yyyy")}</td>
+                      <td className="py-4 px-6 text-sm font-bold text-[#1A1210]"><CurrencySymbol /> {po.total.toLocaleString()}</td>
+                      <td className="py-4 px-6">
+                        <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100">
+                          <span className="flex items-center gap-1"><CheckCircle2 size={12} /> Received</span>
+                        </Badge>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-[#7A6055]"
+                              onClick={() => handleEdit(po)}
+                            >
+                              <Edit size={16} />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-rose-500"
+                              onClick={() => handleDelete(po._id)}
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="text-[#C9A84C]">
+                                <ChevronRight size={16} />
+                            </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={6} className="py-10 text-center text-[#7A6055]">No purchase orders found</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

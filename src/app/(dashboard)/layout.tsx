@@ -2,11 +2,13 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import TopNav from "@/components/layout/TopNav";
+import Navbar from "@/components/layout/Navbar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const router = useRouter();
+
+  console.log("[DashboardLayout] Session Status:", status, !!session);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -14,19 +16,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [status, router]);
 
-  if (!session && status !== "loading") return null;
+  if (status === "loading") {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-[#F7F4F0]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]"></div>
+      </div>
+    );
+  }
+
+  if (!session) return null;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F7F4F0" }}>
-      <TopNav />
-      <main
-        style={{ paddingTop: 64 }}
-        className="min-h-screen"
-      >
-        <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 md:px-6 py-6">
-          {children}
-        </div>
-      </main>
+    <div className="flex flex-col min-h-screen bg-[#F7F4F0] font-sans">
+      <Navbar />
+      
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Main Content Area */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 scroll-smooth overflow-y-auto">
+          <div className="max-w-[1600px] mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

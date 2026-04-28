@@ -37,6 +37,13 @@ export async function PUT(req: NextRequest, { params }: Params) {
     await connectDB();
     const { id } = await params;
     const body = await req.json();
+    if (body.salesAmount !== undefined) body.salesAmount = Number(body.salesAmount);
+    if (body.purchaseAmount !== undefined) body.purchaseAmount = Number(body.purchaseAmount);
+    if (body.mrp !== undefined) body.mrp = Number(body.mrp);
+    if (body.quantity !== undefined) body.quantity = Number(body.quantity);
+    if (body.reorderLevel !== undefined) body.reorderLevel = Number(body.reorderLevel);
+    if (body.taxRate !== undefined) body.taxRate = Number(body.taxRate);
+    if (body.leadTime !== undefined) body.leadTime = Number(body.leadTime);
     body.updatedBy = session.user.id;
 
     let item;

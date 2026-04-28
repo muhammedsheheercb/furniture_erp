@@ -148,6 +148,9 @@ export interface IQuotationItem {
   quantity: number;
   price: number;
   discount: number;
+  color?: string;
+  material?: string;
+  size?: string;
   total: number;
 }
 
@@ -157,6 +160,7 @@ export interface IQuotation {
   customerId?: string;
   customerName: string;
   customerMobile?: string;
+  customerAddress?: string;
   items: IQuotationItem[];
   subtotal: number;
   tax: number;
@@ -180,6 +184,7 @@ export interface IQuotationForm {
   customerId?: string;
   customerName: string;
   customerMobile?: string;
+  customerAddress?: string;
   items: IQuotationItem[];
   subtotal: number;
   tax: number;
@@ -227,12 +232,16 @@ export interface ISale {
   tax: number;
   total: number;
   paymentType: PaymentType;
+  advancePaid?: number;
+  remarks?: string;
   date: Date;
   createdAt: Date;
   updatedAt: Date;
   createdBy?: { _id: string; name: string };
   updatedBy?: { _id: string; name: string };
   isTaxInvoice?: boolean;
+  deliveryDate?: string;
+  deliveryAddress?: string;
 }
 
 export interface ISaleForm {
@@ -244,8 +253,12 @@ export interface ISaleForm {
   tax: number;
   total: number;
   paymentType: PaymentType;
+  advancePaid?: number;
+  remarks?: string;
   date: string;
   isTaxInvoice?: boolean;
+  deliveryDate?: string;
+  deliveryAddress?: string;
 }
 
 // ─── Purchase ───────────────────────────────────────

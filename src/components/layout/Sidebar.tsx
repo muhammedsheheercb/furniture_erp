@@ -5,47 +5,32 @@ import { signOut } from "next-auth/react";
 import {
     LayoutDashboard, Package, Users, ShoppingCart,
     TruckIcon, Briefcase, LogOut, ChevronLeft, ChevronRight,
-    ReceiptText, Receipt, Undo2, Ban, ShieldCheck, Clock
+    ReceiptText, Hammer, Database, ShoppingBag, 
+    Truck, Receipt, BarChart3, Settings, FileText
 } from "lucide-react";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 
 const navItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard" },
-    { href: "/items", label: "Items", icon: Package, permission: "items" },
-    { href: "/customers", label: "Customers", icon: Users, permission: "customers" },
-    { href: "/sales", label: "Sales", icon: ReceiptText, permission: "sales" },
-    { href: "/purchases", label: "Purchases", icon: ShoppingCart, permission: "purchases" },
-    { href: "/expenses", label: "Expenses", icon: Receipt, permission: "expenses" },
-    { href: "/suppliers", label: "Suppliers", icon: TruckIcon, permission: "suppliers" },
-    { href: "/sales-returns", label: "Sales Returns", icon: Undo2, permission: "sales_returns" },
-    { href: "/damaged-items", label: "Damaged Items", icon: Ban, permission: "damaged_items" },
-    { href: "/expiry-alerts", label: "Nearest Expiry", icon: Clock, permission: "items" },
-    { href: "/users", label: "Users", icon: ShieldCheck, role: "admin" },
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/quotations", label: "Quotations", icon: FileText },
+    { href: "/sales", label: "Sales Orders", icon: ReceiptText },
+    { href: "/production", label: "Production", icon: Hammer },
+    { href: "/deliveries", label: "Delivery", icon: Truck },
+    { href: "/invoices", label: "Invoice", icon: Receipt },
+    { href: "/products", label: "Products", icon: Package },
+    { href: "/customers", label: "Customers", icon: Users },
+    { href: "/suppliers", label: "Suppliers", icon: TruckIcon },
+    { href: "/materials", label: "Raw Materials", icon: Database },
+    { href: "/purchases", label: "Purchases", icon: ShoppingBag },
+    { href: "/expenses", label: "Expenses", icon: Receipt },
+    { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function Sidebar() {
-    const { data: session, status } = useSession();
+    const { data: session } = useSession();
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
-    const userRole = (session?.user?.role || "").toLowerCase();
-    const permissions = session?.user?.permissions || {};
-    const isAuthenticating = status === "loading";
-
-    const filteredNavItems = navItems.filter(item => {
-        if (isAuthenticating) return true;
-        if (status === "unauthenticated") return false;
-        if (userRole === "admin") return true;
-        if (item.permission === "dashboard") return true;
-        if (item.permission) {
-            const p = (permissions as any)?.[item.permission];
-            if (p && typeof p === 'object') {
-                return p.view === true || p.create === true || p.edit === true || p.delete === true;
-            }
-            if (p === true) return true;
-        }
-        return false;
-    });
 
     const w = collapsed ? 72 : 260;
 
@@ -55,12 +40,13 @@ export default function Sidebar() {
             width: w,
             minWidth: w,
             height: "100vh",
-            background: "#ffffff",
-            borderRight: "1px solid #f3f4f6",
+            background: "#1A0F0A",
+            borderRight: "1px solid #2C1810",
             display: "flex",
             flexDirection: "column",
             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            boxShadow: "4px 0 24px rgba(0,0,0,0.02)"
+            boxShadow: "4px 0 24px rgba(0,0,0,0.2)",
+            color: "#E5DDD5"
         }}>
             {/* logo */}
             <div style={{
@@ -75,20 +61,19 @@ export default function Sidebar() {
                     width: 36,
                     height: 36,
                     borderRadius: 10,
-                    background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+                    background: "linear-gradient(135deg, #C9A84C 0%, #8B5E3C 100%)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     flexShrink: 0,
-                    boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)"
+                    boxShadow: "0 4px 12px rgba(201, 168, 76, 0.3)"
                 }}>
                     <Briefcase size={18} color="#fff" />
                 </div>
                 {!collapsed && (
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: 800, fontSize: 16, color: "#111827", letterSpacing: "-0.02em" }}>CAFE DIRECT
-                        </span>
-                        <span style={{ fontSize: 10, color: "#9ca3af", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Management</span>
+                        <span style={{ fontWeight: 800, fontSize: 16, color: "#E8C97A", letterSpacing: "-0.02em" }}>DIAMOND HOME</span>
+                        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Furniture ERP</span>
                     </div>
                 )}
             </div>
@@ -103,8 +88,8 @@ export default function Sidebar() {
                 overflowY: "auto",
                 scrollbarWidth: "none"
             }}>
-                {filteredNavItems.map(({ href, label, icon: Icon }) => {
-                    const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+                {navItems.map(({ href, label, icon: Icon }) => {
+                    const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
                     return (
                         <Link key={href} href={href} title={collapsed ? label : undefined}
                             style={{
@@ -117,17 +102,15 @@ export default function Sidebar() {
                                 fontWeight: active ? 600 : 500,
                                 textDecoration: "none",
                                 justifyContent: collapsed ? "center" : "flex-start",
-                                background: active ? "#f5f3ff" : "transparent",
-                                color: active ? "#6366f1" : "#64748b",
+                                background: active ? "rgba(201, 168, 76, 0.1)" : "transparent",
+                                color: active ? "#E8C97A" : "rgba(255,255,255,0.6)",
                                 transition: "all 0.2s ease",
-                                border: active ? "1px solid #e0e7ff" : "1px solid transparent"
+                                border: active ? "1px solid rgba(201, 168, 76, 0.2)" : "1px solid transparent"
                             }}
-                            onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "#f9fafb"; }}
-                            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                         >
                             <Icon size={20} style={{
                                 flexShrink: 0,
-                                color: active ? "#6366f1" : "#94a3b8"
+                                color: active ? "#E8C97A" : "rgba(255,255,255,0.4)"
                             }} />
                             {!collapsed && <span>{label}</span>}
                         </Link>
@@ -136,7 +119,7 @@ export default function Sidebar() {
             </nav>
 
             {/* user profile / logout */}
-            <div className="logout-container" style={{ padding: "16px 12px 24px", borderTop: "1px solid #f3f4f6" }}>
+            <div className="logout-container" style={{ padding: "16px 12px 24px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
                 <button onClick={() => signOut({ callbackUrl: "/login" })}
                     title={collapsed ? "Logout" : undefined}
                     style={{
@@ -155,8 +138,6 @@ export default function Sidebar() {
                         justifyContent: collapsed ? "center" : "flex-start",
                         transition: "all 0.2s"
                     }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#fef2f2"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                 >
                     <LogOut size={20} style={{ flexShrink: 0 }} />
                     {!collapsed && <span>Log Out</span>}
@@ -172,20 +153,18 @@ export default function Sidebar() {
                     width: 28,
                     height: 28,
                     borderRadius: "50%",
-                    background: "#ffffff",
-                    border: "1px solid #e5e7eb",
+                    background: "#1A0F0A",
+                    border: "1px solid rgba(201, 168, 76, 0.3)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     cursor: "pointer",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.3)",
                     zIndex: 20,
                     transition: "transform 0.2s"
                 }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = "scale(1.1)"}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = "scale(1)"}
             >
-                {collapsed ? <ChevronRight size={14} color="#6366f1" /> : <ChevronLeft size={14} color="#6366f1" />}
+                {collapsed ? <ChevronRight size={14} color="#C9A84C" /> : <ChevronLeft size={14} color="#C9A84C" />}
             </button>
         </aside>
     );

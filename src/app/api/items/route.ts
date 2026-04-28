@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Item from "@/models/Item";
 import User from "@/models/User";
-import { generateUniqueNumber } from "@/lib/utils";
+import { generateUniqueNumber } from "../../../lib/utils";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -20,14 +20,19 @@ export async function GET(req: NextRequest) {
     const limit    = parseInt(searchParams.get("limit") || "10");
     const sortBy   = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") === "asc" ? 1 : -1;
+    const category = searchParams.get("category") || "";
     const skip     = (page - 1) * limit;
 
-    const query = search
-      ? { $or: [
-          { name: { $regex: search, $options: "i" } },
-          { itemNumber: { $regex: search, $options: "i" } },
-        ]}
-      : {};
+    const query: any = {};
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { itemNumber: { $regex: search, $options: "i" } },
+      ];
+    }
+    if (category) {
+      query.category = category;
+    }
 
     const [items, total, summary] = await Promise.all([
       Item.find(query)
@@ -75,9 +80,13 @@ export async function POST(req: NextRequest) {
     const itemData = { 
       ...body, 
       itemNumber,
-      salesAmount: body.salesAmount ?? 0,
-      purchaseAmount: body.purchaseAmount ?? 0,
-      quantity: body.quantity ?? 0,
+      salesAmount: Number(body.salesAmount) || 0,
+      purchaseAmount: Number(body.purchaseAmount) || 0,
+      mrp: Number(body.mrp) || 0,
+      quantity: Number(body.quantity) || 0,
+      reorderLevel: Number(body.reorderLevel) || 0,
+      taxRate: Number(body.taxRate) || 0,
+      leadTime: Number(body.leadTime) || 0,
       createdBy: session.user.id,
       updatedBy: session.user.id,
     };

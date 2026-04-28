@@ -82,7 +82,7 @@ export default function SupplierModal({ open, onClose, onSubmit, supplier, loadi
                     <Input label="Supplier number" placeholder="SUP-001" required readOnly disabled error={errors.supplierNumber?.message} {...register("supplierNumber")} />
                     <Input label="Name" placeholder="Supplier name" required error={errors.name?.message}           {...register("name")} />
                     <Input label="Mobile number" placeholder="9876543210" error={errors.mobile?.message} {...register("mobile")} />
-                    <Input label={isEdit ? "Opening Balance (OMR)" : "Opening balance (OMR)"} type="number" step="0.001" placeholder="0.000"
+                    <Input label={isEdit ? "Opening Balance (INR)" : "Opening balance (INR)"} type="number" step="0.001" placeholder="0.000"
                         error={errors.balance?.message} {...register("balance")} />
                 </div>
             </form>

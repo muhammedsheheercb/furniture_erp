@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
       expensesAgg,
       totalCustomers,
       totalItems,
+      totalStockAgg,
       totalSuppliers,
       receivableAgg,
       payableAgg,
@@ -72,6 +73,9 @@ export async function GET(req: NextRequest) {
       ]),
       Customer.countDocuments(),
       Item.countDocuments(),
+      Item.aggregate([
+        { $group: { _id: null, total: { $sum: "$quantity" } } }
+      ]),
       Supplier.countDocuments(),
       Customer.aggregate([
         { $group: { _id: null, total: { $sum: "$creditBalance" } } }
@@ -80,6 +84,8 @@ export async function GET(req: NextRequest) {
         { $group: { _id: null, total: { $sum: "$creditBalance" } } }
       ]),
     ]);
+
+    const stockSum = totalStockAgg[0]?.total ?? 0;
 
     const totalReturns   = returnsAgg[0]?.total ?? 0;
     
@@ -156,7 +162,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      kpi: { totalSales, totalPurchases, totalExpenses, totalRevenue, totalCustomers, totalItems, totalSuppliers, totalReceivable, totalPayable, cashSales, bankSales, creditSales, cashPurchases, bankPurchases, creditPurchases },
+      kpi: { totalSales, totalPurchases, totalExpenses, totalRevenue, totalCustomers, totalItems, totalStock: stockSum, totalSuppliers, totalReceivable, totalPayable, cashSales, bankSales, creditSales, cashPurchases, bankPurchases, creditPurchases },
       chartData,
     });
   } catch (err) {

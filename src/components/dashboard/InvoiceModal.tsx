@@ -29,6 +29,7 @@ interface InvoiceData {
     total: number;
     type: "Sale" | "Purchase";
     isTaxInvoice?: boolean;
+    advancePaid?: number;
 }
 
 interface InvoiceModalProps {
@@ -66,7 +67,8 @@ export default function InvoiceModal({ open, onClose, data }: InvoiceModalProps)
             tax,
             total: data.total,
             type: data.type,
-            isTaxInvoice: data.isTaxInvoice
+            isTaxInvoice: data.isTaxInvoice,
+            advancePaid: data.advancePaid
         });
     };
 
@@ -161,6 +163,14 @@ export default function InvoiceModal({ open, onClose, data }: InvoiceModalProps)
                             <div className="flex justify-between text-sm text-gray-500">
                                 <span>Tax ({tax}%)</span>
                                 <span className="font-medium text-gray-700">{formatCurrency(taxAmt)}</span>
+                            </div>
+                             <div className="flex justify-between text-sm text-gray-500">
+                                <span>Advance Paid</span>
+                                <span className="font-medium text-emerald-600">{formatCurrency(data.advancePaid || 0)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm text-gray-500">
+                                <span>Balance Amount</span>
+                                <span className="font-medium text-rose-600">{formatCurrency(data.total - (data.advancePaid || 0))}</span>
                             </div>
                             <div className="flex justify-between text-base font-bold text-gray-800 border-t border-gray-100 pt-3">
                                 <span>Total Amount</span>

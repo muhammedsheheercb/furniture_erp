@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
     const deliveryStatus = searchParams.get("deliveryStatus") || "";
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const converted = searchParams.get("converted");
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") === "asc" ? 1 : -1;
 
@@ -34,6 +35,8 @@ export async function GET(req: NextRequest) {
     }
     if (status) filter.status = status;
     if (deliveryStatus) filter.deliveryStatus = deliveryStatus;
+    if (converted === "false") filter.convertedToSaleId = { $exists: false };
+    if (converted === "true") filter.convertedToSaleId = { $exists: true };
     if (startDate || endDate) {
       filter.date = {};
       if (startDate) filter.date.$gte = new Date(startDate);

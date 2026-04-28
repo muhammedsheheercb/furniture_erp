@@ -1,9 +1,11 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   Plus, Search, FileText, Pencil, Trash2, ChevronDown,
-  CheckCircle, XCircle, Clock, Truck, Package, Calendar, Eye
+  CheckCircle, XCircle, Clock, Truck, Package, Calendar, Eye,
+  Check, X, UserPlus, Download
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -13,6 +15,11 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import Spinner from "@/components/ui/Spinner";
 import Pagination from "@/components/ui/Pagination";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { generateQuotationPDF, generateInvoicePDF } from "@/lib/pdf-utils";
+import CustomerModal from "@/components/customers/CustomerModal";
+import SaleModal from "@/components/sales/SaleModal";
+import axios from "axios";
+import { ICustomer } from "@/types";
 
 const LIMIT = 15;
 const UNITS: UnitType[] = ["pcs", "meters", "sq.meters", "kg", "liters", "box", "set", "roll"];
@@ -62,11 +69,12 @@ function deliveryBadge(deliveryStatus: DeliveryStatus, deliveryDate?: string) {
 }
 
 const emptyItem = (): IQuotationItem => ({
-  itemName: "", description: "", unit: "pcs", quantity: 1, price: 0, discount: 0, total: 0
+  itemName: "", description: "", unit: "pcs", quantity: 1, price: 0, discount: 0, 
+  color: "", material: "", size: "", total: 0
 });
 
 const emptyForm = (): IQuotationForm => ({
-  customerName: "", customerMobile: "", items: [emptyItem()],
+  customerName: "", customerMobile: "", customerAddress: "", items: [emptyItem()],
   subtotal: 0, tax: 0, discount: 0, total: 0,
   status: "quote", deliveryStatus: "pending",
   deliveryDate: "", notes: "", validUntil: "",
@@ -84,6 +92,7 @@ function calcTotals(items: IQuotationItem[], taxPct: number, discPct: number) {
 }
 
 export default function QuotationsPage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
   const perms = (session?.user?.permissions as any)?.quotations;
@@ -112,6 +121,13 @@ export default function QuotationsPage() {
   const [taxPct, setTaxPct] = useState(0);
   const [discPct, setDiscPct] = useState(0);
 
+  const [customers, setCustomers] = useState<ICustomer[]>([]);
+  const [customerModalOpen, setCustomerModalOpen] = useState(false);
+  const [fetchingCustomers, setFetchingCustomers] = useState(false);
+
+  const [saleModalOpen, setSaleModalOpen] = useState(false);
+  const [convertingQuotation, setConvertingQuotation] = useState<IQuotation | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -132,7 +148,19 @@ export default function QuotationsPage() {
     }
   }, [page, search, statusFilter, deliveryFilter]);
 
-  useEffect(() => { load(); }, [load]);
+  const fetchCustomers = async () => {
+    setFetchingCustomers(true);
+    try {
+      const res = await axios.get("/api/customers?limit=1000");
+      if (res.data.success) setCustomers(res.data.data);
+    } catch (err) {
+      console.error("Failed to fetch customers", err);
+    } finally {
+      setFetchingCustomers(false);
+    }
+  };
+
+  useEffect(() => { load(); fetchCustomers(); }, [load]);
   useEffect(() => { setPage(1); }, [search, statusFilter, deliveryFilter]);
 
   const recalc = (items: IQuotationItem[], tp: number, dp: number) => {
@@ -167,6 +195,7 @@ export default function QuotationsPage() {
     setDiscPct(q.discount || 0);
     setForm({
       customerName: q.customerName, customerMobile: q.customerMobile || "",
+      customerAddress: q.customerAddress || "",
       items: q.items, subtotal: q.subtotal, tax: q.tax, discount: q.discount,
       total: q.total, status: q.status, deliveryStatus: q.deliveryStatus,
       deliveryDate: q.deliveryDate ? q.deliveryDate.split("T")[0] : "",
@@ -182,6 +211,10 @@ export default function QuotationsPage() {
     if (form.items.length === 0) return toast.error("Add at least one item");
     if (form.items.some(i => !i.itemName.trim())) return toast.error("All items must have a name");
 
+    // If reject is clicked, we might want to just delete it, but the user said 
+    // "reject click the quation remove this form" -> maybe delete from DB?
+    // Let's handle status updates in a separate function.
+
     setSaving(true);
     try {
       const url = editingQuotation ? `/api/quotations/${editingQuotation._id}` : "/api/quotations";
@@ -196,11 +229,121 @@ export default function QuotationsPage() {
         toast.success(editingQuotation ? "Quotation updated" : "Quotation created");
         setModalOpen(false);
         load();
+        // Automatically download PDF after saving
+        if (data.data) {
+          generateQuotationPDF(data.data);
+        }
       } else {
         toast.error(data.error || "Failed to save");
       }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleStatusUpdate = async (id: string, status: QuotationStatus) => {
+    if (status === "reject") {
+      if (!confirm("Are you sure you want to reject and remove this quotation?")) return;
+      try {
+        const res = await fetch(`/api/quotations/${id}`, { method: "DELETE" });
+        if ((await res.json()).success) {
+          toast.success("Quotation removed");
+          load();
+        }
+      } catch (err) {
+        toast.error("Failed to remove");
+      }
+      return;
+    }
+
+    if (status === "sale") {
+      try {
+        const res = await fetch(`/api/quotations/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "sale" }),
+        });
+        if ((await res.json()).success) {
+          toast.success("Quotation accepted! Redirecting to Sales...");
+          router.push("/sales");
+        }
+      } catch (err) {
+        toast.error("Failed to accept quotation");
+      }
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/quotations/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if ((await res.json()).success) {
+        toast.success(`Quotation marked as ${status === "sale" ? "Accepted" : status}`);
+        load();
+      }
+    } catch (err) {
+      toast.error("Failed to update status");
+    }
+  };
+
+  const handleSaleSubmit = async (data: any) => {
+    try {
+      const payload = {
+        ...data,
+        quotationId: convertingQuotation?._id,
+      };
+      const res = await axios.post("/api/sales", payload);
+      if (res.data.success) {
+        toast.success("Sale created and Production started!");
+        
+        // Generate PDF
+        const saleData = res.data.data;
+        generateInvoicePDF({
+          number: saleData.saleNumber,
+          customerOrSupplier: saleData.customerName,
+          customerOrSupplierNumber: saleData.customerNumber,
+          date: saleData.date,
+          paymentType: saleData.paymentType,
+          items: saleData.items,
+          subtotal: saleData.subtotal,
+          tax: saleData.tax,
+          total: saleData.total,
+          type: "Sale",
+          isTaxInvoice: saleData.isTaxInvoice, 
+          advancePaid: saleData.advancePaid,
+          customerAddress: saleData.customerAddress,
+          deliveryAddress: saleData.deliveryAddress,
+          deliveryDate: saleData.deliveryDate
+        });
+
+        setSaleModalOpen(false);
+        setConvertingQuotation(null);
+        load();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to create sale");
+    }
+  };
+
+  const handleCreateCustomer = async (data: any) => {
+    try {
+      const res = await axios.post("/api/customers", data);
+      if (res.data.success) {
+        toast.success("Customer created");
+        setCustomerModalOpen(false);
+        fetchCustomers();
+        const newCust = res.data.data;
+        setForm(f => ({
+          ...f,
+          customerId: newCust._id,
+          customerName: newCust.name,
+          customerMobile: newCust.mobile || ""
+        }));
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to create customer");
     }
   };
 
@@ -310,20 +453,7 @@ export default function QuotationsPage() {
           <option value="reject">Rejected</option>
         </select>
 
-        <select
-          value={deliveryFilter}
-          onChange={e => setDeliveryFilter(e.target.value)}
-          style={{
-            border: "1.5px solid #E5DDD5", borderRadius: 10, padding: "0 12px",
-            height: 40, fontSize: 13, color: "#1A1210", background: "#fff",
-            cursor: "pointer", outline: "none"
-          }}
-        >
-          <option value="">All Deliveries</option>
-          <option value="pending">Pending</option>
-          <option value="delivered">Delivered</option>
-          <option value="partial">Partial</option>
-        </select>
+
       </div>
 
       {/* Table */}
@@ -337,17 +467,16 @@ export default function QuotationsPage() {
               <th className="th">Items</th>
               <th className="th text-right">Total</th>
               <th className="th text-center">Status</th>
-              <th className="th text-center">Delivery</th>
-              <th className="th text-center">Delivery Date</th>
+
               <th className="th text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y" style={{ borderColor: "#F0EAE3" }}>
             {loading ? (
-              <tr><td colSpan={9} style={{ textAlign: "center", padding: "48px 0" }}><Spinner /></td></tr>
+              <tr><td colSpan={7} style={{ textAlign: "center", padding: "48px 0" }}><Spinner /></td></tr>
             ) : quotations.length === 0 ? (
               <tr>
-                <td colSpan={9} style={{ textAlign: "center", padding: "64px 0" }}>
+                <td colSpan={7} style={{ textAlign: "center", padding: "64px 0" }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
                     <FileText size={36} color="#E5DDD5" />
                     <p style={{ color: "#A89080", fontSize: 14, margin: 0 }}>No quotations found</p>
@@ -399,15 +528,7 @@ export default function QuotationsPage() {
                     </span>
                   </td>
                   <td className="td text-center">{statusBadge(q.status)}</td>
-                  <td className="td text-center">{deliveryBadge(q.deliveryStatus, q.deliveryDate)}</td>
-                  <td className="td text-center" style={{ fontSize: 12, color: "#7A6055" }}>
-                    {q.deliveryDate ? (
-                      <span style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "center" }}>
-                        <Calendar size={11} />
-                        {formatDate(q.deliveryDate)}
-                      </span>
-                    ) : "—"}
-                  </td>
+
                   <td className="td text-right">
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
                       <button
@@ -422,6 +543,32 @@ export default function QuotationsPage() {
                       >
                         <Eye size={14} />
                       </button>
+                      {q.status === "quote" && (
+                        <>
+                          <button
+                            onClick={() => handleStatusUpdate(q._id, "sale")}
+                            style={{
+                              padding: "6px", borderRadius: 8, border: "1px solid #A9DFBF",
+                              background: "#EAFAF1", cursor: "pointer", color: "#1E8449",
+                              display: "flex", alignItems: "center", transition: "all 0.15s"
+                            }}
+                            title="Accept & Convert"
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleStatusUpdate(q._id, "reject")}
+                            style={{
+                              padding: "6px", borderRadius: 8, border: "1px solid #F5B7B1",
+                              background: "#FDEDEC", cursor: "pointer", color: "#C0392B",
+                              display: "flex", alignItems: "center", transition: "all 0.15s"
+                            }}
+                            title="Reject & Remove"
+                          >
+                            <X size={14} />
+                          </button>
+                        </>
+                      )}
                       {canEdit && (
                         <button
                           onClick={() => openEdit(q)}
@@ -471,22 +618,42 @@ export default function QuotationsPage() {
       >
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {/* Customer */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
-                CUSTOMER NAME *
-              </label>
-              <input
-                value={form.customerName}
-                onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", letterSpacing: "0.04em", margin: 0 }}>
+                  CUSTOMER NAME *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setCustomerModalOpen(true)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 4, background: "none", border: "none",
+                    color: "#C9A84C", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0
+                  }}
+                >
+                  <UserPlus size={12} /> NEW
+                </button>
+              </div>
+              <select
+                value={form.customerId || ""}
+                onChange={e => {
+                  const c = customers.find(x => x._id === e.target.value);
+                  setForm(f => ({ ...f, customerId: e.target.value, customerName: c?.name || "", customerMobile: c?.mobile || "", customerAddress: (c as any)?.address || "" }));
+                }}
                 required
                 style={{
                   width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
                   padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
-                  background: "#FAF8F6"
+                  background: "#FAF8F6", cursor: "pointer"
                 }}
-                placeholder="Customer name"
-              />
+              >
+                <option value="">Select existing customer</option>
+                {customers.map(c => (
+                  <option key={c._id} value={c._id}>{c.name} ({c.mobile || "No Mobile"})</option>
+                ))}
+              </select>
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
@@ -501,6 +668,21 @@ export default function QuotationsPage() {
                   background: "#FAF8F6"
                 }}
                 placeholder="Mobile number"
+              />
+            </div>
+            <div style={{ gridColumn: "span 2" }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
+                CUSTOMER ADDRESS
+              </label>
+              <textarea
+                value={form.customerAddress}
+                onChange={e => setForm(f => ({ ...f, customerAddress: e.target.value }))}
+                style={{
+                  width: "100%", height: 60, border: "1.5px solid #E5DDD5", borderRadius: 8,
+                  padding: "10px 12px", fontSize: 13, color: "#1A1210", outline: "none",
+                  background: "#FAF8F6", resize: "none"
+                }}
+                placeholder="Customer address"
               />
             </div>
             <div>
@@ -534,9 +716,10 @@ export default function QuotationsPage() {
               />
             </div>
           </div>
+        </div>
 
-          {/* Status and Delivery */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+          {/* Status */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
                 STATUS
@@ -554,39 +737,6 @@ export default function QuotationsPage() {
                 <option value="sale">Sale</option>
                 <option value="reject">Rejected</option>
               </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
-                DELIVERY STATUS
-              </label>
-              <select
-                value={form.deliveryStatus}
-                onChange={e => setForm(f => ({ ...f, deliveryStatus: e.target.value as DeliveryStatus }))}
-                style={{
-                  width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
-                  padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
-                  background: "#FAF8F6", cursor: "pointer"
-                }}
-              >
-                <option value="pending">Pending</option>
-                <option value="partial">Partial</option>
-                <option value="delivered">Delivered</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
-                DELIVERY DATE
-              </label>
-              <input
-                type="date"
-                value={form.deliveryDate}
-                onChange={e => setForm(f => ({ ...f, deliveryDate: e.target.value }))}
-                style={{
-                  width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
-                  padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
-                  background: "#FAF8F6"
-                }}
-              />
             </div>
           </div>
 
@@ -609,14 +759,13 @@ export default function QuotationsPage() {
               </button>
             </div>
 
-            {/* Item headers */}
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "2fr 80px 80px 80px 80px 80px 30px",
+            {/* Item headers - hidden on mobile */}
+            <div className="hidden md:grid" style={{
+              gridTemplateColumns: "1.5fr 1fr 1fr 1fr 80px 80px 80px 80px 80px 30px",
               gap: 8, marginBottom: 6, padding: "0 4px"
             }}>
-              {["Item / Description", "Unit", "Qty", "Price", "Disc%", "Total", ""].map(h => (
-                <div key={h} style={{ fontSize: 10, fontWeight: 700, color: "#A89080", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</div>
+              {["Item", "Color", "Material", "Size", "Unit", "Qty", "Price", "Disc%", "Total", ""].map(h => (
+                <div key={h} style={{ fontSize: 10, fontWeight: 700, color: "#A89080", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: ["Qty", "Price", "Disc%", "Total"].includes(h) ? "right" : "left" }}>{h}</div>
               ))}
             </div>
 
@@ -627,11 +776,15 @@ export default function QuotationsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "2fr 80px 80px 80px 80px 80px 30px",
-                  gap: 8, marginBottom: 8, alignItems: "start"
+                  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                  gap: 8, marginBottom: 12, padding: 12,
+                  background: "#FAF8F6", borderRadius: 10, border: "1px solid #E5DDD5",
+                  position: "relative"
                 }}
+                className="md:!grid md:!grid-cols-[1.5fr_1fr_1fr_1fr_80px_80px_80px_80px_80px_30px] md:!bg-transparent md:!border-none md:!p-0 md:!gap-2 md:!mb-2"
               >
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, gridColumn: "span 2" }} className="md:!col-span-1">
+                  <label className="md:hidden" style={{ fontSize: 10, fontWeight: 700, color: "#A89080" }}>ITEM NAME</label>
                   <input
                     value={item.itemName}
                     onChange={e => updateItem(idx, "itemName", e.target.value)}
@@ -639,61 +792,77 @@ export default function QuotationsPage() {
                     style={{
                       width: "100%", height: 36, border: "1.5px solid #E5DDD5", borderRadius: 7,
                       padding: "0 10px", fontSize: 13, color: "#1A1210", outline: "none",
-                      background: "#FAF8F6"
-                    }}
-                  />
-                  <input
-                    value={item.description || ""}
-                    onChange={e => updateItem(idx, "description", e.target.value)}
-                    placeholder="Description (optional)"
-                    style={{
-                      width: "100%", height: 30, border: "1.5px solid #E5DDD5", borderRadius: 7,
-                      padding: "0 10px", fontSize: 11, color: "#7A6055", outline: "none",
-                      background: "#FAF8F6"
+                      background: "#fff"
                     }}
                   />
                 </div>
-                <select
-                  value={item.unit}
-                  onChange={e => updateItem(idx, "unit", e.target.value)}
-                  style={{
-                    height: 36, border: "1.5px solid #E5DDD5", borderRadius: 7,
-                    padding: "0 6px", fontSize: 12, color: "#1A1210", outline: "none",
-                    background: "#FAF8F6", cursor: "pointer"
-                  }}
-                >
-                  {UNITS.map(u => <option key={u} value={u}>{unitLabel[u]}</option>)}
-                </select>
-                {(["quantity", "price", "discount"] as const).map(field => (
-                  <input
-                    key={field}
-                    type="number"
-                    value={item[field]}
-                    onChange={e => updateItem(idx, field, parseFloat(e.target.value) || 0)}
-                    min={0}
-                    step={field === "quantity" ? "0.01" : "0.001"}
+                {(["color", "material", "size"] as const).map(field => (
+                  <div key={field} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <label className="md:hidden" style={{ fontSize: 10, fontWeight: 700, color: "#A89080" }}>{field.toUpperCase()}</label>
+                    <input
+                      value={item[field] || ""}
+                      onChange={e => updateItem(idx, field, e.target.value)}
+                      placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                      style={{
+                        height: 36, border: "1.5px solid #E5DDD5", borderRadius: 7,
+                        padding: "0 10px", fontSize: 12, color: "#1A1210", outline: "none",
+                        background: "#fff", width: "100%"
+                      }}
+                    />
+                  </div>
+                ))}
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <label className="md:hidden" style={{ fontSize: 10, fontWeight: 700, color: "#A89080" }}>UNIT</label>
+                  <select
+                    value={item.unit}
+                    onChange={e => updateItem(idx, "unit", e.target.value)}
                     style={{
                       height: 36, border: "1.5px solid #E5DDD5", borderRadius: 7,
-                      padding: "0 8px", fontSize: 12, color: "#1A1210", outline: "none",
-                      background: "#FAF8F6", width: "100%"
+                      padding: "0 6px", fontSize: 12, color: "#1A1210", outline: "none",
+                      background: "#fff", cursor: "pointer"
                     }}
-                  />
+                  >
+                    {UNITS.map(u => <option key={u} value={u}>{unitLabel[u]}</option>)}
+                  </select>
+                </div>
+                {(["quantity", "price", "discount"] as const).map(field => (
+                  <div key={field} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <label className="md:hidden" style={{ fontSize: 10, fontWeight: 700, color: "#A89080" }}>{field.toUpperCase()}</label>
+                    <input
+                      type="number"
+                      value={item[field]}
+                      onChange={e => updateItem(idx, field, parseFloat(e.target.value) || 0)}
+                      min={0}
+                      step={field === "quantity" ? "0.01" : "0.001"}
+                      style={{
+                        height: 36, border: "1.5px solid #E5DDD5", borderRadius: 7,
+                        padding: "0 8px", fontSize: 12, color: "#1A1210", outline: "none",
+                        background: "#fff", width: "100%", textAlign: "right"
+                      }}
+                    />
+                  </div>
                 ))}
-                <div style={{
-                  height: 36, display: "flex", alignItems: "center",
-                  fontSize: 12, fontWeight: 700, color: "#2C1810", paddingLeft: 4
-                }}>
-                  {item.total.toFixed(3)}
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <label className="md:hidden" style={{ fontSize: 10, fontWeight: 700, color: "#A89080" }}>TOTAL</label>
+                  <div style={{
+                    height: 36, display: "flex", alignItems: "center", justifyContent: "flex-end",
+                    fontSize: 12, fontWeight: 700, color: "#2C1810", paddingRight: 4
+                  }}>
+                    {item.total.toFixed(3)}
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => removeItem(idx)}
                   disabled={form.items.length === 1}
                   style={{
-                    height: 36, width: 30, display: "flex", alignItems: "center", justifyContent: "center",
-                    border: "1.5px solid #F5B7B1", borderRadius: 7, background: "#FDEDEC",
-                    color: "#C0392B", cursor: "pointer", opacity: form.items.length === 1 ? 0.3 : 1
+                    position: "absolute", top: -10, right: -10,
+                    height: 24, width: 24, display: "flex", alignItems: "center", justifyContent: "center",
+                    border: "1.5px solid #F5B7B1", borderRadius: "50%", background: "#FDEDEC",
+                    color: "#C0392B", cursor: "pointer", opacity: form.items.length === 1 ? 0.3 : 1,
+                    zIndex: 1
                   }}
+                  className="md:!static md:!h-9 md:!w-[30px] md:!rounded-lg md:!mt-0"
                 >
                   <Trash2 size={13} />
                 </button>
@@ -784,7 +953,7 @@ export default function QuotationsPage() {
                 boxShadow: saving ? "none" : "0 4px 14px rgba(44,24,16,0.2)"
               }}
             >
-              {saving ? "Saving…" : (editingQuotation ? "Update Quotation" : "Create Quotation")}
+              {saving ? "Saving…" : (editingQuotation ? "Update & Print Quotation" : "Save & Print Quotation")}
             </button>
           </div>
         </form>
@@ -832,7 +1001,7 @@ export default function QuotationsPage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "#F7F4F0" }}>
-                    {["Item", "Unit", "Qty", "Price", "Disc%", "Total"].map(h => (
+                    {["Item", "Color", "Material", "Size", "Unit", "Qty", "Price", "Disc%", "Total"].map(h => (
                       <th key={h} style={{ padding: "8px 12px", fontSize: 10, fontWeight: 700, color: "#A89080", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: h === "Item" ? "left" : "right" }}>{h}</th>
                     ))}
                   </tr>
@@ -842,8 +1011,10 @@ export default function QuotationsPage() {
                     <tr key={i} style={{ borderTop: "1px solid #F0EAE3" }}>
                       <td style={{ padding: "10px 12px" }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: "#1A1210" }}>{item.itemName}</div>
-                        {item.description && <div style={{ fontSize: 11, color: "#A89080" }}>{item.description}</div>}
                       </td>
+                      <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, color: "#7A6055" }}>{item.color || "—"}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, color: "#7A6055" }}>{item.material || "—"}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, color: "#7A6055" }}>{item.size || "—"}</td>
                       <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, color: "#7A6055" }}>{item.unit}</td>
                       <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 13, fontWeight: 600, color: "#1A1210" }}>{item.quantity}</td>
                       <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, color: "#7A6055" }}>{item.price.toFixed(3)}</td>
@@ -854,7 +1025,7 @@ export default function QuotationsPage() {
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: "2px solid #E5DDD5", background: "#FBF9F7" }}>
-                    <td colSpan={5} style={{ padding: "10px 12px", textAlign: "right", fontSize: 13, fontWeight: 800, color: "#1A1210" }}>TOTAL</td>
+                    <td colSpan={8} style={{ padding: "10px 12px", textAlign: "right", fontSize: 13, fontWeight: 800, color: "#1A1210" }}>TOTAL</td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 15, fontWeight: 800, color: "#2C1810" }}>{formatCurrency(viewingQuotation.total)}</td>
                   </tr>
                 </tfoot>
@@ -867,6 +1038,45 @@ export default function QuotationsPage() {
                 <div style={{ fontSize: 13, color: "#7A6055" }}>{viewingQuotation.notes}</div>
               </div>
             )}
+
+            {/* View Actions */}
+            <div style={{ display: "flex", gap: 10, borderTop: "1px solid #F0EAE3", paddingTop: 16 }}>
+              {viewingQuotation.status === "quote" && (
+                <>
+                  <button
+                    onClick={() => handleStatusUpdate(viewingQuotation._id, "sale")}
+                    style={{
+                      flex: 1, height: 40, background: "#EAFAF1", border: "1px solid #A9DFBF",
+                      color: "#1E8449", borderRadius: 8, fontWeight: 700, fontSize: 13,
+                      cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6
+                    }}
+                  >
+                    <Check size={16} /> Accept & Convert
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate(viewingQuotation._id, "reject")}
+                    style={{
+                      flex: 1, height: 40, background: "#FDEDEC", border: "1px solid #F5B7B1",
+                      color: "#C0392B", borderRadius: 8, fontWeight: 700, fontSize: 13,
+                      cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6
+                    }}
+                  >
+                    <X size={16} /> Reject & Remove
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => generateQuotationPDF(viewingQuotation)}
+                style={{
+                  height: 40, width: 40, background: "#F7F4F0", border: "1px solid #E5DDD5",
+                  color: "#2C1810", borderRadius: 8, cursor: "pointer", display: "flex",
+                  alignItems: "center", justifyContent: "center"
+                }}
+                title="Download PDF"
+              >
+                <Download size={18} />
+              </button>
+            </div>
           </div>
         )}
       </Modal>
@@ -879,6 +1089,37 @@ export default function QuotationsPage() {
         message="Are you sure you want to delete this quotation? This action cannot be undone."
         confirmLabel="Delete"
         loading={deleting}
+      />
+
+      <CustomerModal 
+        open={customerModalOpen}
+        onClose={() => setCustomerModalOpen(false)}
+        onSubmit={handleCreateCustomer}
+      />
+
+      <SaleModal 
+        open={saleModalOpen}
+        onClose={() => setSaleModalOpen(false)}
+        onSubmit={handleSaleSubmit}
+        sale={convertingQuotation ? {
+          customerId: convertingQuotation.customerId,
+          customerName: convertingQuotation.customerName,
+          customerNumber: customers.find(c => c._id === (convertingQuotation.customerId as any)?._id || convertingQuotation.customerId)?.customerNumber || "",
+          items: convertingQuotation.items.map(it => ({
+            itemId: it.itemId,
+            itemNumber: it.itemNumber,
+            itemName: it.itemName,
+            quantity: it.quantity,
+            price: it.price,
+            color: it.color,
+            material: it.material,
+            size: it.size,
+            total: it.total
+          })),
+          subtotal: convertingQuotation.subtotal,
+          total: convertingQuotation.total,
+          isConversion: true
+        } : null}
       />
     </div>
   );

@@ -1,278 +1,345 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
-import { Plus, Search, ArrowUpDown, Pencil, Trash2, Eye, PlusCircle } from "lucide-react";
-import TopBar from "@/components/layout/TopBar";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import Badge from "@/components/ui/Badge";
-import Pagination from "@/components/ui/Pagination";
-import ConfirmModal from "@/components/ui/ConfirmModal";
-import CustomerModal from "@/components/customers/CustomerModal";
-import BalanceAdjustmentModal from "@/components/customers/BalanceAdjustmentModal";
-import BalanceHistoryModal from "@/components/customers/BalanceHistoryModal";
-import Spinner from "@/components/ui/Spinner";
-import { useCustomers } from "@/hooks/useCustomers";
-import { ICustomer } from "@/types";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { toast } from "sonner";
+import { 
+  Plus, 
+  Search, 
+  UserPlus,
+  Mail,
+  Phone,
+  Edit,
+  Trash2,
+  ExternalLink,
+  Wallet,
+  Eye,
+  History,
+  MapPin
+} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
-const LIMIT = 10;
+import CustomerModal from "@/components/customers/CustomerModal";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import CustomerBalanceModal from "@/components/customers/CustomerBalanceModal";
+import CustomerLedgerModal from "@/components/customers/CustomerLedgerModal";
+import CurrencySymbol from "@/components/ui/CurrencySymbol";
 
 export default function CustomersPage() {
-    const { customers, total, totalPages, loading, fetchCustomers, createCustomer, updateCustomer, deleteCustomer } = useCustomers();
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editCustomer, setEditCustomer] = useState<any | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  
+  // New balance/ledger state
+  const [balanceModalOpen, setBalanceModalOpen] = useState(false);
+  const [ledgerModalOpen, setLedgerModalOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
+  const [balanceUpdating, setBalanceUpdating] = useState(false);
 
-    const [search, setSearch] = useState("");
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
-    const [purchaseFilter, setPurchaseFilter] = useState<"higher" | "lower" | "">("");
-    const [page, setPage] = useState(1);
-    const [sortBy, setSortBy] = useState("createdAt");
-    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-    const [modalOpen, setModalOpen] = useState(false);
-    const [editCustomer, setEditCustomer] = useState<ICustomer | null>(null);
-    const [deleteId, setDeleteId] = useState<string | null>(null);
-    const [saving, setSaving] = useState(false);
-    const [deleting, setDeleting] = useState(false);
-    const [historyLoading, setHistoryLoading] = useState(false);
-    const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
-    const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "admin";
-    const perms = (session?.user?.permissions as any)?.customers;
-    const canCreate = isAdmin || perms?.create;
-    const canEdit = isAdmin || perms?.edit;
-    const canDelete = isAdmin || perms?.delete;
+  const fetchCustomers = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`/api/customers?search=${search}`);
+      if (res.data.success) {
+        setCustomers(res.data.data);
+      }
+    } catch (err) {
+      console.error("Customers fetch error:", err);
+      toast.error("Failed to load customers");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Balance Adjustment
-    const [adjustModalOpen, setAdjustModalOpen] = useState(false);
-    const [adjustCustomer, setAdjustCustomer] = useState<ICustomer | null>(null);
-    // Balance History
-    const [historyModalOpen, setHistoryModalOpen] = useState(false);
-    const [historyCustomer, setHistoryCustomer] = useState<ICustomer | null>(null);
-    const load = useCallback(() => {
-        fetchCustomers({ search, page, limit: LIMIT, sortBy, sortOrder, startDate, endDate, purchaseFilter });
-    }, [search, page, sortBy, sortOrder, startDate, endDate, purchaseFilter, fetchCustomers]);
+  useEffect(() => {
+    fetchCustomers();
+  }, [search]);
 
-    useEffect(() => { load(); }, [load]);
-    useEffect(() => { setPage(1); }, [search, startDate, endDate, purchaseFilter]);
-
-    const handleSort = (col: string) => {
-        if (sortBy === col) setSortOrder(o => o === "asc" ? "desc" : "asc");
-        else { setSortBy(col); setSortOrder("asc"); }
-    };
-
-    const handleSubmit = async (data: any) => {
-        setSaving(true);
-        const ok = editCustomer ? await updateCustomer(editCustomer._id, data) : await createCustomer(data);
-        setSaving(false);
-        if (ok) { setModalOpen(false); setEditCustomer(null); load(); }
-    };
-
-    const handleAdjustBalance = async (data: { adjustAmount: number; adjustType: "add" | "subtract"; date: string }) => {
-        if (!adjustCustomer) return;
-        setSaving(true);
-        const ok = await updateCustomer(adjustCustomer._id, data as any);
-        setSaving(false);
-        if (ok) { setAdjustModalOpen(false); setAdjustCustomer(null); load(); }
-    };
-
-    const handleDelete = async () => {
-        if (!deleteId) return;
-        setDeleting(true);
-        const ok = await deleteCustomer(deleteId);
-        setDeleting(false);
-        if (ok) { setDeleteId(null); load(); }
-    };
-
-    const handleViewHistory = async (c: ICustomer) => {
-        setActiveHistoryId(c._id);
-        setHistoryLoading(true);
-        try {
-            const res = await fetch(`/api/customers/${c._id}?t=${Date.now()}`);
-            const data = await res.json();
-            if (data.success) {
-                setHistoryCustomer(data.data);
-                setHistoryModalOpen(true);
-            }
-        } catch (err) {
-            console.error("Failed to fetch history:", err);
-        } finally {
-            setHistoryLoading(false);
-            setActiveHistoryId(null);
+  const handleSubmitCustomer = async (data: any) => {
+    setSaving(true);
+    try {
+      if (editCustomer) {
+        const res = await axios.put(`/api/customers/${editCustomer._id}`, data);
+        if (res.data.success) {
+          toast.success("Customer updated successfully");
+          setModalOpen(false);
+          setEditCustomer(null);
+          fetchCustomers();
         }
-    };
+      } else {
+        const res = await axios.post("/api/customers", data);
+        if (res.data.success) {
+          toast.success("Customer created successfully");
+          setModalOpen(false);
+          fetchCustomers();
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to save customer");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    const SortBtn = ({ col }: { col: string }) => (
-        <button onClick={() => handleSort(col)} className="ml-1 opacity-50 hover:opacity-100 transition-opacity">
-            <ArrowUpDown size={13} />
-        </button>
-    );
+  const handleEdit = (customer: any) => {
+    setEditCustomer(customer);
+    setModalOpen(true);
+  };
 
-    return (
-        <div className="page-container">
-            <TopBar
-                title="Customers"
-                subtitle={`${total} customers total`}
-                actions={
-                    canCreate && (
-                        <Button icon={<Plus size={16} />} onClick={() => { setEditCustomer(null); setModalOpen(true); }}>
-                            New Customer
-                        </Button>
-                    )
-                }
-            />
+  const handleDelete = (id: string) => {
+    setDeleteId(id);
+  };
 
-            <div className="filter-bar flex-wrap gap-4">
-                <Input
-                    placeholder="Search customers…"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    leftIcon={<Search size={15} />}
-                    wrapperClassName="w-64"
-                />
-                <div className="flex items-center gap-2">
-                    <Input
-                        type="date"
-                        value={startDate}
-                        onChange={e => setStartDate(e.target.value)}
-                        className="text-xs"
-                    />
-                    <span className="text-gray-400">to</span>
-                    <Input
-                        type="date"
-                        value={endDate}
-                        onChange={e => setEndDate(e.target.value)}
-                        className="text-xs"
-                    />
-                </div>
-                <select
-                    className="input-base text-sm py-2 px-3 min-w-[180px]"
-                    value={purchaseFilter}
-                    onChange={e => setPurchaseFilter(e.target.value as any)}
-                >
-                    <option value="">Sort by Purchase Vol.</option>
-                    <option value="higher">Higher Purchases First</option>
-                    <option value="lower">Lower Purchases First</option>
-                </select>
-                {(startDate || endDate || purchaseFilter || search) && (
-                    <Button variant="ghost" size="sm" onClick={() => { setStartDate(""); setEndDate(""); setPurchaseFilter(""); setSearch(""); }} className="text-gray-500">
-                        Clear
-                    </Button>
-                )}
-            </div>
+  const handleConfirmDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      const res = await axios.delete(`/api/customers/${deleteId}`);
+      if (res.data.success) {
+        toast.success("Customer deleted successfully");
+        setDeleteId(null);
+        fetchCustomers();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to delete customer");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-            <div className="table-wrapper">
-                <table className="w-full">
-                    <thead>
-                        <tr className="border-b border-gray-200">
-                            <th className="th">Customer # <SortBtn col="customerNumber" /></th>
-                            <th className="th">Name <SortBtn col="name" /></th>
-                            <th className="th">Mobile</th>
-                            {(purchaseFilter || startDate || endDate) && <th className="th text-right text-indigo-600">Total Purchase</th>}
-                            <th className="th text-right">Balance <SortBtn col="creditBalance" /></th>
-                            <th className="th">Joined <SortBtn col="createdAt" /></th>
-                            {isAdmin && <th className="th text-right">Created By</th>}
-                            <th className="th text-right px-6">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {loading ? (
-                            <tr><td colSpan={isAdmin ? 8 : 7} className="py-16 text-center"><Spinner /></td></tr>
-                        ) : customers.length === 0 ? (
-                            <tr><td colSpan={isAdmin ? 8 : 7} className="py-16 text-center text-gray-400 text-sm">No customers found</td></tr>
-                        ) : customers.map((c: any) => (
-                            <tr key={c._id} className="tr-hover">
-                                <td className="td font-mono text-xs text-gray-500">{c.customerNumber}</td>
-                                <td className="td font-medium text-gray-800">{c.name}</td>
-                                <td className="td text-gray-500">{c.mobile}</td>
-                                {(purchaseFilter || startDate || endDate) && (
-                                    <td className="td text-right font-bold text-indigo-600">
-                                        {formatCurrency(c.totalPurchases || 0)}
-                                    </td>
-                                )}
-                                <td className="td text-right">
-                                    <div className="flex items-center justify-end gap-1.5">
-                                        <Badge
-                                            label={formatCurrency(c.creditBalance || 0)}
-                                            variant={(c.creditBalance || 0) > 0 ? "warning" : (c.creditBalance || 0) < 0 ? "danger" : "success"}
-                                        />
-                                        <Button variant="ghost" size="xs" icon={<PlusCircle size={14} className="text-indigo-500" />} 
-                                            onClick={() => { setAdjustCustomer(c); setAdjustModalOpen(true); }} 
-                                            title="Add Payment / Adjustment"
-                                        />
-                                        <Button variant="ghost" size="xs" icon={<Eye size={14} className="text-gray-400 hover:text-indigo-600 transition-colors" />} 
-                                            onClick={() => handleViewHistory(c)}
-                                            title="Full Statement"
-                                            loading={historyLoading && activeHistoryId === c._id}
-                                        />
-                                    </div>
-                                </td>
-                                <td className="td text-gray-400 text-xs">{formatDate(c.createdAt)}</td>
-                                {isAdmin && (
-                                    <td className="td text-right">
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-[10px] font-medium text-gray-800">{c.createdBy?.name || "Admin"}</span>
-                                            {c.updatedBy && c.updatedBy.name !== c.createdBy?.name && (
-                                                <span className="text-[9px] text-gray-400 italic">Edit: {c.updatedBy.name}</span>
-                                            )}
-                                        </div>
-                                    </td>
-                                )}
-                                <td className="td text-right">
-                                    <div className="flex items-center justify-end gap-1">
-                                        {canEdit && (
-                                            <Button variant="ghost" size="xs" icon={<Pencil size={14} />}
-                                                onClick={() => { setEditCustomer(c); setModalOpen(true); }} />
-                                        )}
-                                        {canDelete && (
-                                            <Button variant="ghost" size="xs" icon={<Trash2 size={14} className="text-red-500" />}
-                                                onClick={() => setDeleteId(c._id)} />
-                                        )}
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                <div className="border-t border-gray-100 px-2">
-                    <Pagination page={page} totalPages={totalPages} total={total} limit={LIMIT} onPageChange={setPage} />
-                </div>
-            </div>
+  const handleOpenBalance = (customer: any) => {
+    setSelectedCustomer(customer);
+    setBalanceModalOpen(true);
+  };
 
-            <CustomerModal
-                open={modalOpen}
-                onClose={() => { setModalOpen(false); setEditCustomer(null); }}
-                onSubmit={handleSubmit}
-                customer={editCustomer}
-                loading={saving}
-            />
+  const handleViewLedger = (customer: any) => {
+    setSelectedCustomer(customer);
+    setLedgerModalOpen(true);
+  };
 
-            <BalanceAdjustmentModal
-                open={adjustModalOpen}
-                onClose={() => { setAdjustModalOpen(false); setAdjustCustomer(null); }}
-                onSubmit={handleAdjustBalance}
-                entityName={adjustCustomer?.name || ""}
-                customerNumber={adjustCustomer?.customerNumber}
-                currentBalance={adjustCustomer?.creditBalance}
-                loading={saving}
-            />
+  const handleSubmitBalance = async (data: any) => {
+    if (!selectedCustomer) return;
+    setBalanceUpdating(true);
+    try {
+      const res = await axios.put(`/api/customers/${selectedCustomer._id}`, data);
+      if (res.data.success) {
+        toast.success("Balance updated successfully");
+        setBalanceModalOpen(false);
+        fetchCustomers();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to update balance");
+    } finally {
+      setBalanceUpdating(false);
+    }
+  };
 
-            <BalanceHistoryModal
-                open={historyModalOpen}
-                onClose={() => { setHistoryModalOpen(false); setHistoryCustomer(null); }}
-                history={historyCustomer?.balanceHistory || []}
-                entityName={historyCustomer?.name || ""}
-                currentBalance={historyCustomer?.creditBalance || 0}
-            />
+  const totalReceivables = customers.reduce((sum, c) => sum + (c.creditBalance || 0), 0);
 
-            <ConfirmModal
-                open={!!deleteId}
-                onClose={() => setDeleteId(null)}
-                onConfirm={handleDelete}
-                title="Delete Customer"
-                message="Are you sure you want to delete this customer?"
-                confirmLabel="Delete"
-                loading={deleting}
-            />
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-3xl font-extrabold text-[#1A1210]">Customers</h2>
+          <p className="text-[#7A6055]">Manage your customer relationships and credit history.</p>
         </div>
-    );
+        <Button 
+          className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
+          onClick={() => {
+            setEditCustomer(null);
+            setModalOpen(true);
+          }}
+        >
+          <UserPlus size={18} className="mr-2" /> Add Customer
+        </Button>
+      </div>
+
+      <CustomerModal 
+        open={modalOpen} 
+        onClose={() => {
+          setModalOpen(false);
+          setEditCustomer(null);
+        }} 
+        onSubmit={handleSubmitCustomer}
+        customer={editCustomer}
+        loading={saving}
+      />
+
+      <ConfirmModal 
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Customer"
+        message="Are you sure you want to delete this customer? This action cannot be undone and will remove all history."
+        loading={deleting}
+      />
+
+      <CustomerBalanceModal 
+        open={balanceModalOpen}
+        onClose={() => setBalanceModalOpen(false)}
+        onSubmit={handleSubmitBalance}
+        customerName={selectedCustomer?.name || ""}
+        loading={balanceUpdating}
+      />
+
+      <CustomerLedgerModal 
+        open={ledgerModalOpen}
+        onClose={() => setLedgerModalOpen(false)}
+        customer={selectedCustomer}
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="md:col-span-3 border-[#E5DDD5]">
+          <CardHeader className="p-4 border-b border-[#E5DDD5]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89080]" size={18} />
+              <Input 
+                placeholder="Search by name, phone or email..." 
+                className="pl-10 border-[#E5DDD5] bg-[#FAF8F6]"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]"></div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#FAF8F6] border-b border-[#E5DDD5]">
+                      <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Customer</th>
+                      <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Contact</th>
+                      <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Type</th>
+                      <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Outstanding</th>
+                      <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F0EBE5]">
+                    {customers.length > 0 ? customers.map((customer) => (
+                      <tr key={customer._id} className="hover:bg-[#FAF8F6] transition-colors group">
+                        <td className="py-4 px-6">
+                          <div className="font-semibold text-[#1A1210]">{customer.name}</div>
+                          <div className="text-xs text-[#A89080]">ID: {customer.customerNumber || `CUST-${customer._id.slice(-4)}`}</div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 text-sm text-[#7A6055]">
+                              <Phone size={12} /> {customer.mobile || customer.phone || "N/A"}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-sm text-[#7A6055]">
+                              <Mail size={12} /> {customer.email || "N/A"}
+                            </div>
+                            {customer.address && (
+                              <div className="flex items-start gap-1.5 text-sm text-[#7A6055] mt-0.5">
+                                <MapPin size={12} className="mt-1 flex-shrink-0" /> 
+                                <span className="line-clamp-2">{customer.address}</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#EDE8E0] text-[#8B5E3C] border border-[#E5DDD5]">
+                            {customer.customerType || customer.type || "retail"}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className={`text-sm font-bold ${(customer.creditBalance || 0) > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            <CurrencySymbol /> {(customer.creditBalance || 0).toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-emerald-600"
+                              title="Receive Payment"
+                              onClick={() => handleOpenBalance(customer)}
+                            >
+                              <Wallet size={16} />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-[#C9A84C]"
+                              title="View Ledger"
+                              onClick={() => handleViewLedger(customer)}
+                            >
+                              <Eye size={16} />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-[#7A6055]"
+                              title="Edit Profile"
+                              onClick={() => handleEdit(customer)}
+                            >
+                              <Edit size={16} />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-rose-500"
+                              title="Delete Customer"
+                              onClick={() => handleDelete(customer._id)}
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={5} className="py-10 text-center text-[#7A6055]">No customers found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="space-y-4">
+          <Card className="border-[#E5DDD5] bg-[#1A0F0A] text-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium opacity-60 uppercase">Total Receivables</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold"><CurrencySymbol /> {totalReceivables.toLocaleString()}</div>
+              <p className="text-xs text-rose-400 mt-1">
+                {customers.filter(c => (c.creditBalance || 0) > 0).length} customers with balance
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border-[#E5DDD5]">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-[#7A6055] uppercase">Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-[#A89080]">Total Customers</span>
+                <span className="font-bold">{customers.length}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
 }

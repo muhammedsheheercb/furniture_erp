@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Supplier from "@/models/Supplier";
 import User from "@/models/User";
-import { generateUniqueNumber } from "@/lib/utils";
+import { generateUniqueNumber } from "../../../lib/utils";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 

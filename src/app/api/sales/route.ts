@@ -4,10 +4,13 @@ import Sale from "@/models/Sale";
 import User from "@/models/User";
 import Item from "@/models/Item";
 import Customer from "@/models/Customer";
-import { generateUniqueNumber } from "@/lib/utils";
+import { generateUniqueNumber } from "../../../lib/utils";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import mongoose from "mongoose";
+import Production from "@/models/Production";
+import Delivery from "@/models/Delivery";
+import Quotation from "@/models/Quotation";
 
 // GET /api/sales
 export async function GET(req: NextRequest) {
@@ -28,6 +31,7 @@ export async function GET(req: NextRequest) {
     const month       = searchParams.get("month");
     const year        = searchParams.get("year");
     const paymentType = searchParams.get("paymentType");
+    const status      = searchParams.get("status");
     const skip        = (page - 1) * limit;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,6 +44,7 @@ export async function GET(req: NextRequest) {
       ];
     }
     if (paymentType) query.paymentType = paymentType;
+    if (status) query.status = status;
     if (startDate || endDate) {
       query.date = {};
       if (startDate) query.date.$gte = new Date(startDate);
@@ -69,9 +74,32 @@ export async function GET(req: NextRequest) {
 
     const totalAmount = totalAmountResult[0]?.total ?? 0;
 
+    // Fetch production and delivery statuses for these sales
+    const saleIds = sales.map(s => s._id);
+    const [productions, deliveries] = await Promise.all([
+      Production.find({ saleId: { $in: saleIds } }).lean(),
+      Delivery.find({ saleId: { $in: saleIds } }).lean()
+    ]);
+
+    const prodMap = productions.reduce((acc: any, p) => {
+      acc[p.saleId.toString()] = p.status;
+      return acc;
+    }, {});
+
+    const delMap = deliveries.reduce((acc: any, d) => {
+      acc[d.saleId.toString()] = d.status;
+      return acc;
+    }, {});
+
+    const salesWithStatuses = sales.map(s => ({
+      ...s,
+      productionStatus: prodMap[s._id.toString()] || "pending",
+      deliveryStatus: delMap[s._id.toString()] || "pending"
+    }));
+
     return NextResponse.json({
       success: true,
-      data: sales,
+      data: salesWithStatuses,
       total,
       page,
       limit,
@@ -118,8 +146,12 @@ export async function POST(req: NextRequest) {
 
     // 2 — decrease item quantities and batches (manual or FIFO)
     for (const saleItem of body.items) {
+      // If no itemId, it's a custom item or not tracked in inventory, skip stock deduction
+      if (!saleItem.itemId) continue;
+
       const item = await Item.findById(saleItem.itemId).session(dbSession);
-      if (!item) throw new Error(`Item not found: ${saleItem.itemName}`);
+      if (!item) continue;
+
       if ((item.quantity || 0) < saleItem.quantity) {
         throw new Error(`Insufficient stock for item: ${saleItem.itemName} (Available: ${item.quantity || 0}, Requested: ${saleItem.quantity})`);
       }
@@ -179,6 +211,31 @@ export async function POST(req: NextRequest) {
 
         await customer.save({ session: dbSession });
       }
+    }
+
+    // 4 — create production entry
+    await Production.create([{
+        saleId: sale._id,
+        saleNumber: sale.saleNumber,
+        customerId: sale.customerId,
+        customerName: sale.customerName,
+        items: body.items.map((it: any) => ({
+            itemName: it.itemName,
+            quantity: it.quantity,
+            color: it.color,
+            material: it.material,
+            size: it.size,
+            status: "pending"
+        })),
+        remarks: body.remarks || ""
+    }], { session: dbSession });
+
+    // 5 — if converted from quotation, update quotation
+    if (body.quotationId) {
+        await Quotation.findByIdAndUpdate(body.quotationId, {
+            status: "sale",
+            convertedToSaleId: sale._id
+        }).session(dbSession);
     }
 
     await dbSession.commitTransaction();

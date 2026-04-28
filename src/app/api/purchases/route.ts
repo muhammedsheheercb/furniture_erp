@@ -4,7 +4,7 @@ import Purchase from "@/models/Purchase";
 import User from "@/models/User";
 import Item from "@/models/Item";
 import Supplier from "@/models/Supplier";
-import { generateUniqueNumber } from "@/lib/utils";
+import { generateUniqueNumber } from "../../../lib/utils";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import mongoose from "mongoose";
