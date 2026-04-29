@@ -26,6 +26,8 @@ const schema = z.object({
   customerId: z.string().min(1, "Customer is required"),
   customerName: z.string(),
   customerNumber: z.string().optional(),
+  customerMobile: z.string().optional(),
+  customerAddress: z.string().optional(),
   date: z.string(),
   paymentType: z.enum(["cash", "bank", "credit"]),
   items: z.array(itemSchema).min(1, "Add at least one item"),
@@ -68,7 +70,7 @@ export default function SaleModal({
     reset,
     formState: { errors },
   } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as any,
     defaultValues: {
       date: new Date().toISOString().split("T")[0],
       paymentType: "cash",
@@ -131,6 +133,8 @@ export default function SaleModal({
           customerId: sale.customerId?._id || sale.customerId || "",
           customerName: sale.customerName,
           customerNumber: sale.customerNumber || "",
+          customerMobile: sale.customerMobile || "",
+          customerAddress: sale.customerAddress || "",
           date: new Date(sale.date || new Date()).toISOString().split("T")[0],
           paymentType: sale.paymentType || "cash",
           items: itemsMapped,
@@ -152,6 +156,9 @@ export default function SaleModal({
           advancePaid: 0,
           deliveryDate: "",
           deliveryAddress: "",
+          customerNumber: "",
+          customerMobile: "",
+          customerAddress: "",
         });
       }
     }
@@ -170,13 +177,13 @@ export default function SaleModal({
       setValue(`items.${index}.itemNumber`, product.itemNumber);
       setValue(`items.${index}.itemName`, product.name);
       setValue(`items.${index}.price`, product.salesAmount || 0);
-      const qty = watchedItems[index].quantity || 1;
+      const qty = watchedItems[index]?.quantity || 1;
       setValue(`items.${index}.total`, (product.salesAmount || 0) * qty);
     }
   };
 
   const handleQtyChange = (index: number, qty: number) => {
-    const price = watchedItems[index].price || 0;
+    const price = watchedItems[index]?.price || 0;
     setValue(`items.${index}.total`, price * qty);
   };
 
@@ -214,6 +221,8 @@ export default function SaleModal({
                   if (c) {
                     setValue("customerName", c.name);
                     setValue("customerNumber", c.customerNumber);
+                    setValue("customerMobile", c.mobile);
+                    setValue("customerAddress", c.address);
                   }
                 }}
               >
@@ -228,6 +237,18 @@ export default function SaleModal({
             {errors.customerId && <p className="text-xs text-red-500">{errors.customerId.message}</p>}
           </div>
           <Input label="Date" type="date" {...register("date")} />
+          <Input label="Customer Number" {...register("customerNumber")} readOnly className="bg-gray-50" />
+          <Input label="Customer Mobile" {...register("customerMobile")} readOnly className="bg-gray-50" />
+          <div className="sm:col-span-2 md:col-span-3">
+            <label className="text-sm font-medium">Customer Address</label>
+            <textarea
+              {...register("customerAddress")}
+              rows={2}
+              readOnly
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50"
+              placeholder="Customer Address"
+            />
+          </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">Payment Type</label>
             <select
@@ -301,7 +322,7 @@ export default function SaleModal({
                           className="w-full rounded border-gray-300 text-sm text-right disabled:bg-gray-50"
                           onChange={(e) => {
                             const p = Number(e.target.value);
-                            const q = watchedItems[index].quantity || 1;
+                            const q = watchedItems[index]?.quantity || 1;
                             setValue(`items.${index}.total`, p * q);
                           }}
                           disabled={sale?.isConversion}

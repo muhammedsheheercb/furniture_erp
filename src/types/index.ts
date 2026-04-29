@@ -227,6 +227,8 @@ export interface ISale {
   customerId: string;
   customerName: string;
   customerNumber: string;
+  customerMobile?: string;
+  customerAddress?: string;
   items: ISaleItem[];
   subtotal: number;
   tax: number;
@@ -248,6 +250,8 @@ export interface ISaleForm {
   customerId: string;
   customerName: string;
   customerNumber: string;
+  customerMobile?: string;
+  customerAddress?: string;
   items: ISaleItem[];
   subtotal: number;
   tax: number;

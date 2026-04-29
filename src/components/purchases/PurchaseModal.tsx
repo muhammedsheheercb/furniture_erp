@@ -59,13 +59,16 @@ export default function PurchaseModal({
     reset,
     formState: { errors },
   } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as any,
     defaultValues: {
+      supplierId: "",
+      supplierName: "",
       date: new Date().toISOString().split("T")[0],
       paymentType: "cash",
       items: [],
       total: 0,
       paidAmount: 0,
+      note: "",
     },
   });
 
@@ -127,13 +130,13 @@ export default function PurchaseModal({
     if (product) {
       setValue(`items.${index}.productName`, product.name);
       setValue(`items.${index}.price`, product.purchaseAmount || 0);
-      const qty = watchedItems[index].quantity || 1;
+      const qty = watchedItems[index]?.quantity || 1;
       setValue(`items.${index}.total`, (product.purchaseAmount || 0) * qty);
     }
   };
 
   const handleQtyChange = (index: number, qty: number) => {
-    const price = watchedItems[index].price || 0;
+    const price = watchedItems[index]?.price || 0;
     setValue(`items.${index}.total`, price * qty);
   };
 

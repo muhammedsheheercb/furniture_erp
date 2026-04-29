@@ -69,15 +69,15 @@ export default function ItemsPage() {
     else { setSortBy(col); setSortOrder("asc"); }
   };
 
-  const handleSubmit = async (data: Parameters<typeof createItem>[0] & { itemId?: string }) => {
+  const handleSubmit = async (data: any) => {
     setSaving(true);
     let ok = false;
     if (editItem) {
-      ok = await updateItem(editItem._id, data);
+      ok = await updateItem(editItem._id, { ...data, unit: data.unit as any });
     } else if (modalMode === "opening_stock" && data.itemId) {
-      ok = await updateItem(data.itemId, { ...data, isOpeningStock: true } as any);
+      ok = await updateItem(data.itemId, { ...data, unit: data.unit as any, isOpeningStock: true } as any);
     } else {
-      ok = await createItem(data);
+      ok = await createItem({ ...data, unit: data.unit as any });
     }
     setSaving(false);
     if (ok) { setModalOpen(false); setEditItem(null); load(); }
@@ -227,7 +227,7 @@ export default function ItemsPage() {
                 </td>
               </tr>
             ) : filteredItems.map((item: IItem, idx: number) => {
-              const uc = unitColor[item.unit || "pcs"] || unitColor.pcs;
+              const uc = unitColor[item.unit || "pcs"] || { bg: "#EBF5FB", color: "#2980B9", border: "#AED6F1" };
               return (
                 <React.Fragment key={item._id}>
                   <motion.tr

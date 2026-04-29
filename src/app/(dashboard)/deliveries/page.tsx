@@ -77,7 +77,7 @@ export default function DeliveriesPage() {
                     <div>
                       <h4 className="font-bold text-[#1A1210] flex items-center gap-2">
                         Order {delivery.saleNumber}
-                        <Badge variant={delivery.status === "delivered" ? "success" : "secondary"}>
+                        <Badge variant={delivery.status === "delivered" ? "success" : "warning"}>
                           {delivery.status}
                         </Badge>
                       </h4>

@@ -20,8 +20,10 @@ import {
 import { useEffect, useState } from "react";
 import axios from "axios";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function DashboardPage() {
+  const { t } = useLanguage();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,19 +52,19 @@ export default function DashboardPage() {
   }
 
   const kpis = [
-    { label: "Total Sales", value: data?.kpi?.totalSales?.toLocaleString() || 0, icon: DollarSign, trend: "+12%", trendUp: true, isCurrency: true },
-    { label: "Total Purchases", value: data?.kpi?.totalPurchases?.toLocaleString() || 0, icon: ShoppingBag, trend: "+8.2%", trendUp: true, isCurrency: true },
-    { label: "Revenue", value: data?.kpi?.totalRevenue?.toLocaleString() || 0, icon: ArrowUpRight, trend: "+2%", trendUp: true, isCurrency: true },
-    { label: "Total Items (SKUs)", value: data?.kpi?.totalItems || 0, icon: Package, trend: "+3", trendUp: true },
-    { label: "Total Customers", value: data?.kpi?.totalCustomers || 0, icon: Users, trend: "+5", trendUp: true },
-    { label: "Total Suppliers", value: data?.kpi?.totalSuppliers || 0, icon: Package, trend: "+1", trendUp: true },
+    { label: t("total_sales"), value: data?.kpi?.totalSales?.toLocaleString() || 0, icon: DollarSign, trend: "+12%", trendUp: true, isCurrency: true },
+    { label: t("total_purchases"), value: data?.kpi?.totalPurchases?.toLocaleString() || 0, icon: ShoppingBag, trend: "+8.2%", trendUp: true, isCurrency: true },
+    { label: t("revenue"), value: data?.kpi?.totalRevenue?.toLocaleString() || 0, icon: ArrowUpRight, trend: "+2%", trendUp: true, isCurrency: true },
+    { label: t("total_items"), value: data?.kpi?.totalItems || 0, icon: Package, trend: "+3", trendUp: true },
+    { label: t("total_customers"), value: data?.kpi?.totalCustomers || 0, icon: Users, trend: "+5", trendUp: true },
+    { label: t("total_suppliers"), value: data?.kpi?.totalSuppliers || 0, icon: Package, trend: "+1", trendUp: true },
   ];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
-        <h2 className="text-3xl font-extrabold text-[#1A1210] tracking-tight">Business Overview</h2>
-        <p className="text-[#7A6055] mt-1">Here's what's happening with your furniture business today.</p>
+        <h2 className="text-3xl font-extrabold text-[#1A1210] tracking-tight">{t("business_overview")}</h2>
+        <p className="text-[#7A6055] mt-1">{t("dashboard_subtitle")}</p>
       </div>
 
       {/* KPI Grid */}

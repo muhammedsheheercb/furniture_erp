@@ -15,6 +15,7 @@ export interface IProductionDocument extends Document {
   }[];
   status: "pending" | "processing" | "finished";
   remarks?: string;
+  deliveryDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +38,7 @@ const ProductionSchema = new Schema<IProductionDocument>(
     ],
     status: { type: String, enum: ["pending", "processing", "finished"], default: "pending" },
     remarks: String,
+    deliveryDate: Date,
   },
   { timestamps: true }
 );

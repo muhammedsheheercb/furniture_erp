@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import Sale from "@/models/Sale";
+import SaleRaw from "@/models/Sale";
+const Sale = SaleRaw as any;
+import ItemRaw from "@/models/Item";
+const Item = ItemRaw as any;
+import CustomerRaw from "@/models/Customer";
+const Customer = CustomerRaw as any;
+import ProductionRaw from "@/models/Production";
+const Production = ProductionRaw as any;
 import User from "@/models/User";
-import Item from "@/models/Item";
-import Customer from "@/models/Customer";
 import { generateUniqueNumber } from "../../../lib/utils";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import mongoose from "mongoose";
-import Production from "@/models/Production";
 import Delivery from "@/models/Delivery";
 import Quotation from "@/models/Quotation";
 
@@ -75,23 +79,23 @@ export async function GET(req: NextRequest) {
     const totalAmount = totalAmountResult[0]?.total ?? 0;
 
     // Fetch production and delivery statuses for these sales
-    const saleIds = sales.map(s => s._id);
+    const saleIds = sales.map((s: any) => s._id);
     const [productions, deliveries] = await Promise.all([
       Production.find({ saleId: { $in: saleIds } }).lean(),
       Delivery.find({ saleId: { $in: saleIds } }).lean()
     ]);
 
-    const prodMap = productions.reduce((acc: any, p) => {
+    const prodMap = productions.reduce((acc: any, p: any) => {
       acc[p.saleId.toString()] = p.status;
       return acc;
     }, {});
 
-    const delMap = deliveries.reduce((acc: any, d) => {
+    const delMap = deliveries.reduce((acc: any, d: any) => {
       acc[d.saleId.toString()] = d.status;
       return acc;
     }, {});
 
-    const salesWithStatuses = sales.map(s => ({
+    const salesWithStatuses = sales.map((s: any) => ({
       ...s,
       productionStatus: prodMap[s._id.toString()] || "pending",
       deliveryStatus: delMap[s._id.toString()] || "pending"
@@ -169,7 +173,7 @@ export async function POST(req: NextRequest) {
           } else {
             // Fallback to FIFO if batch name not found
             let remainingToDeduct = saleItem.quantity;
-            item.batches.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            item.batches.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
             for (const b of item.batches) {
               if (remainingToDeduct <= 0) break;
               const deductFromThisBatch = Math.min(b.quantity, remainingToDeduct);
@@ -180,7 +184,7 @@ export async function POST(req: NextRequest) {
         } else {
           // FIFO as before
           let remainingToDeduct = saleItem.quantity;
-          item.batches.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          item.batches.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
           for (const batch of item.batches) {
             if (remainingToDeduct <= 0) break;

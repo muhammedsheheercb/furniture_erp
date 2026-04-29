@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import ProductionModal from "@/components/production/ProductionModal";
 import {
   Card,
   CardContent,
@@ -21,6 +22,9 @@ import {
 export default function ProductionPage() {
   const [productions, setProductions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedProd, setSelectedProd] = useState<any | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   const fetchProductions = async () => {
     setLoading(true);
@@ -41,21 +45,42 @@ export default function ProductionPage() {
   }, []);
 
   const handleUpdateStatus = async (id: string, currentStatus: string) => {
-    const nextStatusMap: Record<string, string> = {
-      pending: "processing",
-      processing: "finished",
-    };
-    const nextStatus = nextStatusMap[currentStatus];
-    if (!nextStatus) return;
+    if (currentStatus === "pending") {
+      const prod = productions.find(p => p._id === id);
+      setSelectedProd(prod);
+      setModalOpen(true);
+      return;
+    }
 
+    const nextStatus = "finished";
     try {
       const res = await axios.put(`/api/production/${id}`, { status: nextStatus });
       if (res.data.success) {
-        toast.success(`Production status updated to ${nextStatus}`);
+        toast.success(`Production status updated to finished`);
         fetchProductions();
       }
     } catch (err) {
       toast.error("Failed to update status");
+    }
+  };
+
+  const handleStartProduction = async (id: string, data: any) => {
+    setUpdating(true);
+    try {
+      const res = await axios.put(`/api/production/${id}`, { 
+        status: "processing",
+        remarks: data.remarks,
+        deliveryDate: data.deliveryDate
+      });
+      if (res.data.success) {
+        toast.success("Production started and job card generated");
+        setModalOpen(false);
+        fetchProductions();
+      }
+    } catch (err) {
+      toast.error("Failed to start production");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -129,7 +154,7 @@ export default function ProductionPage() {
                     <div className="flex items-center gap-6">
                       <div className="text-right">
                         <p className="text-xs text-[#A89080] uppercase font-bold">Status</p>
-                        <Badge variant={prod.status === "finished" ? "success" : prod.status === "processing" ? "warning" : "secondary"}>
+                        <Badge variant={prod.status === "finished" ? "success" : prod.status === "processing" ? "warning" : "default"}>
                           {prod.status}
                         </Badge>
                       </div>
@@ -149,6 +174,14 @@ export default function ProductionPage() {
           )}
         </CardContent>
       </Card>
+
+      <ProductionModal 
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleStartProduction}
+        production={selectedProd}
+        loading={updating}
+      />
     </div>
   );
 }

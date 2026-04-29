@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import DamagedItem from "@/models/DamagedItem";
-import Item from "@/models/Item";
+import DamagedItemRaw from "@/models/DamagedItem";
+const DamagedItem = DamagedItemRaw as any;
+import ItemRaw from "@/models/Item";
+const Item = ItemRaw as any;
 import User from "@/models/User";
 import mongoose from "mongoose";
 import { getServerSession } from "next-auth";
@@ -19,7 +21,7 @@ export async function GET(
 
         await connectDB();
         const { id } = await params;
-        const item = await DamagedItem.findById(id)
+        const item = await DamagedItem.findOne({ _id: id })
             .populate("createdBy", "name")
             .populate("updatedBy", "name");
         if (!item) return NextResponse.json({ error: "Damaged item not found" }, { status: 404 });
@@ -43,7 +45,7 @@ export async function PUT(
         await connectDB();
         const { id } = await params;
         const body = await req.json();
-        const oldDamaged = await DamagedItem.findById(id).session(dbSession);
+        const oldDamaged = await DamagedItem.findOne({ _id: id }).session(dbSession);
 
         if (!oldDamaged) {
             return NextResponse.json({ error: "Damaged item record not found" }, { status: 404 });
@@ -52,7 +54,7 @@ export async function PUT(
         const quantityDiff = body.quantity - oldDamaged.quantity;
         
         // 1 - Update record
-        const updated = await DamagedItem.findByIdAndUpdate(id, {
+        const updated = await DamagedItem.findOneAndUpdate({ _id: id }, {
             ...body,
             updatedBy: session.user.id
         }, { 
@@ -63,22 +65,22 @@ export async function PUT(
         // 2 - Adjust inventory if quantity changed or if item changed!
         if (oldDamaged.itemId === body.itemId) {
             if (quantityDiff !== 0) {
-                await Item.findByIdAndUpdate(
-                    body.itemId,
+                await Item.findOneAndUpdate(
+                    { _id: body.itemId },
                     { $inc: { quantity: -quantityDiff } },
                     { session: dbSession }
                 );
             }
         } else {
             // Revert old item
-            await Item.findByIdAndUpdate(
-                oldDamaged.itemId,
+            await Item.findOneAndUpdate(
+                { _id: oldDamaged.itemId },
                 { $inc: { quantity: oldDamaged.quantity } },
                 { session: dbSession }
             );
             // Decrease from new item
-            await Item.findByIdAndUpdate(
-                body.itemId,
+            await Item.findOneAndUpdate(
+                { _id: body.itemId },
                 { $inc: { quantity: -body.quantity } },
                 { session: dbSession }
             );
@@ -107,20 +109,20 @@ export async function DELETE(
 
         await connectDB();
         const { id } = await params;
-        const damaged = await DamagedItem.findById(id).session(dbSession);
+        const damaged = await DamagedItem.findOne({ _id: id }).session(dbSession);
         if (!damaged) {
             return NextResponse.json({ error: "Damaged record not found" }, { status: 404 });
         }
 
         // 1 - Restore quantity
-        await Item.findByIdAndUpdate(
-            damaged.itemId,
+        await Item.findOneAndUpdate(
+            { _id: damaged.itemId },
             { $inc: { quantity: damaged.quantity } },
             { session: dbSession }
         );
 
         // 2 - Delete record
-        await DamagedItem.findByIdAndDelete(id).session(dbSession);
+        await DamagedItem.findOneAndDelete({ _id: id }).session(dbSession);
 
         await dbSession.commitTransaction();
         return NextResponse.json({ message: "Damaged record deleted" });

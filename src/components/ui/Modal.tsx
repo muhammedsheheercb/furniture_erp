@@ -18,9 +18,10 @@ interface ModalProps {
     children: React.ReactNode;
     size?: keyof typeof sizes;
     footer?: React.ReactNode;
+    className?: string;
 }
 
-export default function Modal({ open, onClose, title, children, size = "md", footer }: ModalProps) {
+export default function Modal({ open, onClose, title, children, size = "md", footer, className }: ModalProps) {
     const overlayRef = useRef<HTMLDivElement>(null);
 
     // close on Escape
@@ -45,7 +46,7 @@ export default function Modal({ open, onClose, title, children, size = "md", foo
             onClick={(e) => e.target === overlayRef.current && onClose()}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
         >
-            <div className={cn("w-full bg-white rounded-xl shadow-xl flex flex-col max-h-[90vh]", sizes[size])}>
+            <div className={cn("w-full bg-white rounded-xl shadow-xl flex flex-col max-h-[90vh]", sizes[size], className)}>
                 {/* header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
                     <h2 className="text-lg font-semibold text-gray-800">{title}</h2>

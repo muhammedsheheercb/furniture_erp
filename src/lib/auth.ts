@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
         try {
           await dbConnect();
           const email = credentials.email.toLowerCase().trim();
-          const user = await User.findOne({ email }).select("+passwordHash +password").lean();
+          const user = await (User as any).findOne({ email }).select("+passwordHash +password").lean();
 
           if (!user) {
             console.warn(`[authorize] No user found: ${email}`);

@@ -18,16 +18,16 @@ async function seed() {
   console.log('Connected to MongoDB');
 
   // Clear existing data
-  await User.deleteMany({});
-  await Product.deleteMany({});
-  await Customer.deleteMany({});
-  await Supplier.deleteMany({});
-  await RawMaterial.deleteMany({});
-  await BOM.deleteMany({});
+  await (User as any).deleteMany({});
+  await (Product as any).deleteMany({});
+  await (Customer as any).deleteMany({});
+  await (Supplier as any).deleteMany({});
+  await (RawMaterial as any).deleteMany({});
+  await (BOM as any).deleteMany({});
 
   // 1. Create Owner
   const passwordHash = await bcrypt.hash('admin123', 10);
-  const owner = await User.create({
+  const owner = await (User as any).create({
     name: 'Furniture Owner',
     email: 'owner@example.com',
     passwordHash,
@@ -36,16 +36,16 @@ async function seed() {
   console.log('Owner created');
 
   // 2. Create Suppliers
-  const s1 = await Supplier.create({ name: 'Timber Mart', contactPerson: 'John', phone: '9876543210' });
-  const s2 = await Supplier.create({ name: 'Global Hardware', contactPerson: 'Sara', phone: '9123456789' });
+  const s1 = await (Supplier as any).create({ name: 'Timber Mart', contactPerson: 'John', phone: '9876543210' });
+  const s2 = await (Supplier as any).create({ name: 'Global Hardware', contactPerson: 'Sara', phone: '9123456789' });
 
   // 3. Create Raw Materials
-  const m1 = await RawMaterial.create({ name: 'Teak Wood', category: 'wood', unit: 'sqft', currentStock: 200, preferredSupplierId: s1._id });
-  const m2 = await RawMaterial.create({ name: 'Velvet Fabric', category: 'fabric', unit: 'meter', currentStock: 50, preferredSupplierId: s2._id });
-  const m3 = await RawMaterial.create({ name: 'Stainless Steel Hinge', category: 'hardware', unit: 'piece', currentStock: 100 });
+  const m1 = await (RawMaterial as any).create({ name: 'Teak Wood', category: 'wood', unit: 'sqft', currentStock: 200, preferredSupplierId: s1._id });
+  const m2 = await (RawMaterial as any).create({ name: 'Velvet Fabric', category: 'fabric', unit: 'meter', currentStock: 50, preferredSupplierId: s2._id });
+  const m3 = await (RawMaterial as any).create({ name: 'Stainless Steel Hinge', category: 'hardware', unit: 'piece', currentStock: 100 });
 
   // 4. Create Products
-  const p1 = await Product.create({
+  const p1 = await (Product as any).create({
     sku: 'SOF-001',
     name: 'Luxury Sofa',
     category: 'sofa',
@@ -54,7 +54,7 @@ async function seed() {
     isManufactured: true,
     currentStock: 5
   });
-  const p2 = await Product.create({
+  const p2 = await (Product as any).create({
     sku: 'TAB-001',
     name: 'Oak Dining Table',
     category: 'table',
@@ -65,7 +65,7 @@ async function seed() {
   });
 
   // 5. Create BOMs
-  await BOM.create({
+  await (BOM as any).create({
     productId: p1._id,
     materials: [
       { materialId: m1._id, quantity: 10, unit: 'sqft' },
@@ -76,8 +76,8 @@ async function seed() {
   });
 
   // 6. Create Customers
-  await Customer.create({ name: 'Rajesh Kumar', phone: '9000011111', customerType: 'retail' });
-  await Customer.create({ name: 'Creative Spaces', phone: '9000022222', customerType: 'designer' });
+  await (Customer as any).create({ name: 'Rajesh Kumar', phone: '9000011111', customerType: 'retail' });
+  await (Customer as any).create({ name: 'Creative Spaces', phone: '9000022222', customerType: 'designer' });
 
   console.log('Seeding completed');
   process.exit(0);

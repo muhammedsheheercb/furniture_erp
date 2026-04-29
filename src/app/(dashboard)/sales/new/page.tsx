@@ -54,6 +54,7 @@ export default function NewSalePage() {
     const [deliveryAddress, setDeliveryAddress] = useState("");
     const [customerMobile, setCustomerMobile] = useState("");
     const [customerAddress, setCustomerAddress] = useState("");
+    const [customerNumber, setCustomerNumber] = useState("");
     
     // Batch selection state
     const [batchSelectionItem, setBatchSelectionItem] = useState<IItem | null>(null);
@@ -123,10 +124,12 @@ export default function NewSalePage() {
             const customer = selCustomer.data as ICustomer;
             setCustomerMobile(customer.mobile || "");
             setCustomerAddress(customer.address || "");
+            setCustomerNumber(customer.customerNumber || "");
             setDeliveryAddress(customer.address || "");
         } else {
             setCustomerMobile("");
             setCustomerAddress("");
+            setCustomerNumber("");
             setDeliveryAddress("");
         }
     }, [selCustomer]);
@@ -245,7 +248,9 @@ export default function NewSalePage() {
         const saleData = {
             customerId: customer._id,
             customerName: customer.name,
-            customerNumber: customer.customerNumber,
+            customerNumber: customerNumber || customer.customerNumber,
+            customerMobile,
+            customerAddress,
             items: cart.map(({ _itemRef: _, ...rest }) => rest),
             subtotal,
             tax,
@@ -273,8 +278,8 @@ export default function NewSalePage() {
                 generateInvoicePDF({
                     number: data.data.saleNumber || "PREVIEW",
                     customerOrSupplier: customer.name,
-                    customerOrSupplierNumber: customer.customerNumber,
-                    customerOrSupplierMobile: customer.mobile,
+                    customerOrSupplierNumber: customerNumber || customer.customerNumber,
+                    customerOrSupplierMobile: customerMobile || customer.mobile,
                     date: date,
                     paymentType: paymentType,
                     items: cart,
@@ -301,17 +306,17 @@ export default function NewSalePage() {
         generateInvoicePDF({
             number: "PREVIEW",
             customerOrSupplier: customer.name,
-            customerOrSupplierNumber: customer.customerNumber,
-            customerOrSupplierMobile: customer.mobile,
+            customerOrSupplierNumber: customerNumber || customer.customerNumber,
+            customerOrSupplierMobile: customerMobile || customer.mobile,
             date: date,
             paymentType: paymentType,
             items: cart,
-            subtotal,
-            tax,
-            total,
+            subtotal: subtotal,
+            tax: tax,
+            total: total,
             type: "Sale",
-            isTaxInvoice,
-            advancePaid,
+            isTaxInvoice: isTaxInvoice,
+            advancePaid: advancePaid,
             customerAddress: customerAddress,
             deliveryAddress: deliveryAddress,
             deliveryDate: deliveryDate,
@@ -334,10 +339,32 @@ export default function NewSalePage() {
                             required
                         />
                         {selCustomer && (
-                            <div className="mt-2 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100 flex flex-col gap-1">
-                                <div className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Customer Details</div>
-                                <div className="text-sm font-medium text-indigo-900">Mobile: {customerMobile || '—'}</div>
-                                <div className="text-sm font-medium text-indigo-900">Address: {customerAddress || '—'}</div>
+                            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Input 
+                                    label="Customer Number" 
+                                    value={customerNumber} 
+                                    readOnly
+                                    className="bg-gray-50"
+                                    onChange={e => setCustomerNumber(e.target.value)} 
+                                />
+                                <Input 
+                                    label="Customer Mobile" 
+                                    value={customerMobile} 
+                                    readOnly
+                                    className="bg-gray-50"
+                                    onChange={e => setCustomerMobile(e.target.value)} 
+                                />
+                                <div className="sm:col-span-2">
+                                    <label className="text-sm font-medium text-gray-700 block mb-1.5">Customer Address</label>
+                                    <textarea
+                                        value={customerAddress}
+                                        onChange={e => setCustomerAddress(e.target.value)}
+                                        placeholder="Customer Address"
+                                        rows={2}
+                                        readOnly
+                                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none text-sm bg-gray-50"
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>

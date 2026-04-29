@@ -280,7 +280,7 @@ export default function QuotationsPage() {
         body: JSON.stringify({ status }),
       });
       if ((await res.json()).success) {
-        toast.success(`Quotation marked as ${status === "sale" ? "Accepted" : status}`);
+        toast.success(`Quotation marked as ${status}`);
         load();
       }
     } catch (err) {
@@ -313,6 +313,7 @@ export default function QuotationsPage() {
           type: "Sale",
           isTaxInvoice: saleData.isTaxInvoice, 
           advancePaid: saleData.advancePaid,
+          customerMobile: saleData.customerMobile,
           customerAddress: saleData.customerAddress,
           deliveryAddress: saleData.deliveryAddress,
           deliveryDate: saleData.deliveryDate
@@ -339,7 +340,8 @@ export default function QuotationsPage() {
           ...f,
           customerId: newCust._id,
           customerName: newCust.name,
-          customerMobile: newCust.mobile || ""
+          customerMobile: newCust.mobile || "",
+          customerAddress: newCust.address || ""
         }));
       }
     } catch (err: any) {
@@ -569,7 +571,7 @@ export default function QuotationsPage() {
                           </button>
                         </>
                       )}
-                      {canEdit && (
+                      {canEdit && q.status === "quote" && (
                         <button
                           onClick={() => openEdit(q)}
                           style={{
@@ -640,7 +642,13 @@ export default function QuotationsPage() {
                 value={form.customerId || ""}
                 onChange={e => {
                   const c = customers.find(x => x._id === e.target.value);
-                  setForm(f => ({ ...f, customerId: e.target.value, customerName: c?.name || "", customerMobile: c?.mobile || "", customerAddress: (c as any)?.address || "" }));
+                  setForm(f => ({ 
+                    ...f, 
+                    customerId: e.target.value, 
+                    customerName: c?.name || "", 
+                    customerMobile: c?.mobile || "", 
+                    customerAddress: c?.address || "" 
+                  }));
                 }}
                 required
                 style={{
@@ -651,7 +659,7 @@ export default function QuotationsPage() {
               >
                 <option value="">Select existing customer</option>
                 {customers.map(c => (
-                  <option key={c._id} value={c._id}>{c.name} ({c.mobile || "No Mobile"})</option>
+                  <option key={c._id} value={c._id}>{c.name}</option>
                 ))}
               </select>
             </div>
@@ -1105,6 +1113,8 @@ export default function QuotationsPage() {
           customerId: convertingQuotation.customerId,
           customerName: convertingQuotation.customerName,
           customerNumber: customers.find(c => c._id === (convertingQuotation.customerId as any)?._id || convertingQuotation.customerId)?.customerNumber || "",
+          customerMobile: convertingQuotation.customerMobile || "",
+          customerAddress: convertingQuotation.customerAddress || "",
           items: convertingQuotation.items.map(it => ({
             itemId: it.itemId,
             itemNumber: it.itemNumber,

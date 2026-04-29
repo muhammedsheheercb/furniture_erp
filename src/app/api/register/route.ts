@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/db";
-import { User } from "@/lib/models/base";
+import { User as UserRaw } from "@/lib/models/base";
+const User = UserRaw as any;
 
 export async function POST(req: Request) {
   try {

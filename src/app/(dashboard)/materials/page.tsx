@@ -97,7 +97,7 @@ export default async function MaterialsPage() {
                   <tr key={i} className="hover:bg-[#FAF8F6] transition-colors">
                     <td className="py-4 px-6 font-semibold text-[#1A1210]">{mat.name}</td>
                     <td className="py-4 px-6">
-                      <Badge variant="outline" className="text-[10px] uppercase font-bold text-[#7A6055] border-[#E5DDD5]">
+                      <Badge variant="default" className="text-[10px] uppercase font-bold text-[#7A6055] border-[#E5DDD5]">
                         {mat.category}
                       </Badge>
                     </td>

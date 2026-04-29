@@ -23,6 +23,13 @@ export const formatDate = (date: Date | string): string => {
   }).format(new Date(date));
 };
 
+export const formatDateInput = (date: Date | string): string => {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "";
+  return d.toISOString().split('T')[0] || "";
+};
+
 export const generateUniqueNumber = (prefix: string): string => {
   const timestamp = Date.now().toString().slice(-6);
   const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');

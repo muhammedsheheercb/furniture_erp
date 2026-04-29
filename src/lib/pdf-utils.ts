@@ -1,5 +1,4 @@
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { formatCurrency, formatDate } from "./utils";
 
 export interface InvoiceItem {
@@ -30,141 +29,326 @@ export interface InvoiceData {
     customerAddress?: string;
     deliveryAddress?: string;
     deliveryDate?: string | Date;
+    customerMobile?: string;
 }
 
+const containsArabic = (text: string) => {
+    const arabicPattern = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+    return arabicPattern.test(text);
+};
+
 export const generateInvoicePDF = (data: InvoiceData) => {
-    const doc = new jsPDF();
+    const isArabic = containsArabic(data.customerAddress || "") || containsArabic(data.customerOrSupplier || "");
+    const dir = isArabic ? "rtl" : "ltr";
     
-    const taxBillName = "DIAMOND HOME";
-    const taxNumber = "12345678";
-    const crNo = "345678";
-    const place = "Oman";
+    const html = `
+        <div style="font-family: Arial, sans-serif; padding: 40px; color: #333; direction: ${dir}; text-align: ${isArabic ? 'right' : 'left'}">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #3F51B5; padding-bottom: 20px; margin-bottom: 30px">
+                <div>
+                    <h1 style="margin: 0; color: #3F51B5; font-size: 28px">DIAMOND HOME</h1>
+                    <h2 style="margin: 5px 0 0; color: #666; font-size: 18px; text-transform: uppercase; letter-spacing: 2px">${data.isTaxInvoice ? 'Tax Invoice' : `${data.type} Invoice`}</h2>
+                    ${data.isTaxInvoice ? `
+                    <div style="margin-top: 10px; font-size: 11px; color: #999">
+                        Tax No: 12345678 | CR No: 345678 | Oman
+                    </div>` : ''}
+                </div>
+                <div style="text-align: right">
+                    <p style="margin: 0; font-weight: bold; color: #3F51B5">Invoice #: ${data.number}</p>
+                    <p style="margin: 5px 0 0; font-size: 14px; color: #999">Date: ${formatDate(data.date)}</p>
+                    <p style="margin: 5px 0 0; font-size: 12px; color: #666; text-transform: uppercase">${data.paymentType}</p>
+                </div>
+            </div>
 
-    doc.setFontSize(18);
-    doc.text(`DIAMOND HOME`, 14, 20);
-    doc.setFontSize(11);
-    if (data.isTaxInvoice) {
-        doc.text(`Tax Invoice`, 14, 28);
-        doc.setFontSize(10);
-        doc.text(`Tax No: ${taxNumber} | CR No: ${crNo} | Place: ${place}`, 14, 34);
-    } else {
-        doc.text(`${data.type} Invoice`, 14, 28);
-    }
+            <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 40px; margin-bottom: 40px">
+                <div style="background: #F8F9FA; padding: 20px; border-radius: 12px; border: 1px solid #E9ECEF">
+                    <h3 style="margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #6C757D; letter-spacing: 1px">${data.type === "Sale" ? "Customer" : "Supplier"} Details</h3>
+                    <p style="margin: 0 0 5px; font-size: 18px; font-weight: bold; color: #212529">${data.customerOrSupplier}</p>
+                    <p style="margin: 0 0 5px; font-size: 14px; color: #495057">ID: ${data.customerOrSupplierNumber}</p>
+                    ${(data.customerOrSupplierMobile || (data as any).customerMobile) ? `<p style="margin: 0 0 5px; font-size: 14px; color: #495057">Mobile: ${data.customerOrSupplierMobile || (data as any).customerMobile}</p>` : ''}
+                    ${data.customerAddress ? `<p style="margin: 0; font-size: 13px; color: #6C757D; line-height: 1.4">${data.customerAddress}</p>` : ''}
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px">
+                    ${data.deliveryDate ? `
+                    <div style="background: #FFF; padding: 12px; border-radius: 8px; border: 1px solid #E9ECEF">
+                        <span style="font-size: 11px; text-transform: uppercase; color: #6C757D">Delivery Date:</span>
+                        <span style="float: right; font-weight: bold">${formatDate(data.deliveryDate)}</span>
+                    </div>` : ''}
+                    ${data.deliveryAddress ? `
+                    <div style="background: #FFF; padding: 12px; border-radius: 8px; border: 1px solid #E9ECEF">
+                        <h4 style="margin: 0 0 5px; font-size: 11px; text-transform: uppercase; color: #6C757D">Delivery Address:</h4>
+                        <p style="margin: 0; font-size: 12px; color: #495057">${data.deliveryAddress}</p>
+                    </div>` : ''}
+                </div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px">
+                <thead>
+                    <tr style="background: #3F51B5; color: #fff">
+                        <th style="padding: 12px; text-align: center; border: 1px solid #3F51B5; width: 40px">#</th>
+                        <th style="padding: 12px; text-align: left; border: 1px solid #3F51B5">Description</th>
+                        <th style="padding: 12px; text-align: center; border: 1px solid #3F51B5; width: 60px">Qty</th>
+                        <th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 100px">Unit Price</th>
+                        <th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 120px">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.items.map((item, i) => `
+                        <tr>
+                            <td style="padding: 12px; text-align: center; border: 1px solid #DEE2E6">${i + 1}</td>
+                            <td style="padding: 12px; border: 1px solid #DEE2E6">
+                                <div style="font-weight: bold; color: #212529">${item.itemName}${item.isFOC ? ' (FOC)' : ''}</div>
+                                <div style="font-size: 11px; color: #6C757D">${item.itemNumber || ''}</div>
+                            </td>
+                            <td style="padding: 12px; text-align: center; border: 1px solid #DEE2E6; font-weight: 500">${item.quantity}</td>
+                            <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6">${item.isFOC ? '0.00' : formatCurrency(item.price)}</td>
+                            <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6; font-weight: bold">${formatCurrency(item.total)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 40px">
+                <div style="width: 250px">
+                    <div style="display: flex; justify-content: space-between; padding: 5px 0">
+                        <span style="color: #6C757D">Subtotal:</span>
+                        <span style="font-weight: 500">${formatCurrency(data.subtotal)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 5px 0">
+                        <span style="color: #6C757D">Tax (${data.tax}%):</span>
+                        <span style="font-weight: 500">${formatCurrency(data.subtotal * (data.tax / 100))}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid #3F51B5; margin-top: 10px">
+                        <span style="font-weight: bold; font-size: 18px; color: #212529">Grand Total:</span>
+                        <span style="font-weight: bold; font-size: 18px; color: #3F51B5">${formatCurrency(data.total)}</span>
+                    </div>
+                    ${data.advancePaid ? `
+                    <div style="display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px">
+                        <span style="color: #6C757D">Advance Paid:</span>
+                        <span style="color: #28A745; font-weight: 500">(-) ${formatCurrency(data.advancePaid)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 5px 0; font-weight: bold; color: #DC3545">
+                        <span>Balance Due:</span>
+                        <span>${formatCurrency(data.total - data.advancePaid)}</span>
+                    </div>` : ''}
+                </div>
+            </div>
+
+            <div style="margin-top: 80px; text-align: center; color: #6C757D; font-size: 12px; border-top: 1px solid #E9ECEF; padding-top: 20px">
+                This is a computer generated invoice.
+            </div>
+        </div>
+    `;
+
+    const element = document.createElement("div");
+    element.innerHTML = html;
     
-    doc.setFontSize(11);
-    const startY = data.isTaxInvoice ? 38 : 38;
-    
-    doc.text(`${data.type === "Sale" ? "Customer" : "Supplier"}: ${data.customerOrSupplier}`, 14, startY);
-    doc.text(`Number: ${data.customerOrSupplierNumber}`, 14, startY + 7);
-    if (data.customerOrSupplierMobile) {
-        doc.text(`Mobile: ${data.customerOrSupplierMobile}`, 14, startY + 14);
-    } else if (data.type === "Sale" && (data as any).customerMobile) {
-        doc.text(`Mobile: ${(data as any).customerMobile}`, 14, startY + 14);
-    }
-    if (data.customerAddress) {
-        doc.setFontSize(9);
-        doc.text(`Address: ${data.customerAddress}`, 14, startY + 21, { maxWidth: 100 });
-        doc.setFontSize(11);
-    }
-
-    doc.text(`Invoice #: ${data.number}`, 120, startY);
-    doc.text(`Date: ${formatDate(data.date)}`, 120, startY + 7);
-    doc.text(`Payment: ${data.paymentType.toUpperCase()}`, 120, startY + 14);
-    if (data.deliveryDate) {
-        doc.text(`Delivery Date: ${formatDate(data.deliveryDate)}`, 120, startY + 21);
-    }
-
-    if (data.deliveryAddress) {
-        doc.setFontSize(9);
-        doc.text(`Delivery Address: ${data.deliveryAddress}`, 14, startY + 28, { maxWidth: 180 });
-        doc.setFontSize(11);
-    }
-
-    const taxAmt = data.subtotal * (data.tax / 100);
-
-    autoTable(doc, {
-        startY: startY + 45,
-        head: [["#", "Item", "Qty", "Price", data.type === "Purchase" ? "Stock Value" : "Total"]],
-        body: data.items.map((item, i) => [
-            i + 1,
-            item.itemName + (item.isFOC ? " (FOC)" : ""),
-            item.quantity,
-            item.isFOC ? "0.00" : formatCurrency(item.price),
-            formatCurrency(item.total)
-        ]),
-        foot: [
-            ["", "", "", "Subtotal", formatCurrency(data.subtotal)],
-            ["", "", "", `Tax (${data.tax}%)`, formatCurrency(taxAmt)],
-            ["", "", "", "Total", formatCurrency(data.total)],
-            ["", "", "", "Advance Paid", formatCurrency(data.advancePaid || 0)],
-            ["", "", "", "Balance Amount", formatCurrency(data.total - (data.advancePaid || 0))],
-        ],
-        styles: { fontSize: 8.5 },
-        headStyles: { fillColor: [63, 81, 181] },
-        footStyles: { fontStyle: "bold" },
+    import("html2pdf.js").then((html2pdf: any) => {
+        const opt = {
+            margin: 0,
+            filename: `invoice-${data.number}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf.default().from(element).set(opt).save();
     });
-
-    doc.save(`invoice-${data.number}.pdf`);
 };
 
 export const generateQuotationPDF = (data: any) => {
-    const doc = new jsPDF();
+    const isArabic = containsArabic(data.notes || "") || containsArabic(data.customerName || "");
+    const dir = isArabic ? "rtl" : "ltr";
     
-    doc.setFontSize(18);
-    doc.text(`DIAMOND HOME`, 14, 20);
-    doc.setFontSize(12);
-    doc.text(`Furniture Quotation`, 14, 28);
-    
-    doc.setFontSize(11);
-    doc.text(`Customer: ${data.customerName}`, 14, 38);
-    if (data.customerMobile) {
-        doc.text(`Mobile: ${data.customerMobile}`, 14, 45);
-    }
-    if (data.customerAddress || (data as any).address) {
-        doc.setFontSize(9);
-        doc.text(`Address: ${data.customerAddress || (data as any).address}`, 14, 52, { maxWidth: 100 });
-        doc.setFontSize(11);
-    }
-    doc.text(`Quotation #: ${data.quotationNumber}`, 120, 38);
-    doc.text(`Date: ${formatDate(data.date)}`, 120, 45);
-    if (data.validUntil) {
-        doc.text(`Valid Until: ${formatDate(data.validUntil)}`, 120, 52);
-    }
-    if (data.deliveryDate) {
-        doc.text(`Delivery Date: ${formatDate(data.deliveryDate)}`, 120, 59);
-    }
+    const html = `
+        <div style="font-family: Arial, sans-serif; padding: 40px; color: #333; direction: ${dir}; text-align: ${isArabic ? 'right' : 'left'}">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #8B5E3C; padding-bottom: 20px; margin-bottom: 30px">
+                <div>
+                    <h1 style="margin: 0; color: #8B5E3C; font-size: 28px">DIAMOND HOME</h1>
+                    <h2 style="margin: 5px 0 0; color: #666; font-size: 18px; text-transform: uppercase; letter-spacing: 2px">Furniture Quotation</h2>
+                </div>
+                <div style="text-align: right">
+                    <p style="margin: 0; font-weight: bold; color: #8B5E3C">Quotation #: ${data.quotationNumber}</p>
+                    <p style="margin: 5px 0 0; font-size: 14px; color: #999">Date: ${formatDate(data.date)}</p>
+                </div>
+            </div>
 
-    autoTable(doc, {
-        startY: 70,
-        head: [["#", "Item", "Color", "Material", "Size", "Qty", "Price", "Total"]],
-        body: data.items.map((item: any, i: number) => [
-            i + 1,
-            item.itemName,
-            item.color || "—",
-            item.material || "—",
-            item.size || "—",
-            item.quantity,
-            formatCurrency(item.price),
-            formatCurrency(item.total)
-        ]),
-        foot: [
-            ["", "", "", "", "", "", "Subtotal", formatCurrency(data.subtotal)],
-            ["", "", "", "", "", "", `Tax (${data.tax || 0}%)`, formatCurrency(data.subtotal * (data.tax || 0) / 100)],
-            ["", "", "", "", "", "", "Total", formatCurrency(data.total)],
-        ],
-        styles: { fontSize: 8.5 },
-        headStyles: { fillColor: [139, 94, 60] }, // Brownish for furniture
-        footStyles: { fontStyle: "bold" },
+            <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 40px; margin-bottom: 40px">
+                <div style="background: #FAF8F6; padding: 20px; border-radius: 12px; border: 1px solid #E5DDD5">
+                    <h3 style="margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #A89080; letter-spacing: 1px">Bill To</h3>
+                    <p style="margin: 0 0 5px; font-size: 18px; font-weight: bold; color: #2C1810">${data.customerName}</p>
+                    ${data.customerMobile ? `<p style="margin: 0 0 5px; font-size: 14px; color: #666">Mobile: ${data.customerMobile}</p>` : ''}
+                    ${(data.customerAddress || data.address) ? `<p style="margin: 0; font-size: 13px; color: #7A6055; line-height: 1.4">${data.customerAddress || data.address}</p>` : ''}
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px">
+                    ${data.validUntil ? `
+                    <div style="background: #FFF; padding: 12px; border-radius: 8px; border: 1px solid #E5DDD5">
+                        <span style="font-size: 11px; text-transform: uppercase; color: #A89080">Valid Until:</span>
+                        <span style="float: right; font-weight: bold">${formatDate(data.validUntil)}</span>
+                    </div>` : ''}
+                    ${data.deliveryDate ? `
+                    <div style="background: #FFF; padding: 12px; border-radius: 8px; border: 1px solid #E5DDD5">
+                        <span style="font-size: 11px; text-transform: uppercase; color: #A89080">Estimated Delivery:</span>
+                        <span style="float: right; font-weight: bold">${formatDate(data.deliveryDate)}</span>
+                    </div>` : ''}
+                </div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px">
+                <thead>
+                    <tr style="background: #8B5E3C; color: #fff">
+                        <th style="padding: 12px; text-align: center; border: 1px solid #8B5E3C; width: 40px">#</th>
+                        <th style="padding: 12px; text-align: left; border: 1px solid #8B5E3C">Description</th>
+                        <th style="padding: 12px; text-align: center; border: 1px solid #8B5E3C">Color/Size</th>
+                        <th style="padding: 12px; text-align: center; border: 1px solid #8B5E3C; width: 60px">Qty</th>
+                        <th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 100px">Unit Price</th>
+                        <th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 120px">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.items.map((item: any, i: number) => `
+                        <tr>
+                            <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5">${i + 1}</td>
+                            <td style="padding: 12px; border: 1px solid #E5DDD5">
+                                <div style="font-weight: bold; color: #2C1810">${item.itemName}</div>
+                                <div style="font-size: 11px; color: #888">${item.material || ''}</div>
+                            </td>
+                            <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5; font-size: 13px; color: #666">
+                                ${item.color || '—'} / ${item.size || '—'}
+                            </td>
+                            <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5; font-weight: 500">${item.quantity}</td>
+                            <td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5">${formatCurrency(item.price)}</td>
+                            <td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5; font-weight: bold">${formatCurrency(item.total)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 40px">
+                <div style="width: 250px">
+                    <div style="display: flex; justify-content: space-between; padding: 5px 0">
+                        <span style="color: #7A6055">Subtotal:</span>
+                        <span style="font-weight: 500">${formatCurrency(data.subtotal)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 5px 0">
+                        <span style="color: #7A6055">VAT (${data.tax || 0}%):</span>
+                        <span style="font-weight: 500">${formatCurrency(data.subtotal * (data.tax || 0) / 100)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid #8B5E3C; margin-top: 10px">
+                        <span style="font-weight: bold; font-size: 18px; color: #2C1810">Grand Total:</span>
+                        <span style="font-weight: bold; font-size: 18px; color: #8B5E3C">${formatCurrency(data.total)}</span>
+                    </div>
+                </div>
+            </div>
+
+            ${data.notes ? `
+            <div style="background: #FAF8F6; padding: 20px; border-radius: 12px; border-left: 4px solid #8B5E3C">
+                <h3 style="margin: 0 0 10px; font-size: 12px; text-transform: uppercase; color: #8B5E3C">Notes & Conditions</h3>
+                <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #444; white-space: pre-wrap">${data.notes}</p>
+            </div>
+            ` : ''}
+
+            <div style="margin-top: 80px; text-align: center; color: #A89080; font-size: 12px; border-top: 1px solid #F0EAE3; padding-top: 20px">
+                Thank you for choosing Diamond Home Furniture
+            </div>
+        </div>
+    `;
+
+    const element = document.createElement("div");
+    element.innerHTML = html;
+    
+    import("html2pdf.js").then((html2pdf: any) => {
+        const opt = {
+            margin: 0,
+            filename: `quotation-${data.quotationNumber}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf.default().from(element).set(opt).save();
     });
+};
 
-    if (data.notes) {
-        const finalY = (doc as any).lastAutoTable.finalY + 10;
-        doc.setFontSize(10);
-        doc.text("Notes:", 14, finalY);
-        doc.setFontSize(9);
-        doc.setTextColor(100);
-        doc.text(data.notes, 14, finalY + 7);
-    }
+export const generateProductionJobCardPDF = (data: any) => {
+    const isArabic = containsArabic(data.remarks || "") || containsArabic(data.customerName || "");
+    const dir = isArabic ? "rtl" : "ltr";
+    
+    const html = `
+        <div style="font-family: Arial, sans-serif; padding: 40px; color: #333; direction: ${dir}; text-align: ${isArabic ? 'right' : 'left'}">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2C1810; padding-bottom: 20px; margin-bottom: 30px">
+                <div>
+                    <h1 style="margin: 0; color: #2C1810; font-size: 28px">DIAMOND HOME</h1>
+                    <h2 style="margin: 5px 0 0; color: #666; font-size: 18px; text-transform: uppercase; letter-spacing: 2px">Production Job Card</h2>
+                </div>
+                <div style="text-align: right">
+                    <p style="margin: 0; font-weight: bold; color: #CA6F1E">Sale #: ${data.saleNumber}</p>
+                    <p style="margin: 5px 0 0; font-size: 14px; color: #999">Date: ${formatDate(new Date())}</p>
+                </div>
+            </div>
 
-    doc.save(`quotation-${data.quotationNumber}.pdf`);
+            <div style="display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 40px">
+                <div style="background: #F9F7F5; padding: 20px; border-radius: 12px; border: 1px solid #E5DDD5">
+                    <h3 style="margin: 0 0 10px; font-size: 12px; text-transform: uppercase; color: #A89080">Customer Details</h3>
+                    <p style="margin: 0; font-size: 18px; font-weight: bold; color: #2C1810">${data.customerName}</p>
+                </div>
+                ${data.deliveryDate ? `
+                <div style="background: #FFF5F5; padding: 20px; border-radius: 12px; border: 1px solid #FED7D7; text-align: right">
+                    <h3 style="margin: 0 0 10px; font-size: 12px; text-transform: uppercase; color: #C53030">Deadline</h3>
+                    <p style="margin: 0; font-size: 18px; font-weight: bold; color: #C53030">${formatDate(data.deliveryDate)}</p>
+                </div>
+                ` : ''}
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px">
+                <thead>
+                    <tr style="background: #2C1810; color: #fff">
+                        <th style="padding: 12px; text-align: center; border: 1px solid #2C1810; width: 40px">#</th>
+                        <th style="padding: 12px; text-align: left; border: 1px solid #2C1810">Item Name</th>
+                        <th style="padding: 12px; text-align: center; border: 1px solid #2C1810">Color</th>
+                        <th style="padding: 12px; text-align: center; border: 1px solid #2C1810">Size</th>
+                        <th style="padding: 12px; text-align: center; border: 1px solid #2C1810; width: 60px">Qty</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.items.map((item: any, i: number) => `
+                        <tr>
+                            <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5">${i + 1}</td>
+                            <td style="padding: 12px; border: 1px solid #E5DDD5">
+                                <div style="font-weight: bold">${item.itemName}</div>
+                                <div style="font-size: 12px; color: #666">${item.material || ''}</div>
+                            </td>
+                            <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5">${item.color || '—'}</td>
+                            <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5">${item.size || '—'}</td>
+                            <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5; font-weight: bold">${item.quantity}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+
+            ${data.remarks ? `
+            <div style="background: #FAF8F6; padding: 25px; border-radius: 12px; border: 1px dashed #C9A84C">
+                <h3 style="margin: 0 0 15px; font-size: 14px; text-transform: uppercase; color: #8B5E3C; border-bottom: 1px solid #E8C97A; padding-bottom: 5px">Special Instructions / Remarks</h3>
+                <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #2C1810; white-space: pre-wrap">${data.remarks}</p>
+            </div>
+            ` : ''}
+
+            <div style="margin-top: 60px; display: flex; justify-content: space-between">
+                <div style="text-align: center; width: 200px; border-top: 1px solid #333; padding-top: 10px; font-size: 12px">Workshop Supervisor</div>
+                <div style="text-align: center; width: 200px; border-top: 1px solid #333; padding-top: 10px; font-size: 12px">Worker Signature</div>
+            </div>
+        </div>
+    `;
+
+    const element = document.createElement("div");
+    element.innerHTML = html;
+    
+    // Use dynamic import to avoid SSR issues if this runs in a context where global window is not yet ready
+    import("html2pdf.js").then((html2pdf: any) => {
+        const opt = {
+            margin: 0,
+            filename: `job-card-${data.saleNumber}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf.default().from(element).set(opt).save();
+    });
 };

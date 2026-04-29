@@ -36,7 +36,7 @@ import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
 
 export default function SalesPage() {
-  const [activeTab, setActiveTab] = useState("orders");
+  const [activeTab, setActiveTab] = useState("convert");
   const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -107,7 +107,11 @@ export default function SalesPage() {
             total: saleData.total,
             type: "Sale",
             isTaxInvoice: saleData.isTaxInvoice,
-            advancePaid: saleData.advancePaid
+            advancePaid: saleData.advancePaid,
+            customerMobile: saleData.customerMobile,
+            customerAddress: saleData.customerAddress,
+            deliveryAddress: saleData.deliveryAddress,
+            deliveryDate: saleData.deliveryDate
           });
 
           setModalOpen(false);
@@ -132,7 +136,12 @@ export default function SalesPage() {
             tax: saleData.tax,
             total: saleData.total,
             type: "Sale",
-            isTaxInvoice: saleData.isTaxInvoice, advancePaid: saleData.advancePaid
+            isTaxInvoice: saleData.isTaxInvoice, 
+            advancePaid: saleData.advancePaid,
+            customerMobile: saleData.customerMobile,
+            customerAddress: saleData.customerAddress,
+            deliveryAddress: saleData.deliveryAddress,
+            deliveryDate: saleData.deliveryDate
           });
 
           setModalOpen(false);
@@ -217,8 +226,11 @@ export default function SalesPage() {
         sale={balanceSale}
       />
 
-      <Tabs defaultValue="orders" className="w-full" onValueChange={setActiveTab}>
+      <Tabs defaultValue="convert" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="bg-[#FAF8F6] border border-[#E5DDD5] p-1 h-12">
+          <TabsTrigger value="convert" className="data-[state=active]:bg-white data-[state=active]:text-[#C9A84C] data-[state=active]:shadow-sm px-6">
+            Ready to Convert
+          </TabsTrigger>
           <TabsTrigger value="orders" className="data-[state=active]:bg-white data-[state=active]:text-[#C9A84C] data-[state=active]:shadow-sm px-6">
             Active Sales Orders
           </TabsTrigger>
@@ -249,6 +261,75 @@ export default function SalesPage() {
             ) : (
               <>
 
+                <TabsContent value="convert" className="m-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-[#FAF8F6] border-b border-[#E5DDD5]">
+                          <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Quote #</th>
+                          <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Customer</th>
+                          <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Total</th>
+                          <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-center">Status</th>
+                          <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#F0EBE5]">
+                        {quotations.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="py-10 text-center text-[#7A6055]">No quotations ready for conversion</td>
+                          </tr>
+                        ) : (
+                          quotations.map((q) => (
+                            <tr key={q._id} className="hover:bg-[#FAF8F6] transition-colors group">
+                              <td className="py-4 px-6 font-mono text-sm text-[#1A1210]">{q.quotationNumber}</td>
+                              <td className="py-4 px-6">
+                                <div className="text-sm font-semibold text-[#1A1210]">{q.customerName}</div>
+                                <div className="text-[10px] text-[#A89080]">{format(new Date(q.date), "dd MMM yyyy")}</div>
+                              </td>
+                              <td className="py-4 px-6 text-sm font-bold text-[#1A1210]"><CurrencySymbol /> {q.total.toLocaleString()}</td>
+                              <td className="py-4 px-6 text-center">
+                                <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100 text-[10px] uppercase">Quotation</Badge>
+                              </td>
+                              <td className="py-4 px-6 text-right">
+                                <Button 
+                                  size="sm" 
+                                  className="h-8 bg-[#2C1810] hover:bg-[#1A0F0A] text-white px-3 text-xs"
+                                  onClick={() => {
+                                    setEditSale({
+                                      customerId: q.customerId?._id || q.customerId,
+                                      customerName: q.customerName,
+                                      customerNumber: q.customerId?.customerNumber || "",
+                                      customerMobile: q.customerMobile || "",
+                                      customerAddress: q.customerAddress || "",
+                                      items: q.items.map((it: any) => ({
+                                        itemId: it.itemId,
+                                        itemNumber: it.itemNumber,
+                                        itemName: it.itemName,
+                                        quantity: it.quantity,
+                                        price: it.price,
+                                        color: it.color,
+                                        material: it.material,
+                                        size: it.size,
+                                        total: it.total
+                                      })),
+                                      total: q.total,
+                                      quotationId: q._id,
+                                      isConversion: true
+                                    });
+                                    setModalOpen(true);
+                                  }}
+                                >
+                                  Convert to Sale
+                                </Button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </TabsContent>
+
                 <TabsContent value="orders" className="m-0">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -266,34 +347,22 @@ export default function SalesPage() {
                       </thead>
                       <tbody className="divide-y divide-[#F0EBE5]">
                         {(() => {
-                          const allOrders = [
-                            ...sales.map(s => ({ ...s, _type: 'sale' })),
-                            ...quotations.map(q => ({ 
-                              ...q, 
-                              _type: 'quote', 
-                              saleNumber: q.quotationNumber,
-                              paymentType: 'Pending'
-                            }))
-                          ]
-                          .filter(item => {
-                            if (item._type === 'quote') return true;
+                          const activeOrders = sales.filter(item => {
                             const balance = item.total - (item.advancePaid || 0);
                             const isDelivered = item.deliveryStatus === "delivered" || item.status === "invoiced";
-                            // If fully paid and delivered, don't show in Active Orders
-                            if (balance <= 0 && isDelivered) return false;
-                            return true;
-                          })
-                          .sort((a, b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime());
+                            // Show in Active if has balance OR not delivered
+                            return balance > 0 || !isDelivered;
+                          }).sort((a, b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime());
 
-                          if (allOrders.length === 0) {
+                          if (activeOrders.length === 0) {
                             return (
                               <tr>
-                                <td colSpan={7} className="py-10 text-center text-[#7A6055]">No sales orders found</td>
+                                <td colSpan={8} className="py-10 text-center text-[#7A6055]">No active sales orders found</td>
                               </tr>
                             );
                           }
 
-                          return allOrders.map((item) => (
+                          return activeOrders.map((item) => (
                             <tr key={item._id} className="hover:bg-[#FAF8F6] transition-colors group">
                               <td className="py-4 px-6 font-mono text-sm text-[#1A1210]">{item.saleNumber}</td>
                               <td className="py-4 px-6">
@@ -324,10 +393,6 @@ export default function SalesPage() {
                               </td>
                               <td className="py-4 px-6 text-center">
                                 {(() => {
-                                  if (item._type === 'quote') {
-                                    return <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100 text-[10px] uppercase">Quotation</Badge>;
-                                  }
-                                  
                                   if (item.deliveryStatus === "delivered" || item.status === "invoiced") {
                                     return <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[10px] uppercase font-bold">Delivered</Badge>;
                                   }
@@ -345,63 +410,29 @@ export default function SalesPage() {
                               </td>
                               <td className="py-4 px-6 text-right">
                                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {item._type === 'quote' ? (
+                                  {(item.total - (item.advancePaid || 0)) > 0 && (
                                     <Button 
-                                      size="sm" 
-                                      className="h-8 bg-[#2C1810] hover:bg-[#1A0F0A] text-white px-3 text-xs"
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="text-[#C9A84C]"
+                                      title="Update Balance"
                                       onClick={() => {
-                                        setEditSale({
-                                          customerId: item.customerId,
-                                          customerName: item.customerName,
-                                          items: item.items.map((it: any) => ({
-                                            itemId: it.itemId,
-                                            itemNumber: it.itemNumber,
-                                            itemName: it.itemName,
-                                            quantity: it.quantity,
-                                            price: it.price,
-                                            color: it.color,
-                                            material: it.material,
-                                            size: it.size,
-                                            total: it.total
-                                          })),
-                                          total: item.total,
-                                          quotationId: item._id,
-                                          isConversion: true
-                                        });
-                                        setModalOpen(true);
+                                        setBalanceSale(item);
+                                        setBalanceModalOpen(true);
                                       }}
                                     >
-                                      Convert to Sale
+                                      <Wallet size={16} />
                                     </Button>
-                                  ) : (
-                                    <>
-                                      {(item.total - (item.advancePaid || 0)) > 0 && (
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
-                                          className="text-[#C9A84C]"
-                                          title="Update Balance"
-                                          onClick={() => {
-                                            setBalanceSale(item);
-                                            setBalanceModalOpen(true);
-                                          }}
-                                        >
-                                          <Wallet size={16} />
-                                        </Button>
-                                      )}
-                                      {item.status !== "delivered" && item.status !== "invoiced" && (
-                                        <>
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="text-rose-500"
-                                            onClick={() => handleDelete(item._id)}
-                                          >
-                                            <Trash2 size={16} />
-                                          </Button>
-                                        </>
-                                      )}
-                                    </>
+                                  )}
+                                  {item.status !== "delivered" && item.status !== "invoiced" && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="text-rose-500"
+                                      onClick={() => handleDelete(item._id)}
+                                    >
+                                      <Trash2 size={16} />
+                                    </Button>
                                   )}
                                 </div>
                               </td>
@@ -500,7 +531,7 @@ function TablePlaceholder({ type }: { type: string }) {
     <div className="flex flex-col items-center justify-center py-12 text-[#A89080]">
       <ClipboardList size={48} className="mb-4 opacity-20" />
       <p>No {type}s found for the current period.</p>
-      <Button variant="link" className="text-[#C9A84C] mt-2">Create your first {type}</Button>
+      <Button variant="ghost" className="text-[#C9A84C] mt-2">Create your first {type}</Button>
     </div>
   );
 }

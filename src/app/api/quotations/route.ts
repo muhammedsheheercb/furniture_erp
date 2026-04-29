@@ -48,6 +48,7 @@ export async function GET(req: NextRequest) {
       Quotation.find(filter)
         .populate("createdBy", "name")
         .populate("updatedBy", "name")
+        .populate("customerId", "customerNumber")
         .sort({ [sortBy]: sortOrder })
         .skip(skip)
         .limit(limit)

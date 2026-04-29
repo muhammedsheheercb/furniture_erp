@@ -25,6 +25,8 @@ export interface ISaleDocument extends Document {
   customerId: mongoose.Types.ObjectId;
   customerName: string;
   customerNumber: string;
+  customerMobile?: string;
+  customerAddress?: string;
   items: {
     itemId?: mongoose.Types.ObjectId;
     itemNumber?: string;
@@ -73,6 +75,8 @@ const SaleSchema = new Schema<ISaleDocument>(
     },
     customerName: { type: String, required: true },
     customerNumber: { type: String },
+    customerMobile: { type: String },
+    customerAddress: { type: String },
     items: { type: [SaleItemSchema], required: true },
     subtotal: { type: Number, required: true, min: 0 },
     tax: { type: Number, default: 0, min: 0 },

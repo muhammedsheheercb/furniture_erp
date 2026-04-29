@@ -10,6 +10,8 @@ import {
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/context/LanguageContext";
+import { Globe } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard" },
@@ -31,6 +33,7 @@ export default function TopNav() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { language, setLanguage, t } = useLanguage();
 
   const userRole = (session?.user?.role || "").toLowerCase();
   const permissions = session?.user?.permissions || {};
@@ -114,7 +117,7 @@ export default function TopNav() {
                 }}
               >
                 <Icon size={15} style={{ flexShrink: 0 }} />
-                <span>{label}</span>
+                <span>{t(label.toLowerCase().replace(/\s+/g, '_'))}</span>
               </Link>
             );
           })}
@@ -122,6 +125,31 @@ export default function TopNav() {
 
         {/* Right: user menu */}
         <div className="flex items-center gap-3 ml-4 flex-shrink-0">
+          {/* Language Switcher */}
+          <button
+            onClick={() => setLanguage(language === "en" ? "ar" : "en")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "6px 12px",
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.07)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              cursor: "pointer",
+              color: "#E8C97A",
+              fontSize: 12,
+              fontWeight: 700,
+              transition: "all 0.15s",
+              textTransform: "uppercase"
+            }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.12)"}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.07)"}
+          >
+            <Globe size={14} />
+            {language === "en" ? "العربية" : "English"}
+          </button>
+
           {/* Desktop user menu */}
           <div className="hidden md:block relative">
             <button
@@ -291,7 +319,7 @@ export default function TopNav() {
                       }}
                     >
                       <Icon size={18} />
-                      <span>{label}</span>
+                      <span>{t(label.toLowerCase().replace(/\s+/g, '_'))}</span>
                     </Link>
                   );
                 })}
@@ -339,7 +367,7 @@ export default function TopNav() {
             >
               <Icon size={20} />
               <span style={{ fontSize: 9, fontWeight: active ? 600 : 400, whiteSpace: "nowrap" }}>
-                {label}
+                {t(label.toLowerCase().replace(/\s+/g, '_'))}
               </span>
             </Link>
           );

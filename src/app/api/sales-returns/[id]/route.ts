@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import SaleReturn from "@/models/SaleReturn";
-import Item from "@/models/Item";
-import Customer from "@/models/Customer";
+import SaleReturnRaw from "@/models/SaleReturn";
+const SaleReturn = SaleReturnRaw as any;
+import ItemRaw from "@/models/Item";
+const Item = ItemRaw as any;
+import CustomerRaw from "@/models/Customer";
+const Customer = CustomerRaw as any;
 import User from "@/models/User";
 import mongoose from "mongoose";
 import { getServerSession } from "next-auth";
