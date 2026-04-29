@@ -198,21 +198,20 @@ export async function POST(req: NextRequest) {
       await item.save({ session: dbSession });
     }
 
-    // 3 — if credit sale, increase customer credit balance and record history
-    if (body.paymentType === "credit") {
+    // 3 — update customer outstanding for any sale that has an unpaid balance
+    const outstandingAmount = Number(body.total) - Number(body.advancePaid || 0);
+    if (outstandingAmount > 0) {
       const customer = await Customer.findById(body.customerId).session(dbSession);
       if (customer) {
         if (!customer.balanceHistory) customer.balanceHistory = [];
-        
-        customer.creditBalance = (customer.creditBalance || 0) + Number(body.total);
+        customer.creditBalance = (customer.creditBalance || 0) + outstandingAmount;
         customer.balanceHistory.push({
           date: new Date(),
-          amount: Number(body.total),
+          amount: outstandingAmount,
           type: "adjustment",
-          paymentMethod: "credit",
-          note: "Sales Entry"
+          paymentMethod: body.paymentType,
+          note: `Sale Entry — ${saleNumber}`,
         });
-
         await customer.save({ session: dbSession });
       }
     }

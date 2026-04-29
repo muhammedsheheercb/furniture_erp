@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Customer from "@/models/Customer";
+import SaleRaw from "@/models/Sale";
+const Sale = SaleRaw as any;
 import User from "@/models/User";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -67,25 +69,37 @@ export async function PUT(req: NextRequest, { params }: Params) {
     if (body.adjustAmount && body.adjustType) {
       const { adjustAmount, adjustType, note, date, paymentMethod } = body;
       const amount = Number(adjustAmount);
-      
+
       const customer = await Customer.findById(id);
       if (!customer) return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
 
       if (!customer.balanceHistory) customer.balanceHistory = [];
-      
+
       const prevCredit = customer.creditBalance || 0;
       customer.creditBalance = adjustType === "add" ? prevCredit + amount : prevCredit - amount;
-      
+
       customer.balanceHistory.push({
         date: date ? new Date(date) : new Date(),
         amount: amount,
-        type: adjustType === "subtract" ? "payment" : "adjustment", 
+        type: adjustType === "subtract" ? "payment" : "adjustment",
         paymentMethod: paymentMethod || "credit",
-        note: note || "Manual Entry"
+        note: note || "Manual Entry",
       });
 
       customer.updatedBy = session.user.id as any;
       await customer.save();
+
+      // If a specific saleId was provided, apply the payment to that sale only
+      if (adjustType === "subtract" && body.saleId) {
+        const sale = await Sale.findById(body.saleId);
+        if (sale && String(sale.customerId) === String(id)) {
+          const saleBalance = sale.total - (sale.advancePaid || 0);
+          const apply = Math.min(saleBalance, amount);
+          sale.advancePaid = (sale.advancePaid || 0) + apply;
+          await sale.save();
+        }
+      }
+
       return NextResponse.json({ success: true, data: customer });
     }
 

@@ -31,26 +31,21 @@ export async function POST(req: NextRequest, { params }: Params) {
     // }
 
     sale.advancePaid = newAdvancePaid;
-    
-    // If balance is fully paid, update status to closed if it was delivered or invoiced?
-    // The user said: "if the balnce amount add full then order order status field ther show order close other wise show balnce amount pending"
-    // I'll update the status in DB if needed, but the UI will definitely show it.
-    
     await sale.save();
 
-    // If it's a credit sale, we might want to update the customer's credit balance too
-    if (sale.paymentType === "credit" && sale.customerId) {
-        await Customer.findByIdAndUpdate(sale.customerId, {
-            $inc: { creditBalance: -amount },
-            $push: {
-                balanceHistory: {
-                    date: new Date(),
-                    amount: -amount,
-                    type: "payment",
-                    note: note || `Payment for Sale #${sale.saleNumber}`
-                }
-            }
-        });
+    // Reduce customer outstanding for ALL payment types
+    if (sale.customerId) {
+      await Customer.findByIdAndUpdate(sale.customerId, {
+        $inc: { creditBalance: -Number(amount) },
+        $push: {
+          balanceHistory: {
+            date: new Date(),
+            amount: -Number(amount),
+            type: "payment",
+            note: note || `Payment received for Sale #${sale.saleNumber}`,
+          },
+        },
+      });
     }
 
     return NextResponse.json({ success: true, data: sale });

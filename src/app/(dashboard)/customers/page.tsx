@@ -45,7 +45,7 @@ export default function CustomersPage() {
   const [balanceModalOpen, setBalanceModalOpen] = useState(false);
   const [ledgerModalOpen, setLedgerModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
-  const [balanceUpdating, setBalanceUpdating] = useState(false);
+  // balanceUpdating removed — modal handles its own loading state
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -128,21 +128,9 @@ export default function CustomersPage() {
     setLedgerModalOpen(true);
   };
 
-  const handleSubmitBalance = async (data: any) => {
-    if (!selectedCustomer) return;
-    setBalanceUpdating(true);
-    try {
-      const res = await axios.put(`/api/customers/${selectedCustomer._id}`, data);
-      if (res.data.success) {
-        toast.success("Balance updated successfully");
-        setBalanceModalOpen(false);
-        fetchCustomers();
-      }
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to update balance");
-    } finally {
-      setBalanceUpdating(false);
-    }
+  const handleBalanceSuccess = () => {
+    setBalanceModalOpen(false);
+    fetchCustomers();
   };
 
   const totalReceivables = customers.reduce((sum, c) => sum + (c.creditBalance || 0), 0);
@@ -185,12 +173,12 @@ export default function CustomersPage() {
         loading={deleting}
       />
 
-      <CustomerBalanceModal 
+      <CustomerBalanceModal
         open={balanceModalOpen}
         onClose={() => setBalanceModalOpen(false)}
-        onSubmit={handleSubmitBalance}
+        onSuccess={handleBalanceSuccess}
         customerName={selectedCustomer?.name || ""}
-        loading={balanceUpdating}
+        customer={selectedCustomer}
       />
 
       <CustomerLedgerModal 
@@ -246,7 +234,7 @@ export default function CustomersPage() {
                             </div>
                             {customer.address && (
                               <div className="flex items-start gap-1.5 text-sm text-[#7A6055] mt-0.5">
-                                <MapPin size={12} className="mt-1 flex-shrink-0" /> 
+                                <MapPin size={12} className="mt-1 shrink-0" /> 
                                 <span className="line-clamp-2">{customer.address}</span>
                               </div>
                             )}

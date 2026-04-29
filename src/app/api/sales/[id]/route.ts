@@ -83,19 +83,20 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
       await Item.findByIdAndUpdate(item.itemId, { $inc: { quantity: item.quantity } });
     }
 
-    // Reverse customer balance impact if it was a credit sale
-    if (sale.paymentType === "credit" && sale.customerId) {
-        await Customer.findByIdAndUpdate(sale.customerId, {
-            $inc: { creditBalance: -sale.total, openingBalance: -sale.total },
-            $push: {
-                balanceHistory: {
-                    date: new Date(),
-                    amount: sale.total,
-                    type: "payment",
-                    note: `CANCELLED Credit Sale #${sale.saleNumber}`
-                }
-            }
-        });
+    // Reverse customer outstanding for any sale that had an unpaid balance
+    const outstandingAtCreation = sale.total - (sale.advancePaid || 0);
+    if (outstandingAtCreation > 0 && sale.customerId) {
+      await Customer.findByIdAndUpdate(sale.customerId, {
+        $inc: { creditBalance: -outstandingAtCreation },
+        $push: {
+          balanceHistory: {
+            date: new Date(),
+            amount: -outstandingAtCreation,
+            type: "adjustment",
+            note: `CANCELLED Sale #${sale.saleNumber} — outstanding reversed`,
+          },
+        },
+      });
     }
 
     await Sale.findByIdAndDelete(id);
