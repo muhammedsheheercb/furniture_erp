@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Purchase from "@/models/Purchase";
-import User from "@/models/User";
 import Item from "@/models/Item";
+import Material from "@/models/Material";
 import Supplier from "@/models/Supplier";
-import { generateUniqueNumber } from "../../../lib/utils";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import mongoose from "mongoose";
@@ -30,12 +29,10 @@ export async function GET(req: NextRequest) {
     const paymentType = searchParams.get("paymentType");
     const skip        = (page - 1) * limit;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const query: Record<string, any> = {};
-
     if (search) {
       query.$or = [
-        { supplierName: { $regex: search, $options: "i" } },
+        { supplierName:   { $regex: search, $options: "i" } },
         { purchaseNumber: { $regex: search, $options: "i" } },
       ];
     }
@@ -46,10 +43,7 @@ export async function GET(req: NextRequest) {
       if (endDate)   query.date.$lte = new Date(endDate);
     } else if (month && year) {
       const m = parseInt(month), y = parseInt(year);
-      query.date = {
-        $gte: new Date(y, m - 1, 1),
-        $lte: new Date(y, m, 0, 23, 59, 59),
-      };
+      query.date = { $gte: new Date(y, m - 1, 1), $lte: new Date(y, m, 0, 23, 59, 59) };
     } else if (year) {
       const y = parseInt(year);
       query.date = { $gte: new Date(y, 0, 1), $lte: new Date(y, 11, 31, 23, 59, 59) };
@@ -67,8 +61,6 @@ export async function GET(req: NextRequest) {
       Purchase.aggregate([{ $match: query }, { $group: { _id: null, total: { $sum: "$total" } } }]),
     ]);
 
-    const totalAmount = totalAmountResult[0]?.total ?? 0;
-
     return NextResponse.json({
       success: true,
       data: purchases,
@@ -76,7 +68,7 @@ export async function GET(req: NextRequest) {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-      totalAmount,
+      totalAmount: totalAmountResult[0]?.total ?? 0,
     });
   } catch (err) {
     console.error("[GET /api/purchases]", err);
@@ -94,74 +86,98 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
     const body = await req.json();
-    const lastPurchase = await Purchase.findOne({ 
-      purchaseNumber: { $regex: /^(pur-|PUR-)\d{3,6}$/ } 
+
+    // Generate purchase number
+    const lastPurchase = await Purchase.findOne({
+      purchaseNumber: { $regex: /^PUR-\d+$/ },
     }).sort({ createdAt: -1 }).session(dbSession);
-    
+
     let nextNum = 100;
-    if (lastPurchase && lastPurchase.purchaseNumber) {
-      const lastNumString = lastPurchase.purchaseNumber.replace("pur-", "").replace("PUR-", "");
-      const lastNum = parseInt(lastNumString);
-      if (!isNaN(lastNum)) {
-        nextNum = lastNum + 1;
-      }
+    if (lastPurchase?.purchaseNumber) {
+      const n = parseInt(lastPurchase.purchaseNumber.replace("PUR-", ""));
+      if (!isNaN(n)) nextNum = n + 1;
     }
     const purchaseNumber = `PUR-${nextNum.toString().padStart(3, "0")}`;
 
-    // 1 — create purchase
-    const [purchase] = await Purchase.create([{ 
-        ...body, 
-        purchaseNumber,
-        createdBy: session.user.id,
-        updatedBy: session.user.id
-    }], { session: dbSession });
+    // Create purchase
+    const [purchase] = await Purchase.create(
+      [{ ...body, purchaseNumber, createdBy: session.user.id, updatedBy: session.user.id }],
+      { session: dbSession }
+    );
     if (!purchase) throw new Error("Failed to create purchase record");
 
-    // 2 — increase item quantities and update dates
-    for (const purchaseItem of body.items) {
-      await Item.findByIdAndUpdate(
-        purchaseItem.itemId,
-        { 
-          $inc: { quantity: purchaseItem.quantity },
-          $set: { 
-            purchaseAmount: purchaseItem.price,
-            salesAmount: purchaseItem.sellingPrice,
-            manufacturingDate: purchaseItem.manufacturingDate,
-            expiryDate: purchaseItem.expiryDate 
+    const batchBase = `B${Date.now()}`;
+
+    // Update stock for each item
+    for (let i = 0; i < body.items.length; i++) {
+      const pi = body.items[i];
+      const batchNumber = pi.batch || `${batchBase}-${i + 1}`;
+
+      if (pi.itemType === "material" && pi.materialId) {
+        await Material.findByIdAndUpdate(
+          pi.materialId,
+          {
+            $inc: { currentStock: pi.quantity },
+            $set: { lastPurchasePrice: pi.price },
+            $push: {
+              batches: {
+                purchaseId:     String(purchase._id),
+                purchaseNumber: purchase.purchaseNumber,
+                batchNumber,
+                purchaseDate:   body.date ? new Date(body.date) : new Date(),
+                purchasePrice:  pi.price,
+                quantity:       pi.quantity,
+                createdAt:      new Date(),
+              },
+            },
           },
-          $push: {
-            batches: {
-              purchaseId: purchase._id,
-              purchaseNumber: purchase.purchaseNumber,
-              batchNumber: purchaseItem.batch,
-              manufacturingDate: purchaseItem.manufacturingDate,
-              expiryDate: purchaseItem.expiryDate,
-              purchasePrice: purchaseItem.price,
-              salePrice: purchaseItem.sellingPrice,
-              quantity: purchaseItem.quantity,
-              createdAt: new Date()
-            }
-          }
-        },
-        { session: dbSession, new: true }
-      );
+          { session: dbSession }
+        );
+      } else if (pi.itemId) {
+        await Item.findByIdAndUpdate(
+          pi.itemId,
+          {
+            $inc: { quantity: pi.quantity },
+            $set: {
+              purchaseAmount:   pi.price,
+              salesAmount:      pi.sellingPrice || pi.price,
+              manufacturingDate: pi.manufacturingDate,
+              expiryDate:       pi.expiryDate,
+            },
+            $push: {
+              batches: {
+                purchaseId:       String(purchase._id),
+                purchaseNumber:   purchase.purchaseNumber,
+                batchNumber,
+                manufacturingDate: pi.manufacturingDate,
+                expiryDate:       pi.expiryDate,
+                purchasePrice:    pi.price,
+                salePrice:        pi.sellingPrice || pi.price,
+                quantity:         pi.quantity,
+                createdAt:        new Date(),
+              },
+            },
+          },
+          { session: dbSession }
+        );
+      }
     }
 
-    // 3 — if credit purchase, increase supplier credit balance and record history
+    // Credit purchase → update supplier balance
     if (body.paymentType === "credit") {
       await Supplier.findByIdAndUpdate(
         body.supplierId,
-        { 
+        {
           $inc: { creditBalance: body.total },
-          $push: { 
+          $push: {
             balanceHistory: {
-              date: new Date(),
-              amount: body.total,
-              type: "adjustment",
-              paymentMethod: "credit", // Explicit mode
-              note: `Purchase #${purchaseNumber}`
-            }
-          }
+              date:          new Date(),
+              amount:        body.total,
+              type:          "adjustment",
+              paymentMethod: "credit",
+              note:          `Purchase #${purchaseNumber}`,
+            },
+          },
         },
         { session: dbSession }
       );

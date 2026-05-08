@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Item from "@/models/Item";
+import Material from "@/models/Material";
 import User from "@/models/User";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -65,9 +66,52 @@ export async function PUT(req: NextRequest, { params }: Params) {
         }
       }, { new: true }).lean();
     } else {
+      // Reverse old BOM deductions, then apply new ones
+      const existing = await Item.findById(id).lean() as any;
+      const oldBom: any[] = (existing?.bom || []).filter(
+        (r: any) => r.materialId && r.batchNumber && Number(r.quantity) > 0
+      );
+      const newBom: any[] = (body.bom || []).filter(
+        (r: any) => r.materialId && r.batchNumber && Number(r.quantity) > 0
+      );
+
+      // Restore old quantities back to materials
+      if (oldBom.length > 0) {
+        await Promise.all(
+          oldBom.map((r: any) =>
+            Material.updateOne(
+              { _id: r.materialId, "batches.batchNumber": r.batchNumber },
+              {
+                $inc: {
+                  currentStock: Number(r.quantity),
+                  "batches.$.quantity": Number(r.quantity),
+                },
+              }
+            )
+          )
+        );
+      }
+
+      // Deduct new BOM quantities
+      if (newBom.length > 0) {
+        await Promise.all(
+          newBom.map((r: any) =>
+            Material.updateOne(
+              { _id: r.materialId, "batches.batchNumber": r.batchNumber },
+              {
+                $inc: {
+                  currentStock: -Number(r.quantity),
+                  "batches.$.quantity": -Number(r.quantity),
+                },
+              }
+            )
+          )
+        );
+      }
+
       item = await Item.findByIdAndUpdate(id, body, { new: true, runValidators: true }).lean();
     }
-    
+
     if (!item) return NextResponse.json({ success: false, error: "Item not found" }, { status: 404 });
 
     return NextResponse.json({ success: true, data: item });

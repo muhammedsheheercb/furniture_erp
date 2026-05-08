@@ -1,189 +1,240 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import Modal from "@/components/ui/Modal";
-import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Package, Layers } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
 
-const itemSchema = z.object({
-  productId: z.string().min(1, "Product is required"),
-  productName: z.string(),
-  quantity: z.coerce.number().min(1, "Qty must be at least 1"),
-  price: z.coerce.number().min(0),
-  total: z.coerce.number(),
-});
-
-const schema = z.object({
-  supplierId: z.string().min(1, "Supplier is required"),
-  supplierName: z.string(),
-  date: z.string(),
-  paymentType: z.enum(["cash", "bank", "credit"]),
-  items: z.array(itemSchema).min(1, "Add at least one item"),
-  total: z.coerce.number(),
-  paidAmount: z.coerce.number().default(0),
-  note: z.string().optional(),
-});
-
-type FormData = z.infer<typeof schema>;
-
-interface PurchaseModalProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
-  purchase?: any | null;
-  loading?: boolean;
+// ── types ─────────────────────────────────────────────────────────────────────
+interface LineItem {
+  id:     string;
+  type:   "product" | "material";
+  refId:  string;
+  name:   string;
+  code:   string;
+  unit:   string;
+  qty:    number;
+  price:  number;
+  total:  number;
 }
 
-export default function PurchaseModal({
-  open,
-  onClose,
-  onSubmit,
-  purchase,
-  loading,
-}: PurchaseModalProps) {
+interface PurchaseModalProps {
+  open:      boolean;
+  onClose:   () => void;
+  onSubmit:  (data: any) => Promise<void>;
+  purchase?: any | null;
+  loading?:  boolean;
+}
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+function uid() { return Math.random().toString(36).slice(2); }
+
+function newProductRow(): LineItem {
+  return { id: uid(), type: "product", refId: "", name: "", code: "", unit: "Piece", qty: 1, price: 0, total: 0 };
+}
+function newMaterialRow(): LineItem {
+  return { id: uid(), type: "material", refId: "", name: "", code: "", unit: "Sheet", qty: 1, price: 0, total: 0 };
+}
+
+// ── component ─────────────────────────────────────────────────────────────────
+export default function PurchaseModal({ open, onClose, onSubmit, purchase, loading }: PurchaseModalProps) {
   const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const isEdit = !!purchase;
+  const [products,  setProducts]  = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
 
-  const {
-    register,
-    control,
-    handleSubmit,
-    watch,
-    setValue,
-    reset,
-    formState: { errors },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema) as any,
-    defaultValues: {
-      supplierId: "",
-      supplierName: "",
-      date: new Date().toISOString().split("T")[0],
-      paymentType: "cash",
-      items: [],
-      total: 0,
-      paidAmount: 0,
-      note: "",
-    },
-  });
+  // header fields
+  const [supplierId,   setSupplierId]   = useState("");
+  const [supplierName, setSupplierName] = useState("");
+  const [supplierNo,   setSupplierNo]   = useState("");
+  const [date,         setDate]         = useState(new Date().toISOString().split("T")[0]);
+  const [paymentType,  setPaymentType]  = useState<"cash"|"bank"|"credit">("cash");
+  const [note,         setNote]         = useState("");
+  const [paidAmount,   setPaidAmount]   = useState(0);
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "items",
-  });
+  // line items
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [formError, setFormError] = useState("");
 
-  const watchedItems = watch("items");
+  const grandTotal = lineItems.reduce((s, i) => s + i.total, 0);
 
+  // ── load reference data ──────────────────────────────────────────────────
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [supRes, prodRes] = await Promise.all([
-          axios.get("/api/suppliers"),
-          axios.get("/api/items"),
-        ]);
-        setSuppliers(supRes.data.data || []);
-        setProducts(prodRes.data.data || []);
-      } catch (err) {
-        toast.error("Failed to load selection data");
-      }
-    };
-    if (open) fetchData();
+    if (!open) return;
+    Promise.all([
+      axios.get("/api/suppliers"),
+      axios.get("/api/items?limit=500"),
+      axios.get("/api/materials"),
+    ])
+      .then(([supRes, prodRes, matRes]) => {
+        setSuppliers(supRes.data.data   || []);
+        setProducts (prodRes.data.data  || []);
+        setMaterials(matRes.data.data   || []);
+      })
+      .catch(() => toast.error("Failed to load reference data"));
   }, [open]);
 
+  // ── populate form when editing ───────────────────────────────────────────
   useEffect(() => {
-    if (open) {
-      if (purchase) {
-        reset({
-          supplierId: purchase.supplierId?._id || purchase.supplierId || "",
-          supplierName: purchase.supplierName,
-          date: new Date(purchase.date).toISOString().split("T")[0],
-          paymentType: purchase.paymentType || "cash",
-          items: purchase.items || [],
-          total: purchase.total || 0,
-          paidAmount: purchase.paidAmount || 0,
-          note: purchase.note || "",
-        });
-      } else {
-        reset({
-          date: new Date().toISOString().split("T")[0],
-          paymentType: "cash",
-          items: [],
-          total: 0,
-          paidAmount: 0,
-        });
-      }
+    if (!open) return;
+    if (purchase) {
+      setSupplierId  (purchase.supplierId?._id || purchase.supplierId || "");
+      setSupplierName(purchase.supplierName    || "");
+      setSupplierNo  (purchase.supplierNumber  || "");
+      setDate        (new Date(purchase.date).toISOString().split("T")[0]);
+      setPaymentType (purchase.paymentType     || "cash");
+      setNote        (purchase.note            || "");
+      setPaidAmount  (purchase.paidAmount      || 0);
+      setLineItems(
+        (purchase.items || []).map((item: any) => ({
+          id:    uid(),
+          type:  item.itemType || "product",
+          refId: item.materialId || item.itemId || "",
+          name:  item.itemName,
+          code:  item.itemNumber,
+          unit:  item.unit || "Piece",
+          qty:   item.quantity,
+          price: item.price,
+          total: item.total,
+        }))
+      );
+    } else {
+      setSupplierId(""); setSupplierName(""); setSupplierNo("");
+      setDate(new Date().toISOString().split("T")[0]);
+      setPaymentType("cash"); setNote(""); setPaidAmount(0);
+      setLineItems([]);
     }
-  }, [open, purchase, reset]);
+    setFormError("");
+  }, [open, purchase]);
 
-  useEffect(() => {
-    const total = watchedItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
-    setValue("total", total);
-  }, [watchedItems, setValue]);
+  // ── line item helpers ────────────────────────────────────────────────────
+  function selectProduct(lineId: string, prodId: string) {
+    const p = products.find((x: any) => x._id === prodId);
+    if (!p) return;
+    setLineItems(prev => prev.map(i => i.id !== lineId ? i : {
+      ...i, refId: prodId, name: p.name, code: p.itemNumber,
+      unit: p.unit || "Piece", price: p.purchaseAmount || 0,
+      total: (p.purchaseAmount || 0) * i.qty,
+    }));
+  }
 
-  const handleProductChange = (index: number, productId: string) => {
-    const product = products.find((p) => p._id === productId);
-    if (product) {
-      setValue(`items.${index}.productName`, product.name);
-      setValue(`items.${index}.price`, product.purchaseAmount || 0);
-      const qty = watchedItems[index]?.quantity || 1;
-      setValue(`items.${index}.total`, (product.purchaseAmount || 0) * qty);
-    }
-  };
+  function selectMaterial(lineId: string, matId: string) {
+    const m = materials.find((x: any) => x._id === matId);
+    if (!m) return;
+    setLineItems(prev => prev.map(i => i.id !== lineId ? i : {
+      ...i, refId: matId, name: m.name, code: m.code,
+      unit: m.unit || "Sheet", price: m.lastPurchasePrice || 0,
+      total: (m.lastPurchasePrice || 0) * i.qty,
+    }));
+  }
 
-  const handleQtyChange = (index: number, qty: number) => {
-    const price = watchedItems[index]?.price || 0;
-    setValue(`items.${index}.total`, price * qty);
-  };
+  function updateField(lineId: string, field: "qty" | "price", value: number) {
+    setLineItems(prev => prev.map(i => {
+      if (i.id !== lineId) return i;
+      const updated = { ...i, [field]: value };
+      updated.total = updated.qty * updated.price;
+      return updated;
+    }));
+  }
+
+  function removeRow(lineId: string) {
+    setLineItems(prev => prev.filter(i => i.id !== lineId));
+  }
+
+  // ── submit ───────────────────────────────────────────────────────────────
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError("");
+
+    if (!supplierId) { setFormError("Please select a supplier."); return; }
+    if (lineItems.length === 0) { setFormError("Add at least one item."); return; }
+    const missing = lineItems.find(i => !i.refId);
+    if (missing) { setFormError("Please select an item for every row."); return; }
+
+    const payload = {
+      supplierId,
+      supplierName,
+      supplierNumber: supplierNo,
+      date,
+      paymentType,
+      note,
+      paidAmount,
+      total: grandTotal,
+      subtotal: grandTotal,
+      items: lineItems.map((i, idx) => ({
+        itemType:    i.type,
+        itemId:      i.type === "product"  ? i.refId : undefined,
+        materialId:  i.type === "material" ? i.refId : undefined,
+        itemNumber:  i.code,
+        itemName:    i.name,
+        unit:        i.unit,
+        quantity:    i.qty,
+        price:       i.price,
+        sellingPrice: i.price,
+        total:       i.total,
+        batch:       `B${Date.now()}${idx}`,
+      })),
+    };
+
+    await onSubmit(payload);
+  }
+
+  // ── render ───────────────────────────────────────────────────────────────
+  const inputCls  = "w-full rounded-lg border border-[#E5DDD5] px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30";
+  const labelCls  = "block text-xs font-semibold text-[#7A6055] mb-1";
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? "Edit Purchase Order" : "New Purchase Order"}
-      className="max-w-4xl"
+      title={purchase ? "Edit Purchase Order" : "New Purchase Order"}
+      size="xl"
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
           <Button form="purchase-form" type="submit" loading={loading}>
-            {isEdit ? "Update Order" : "Create Order"}
+            {purchase ? "Update Order" : "Create Order"}
           </Button>
         </>
       }
     >
-      <form id="purchase-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form id="purchase-form" onSubmit={handleSubmit} className="space-y-6">
+
+        {/* ── Header ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">Supplier</label>
+          {/* Supplier */}
+          <div>
+            <label className={labelCls}>Supplier *</label>
             <select
-              {...register("supplierId")}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              onChange={(e) => {
-                const s = suppliers.find(sup => sup._id === e.target.value);
-                if (s) setValue("supplierName", s.name);
+              value={supplierId}
+              onChange={e => {
+                const s = suppliers.find(x => x._id === e.target.value);
+                setSupplierId(e.target.value);
+                setSupplierName(s?.name           || "");
+                setSupplierNo  (s?.supplierNumber || "");
               }}
+              className={inputCls}
             >
               <option value="">Select Supplier</option>
-              {suppliers.map((s) => (
-                <option key={s._id} value={s._id}>
-                  {s.name}
-                </option>
+              {suppliers.map(s => (
+                <option key={s._id} value={s._id}>{s.name}</option>
               ))}
             </select>
-            {errors.supplierId && <p className="text-xs text-red-500">{errors.supplierId.message}</p>}
           </div>
-          <Input label="Date" type="date" {...register("date")} />
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">Payment Type</label>
+
+          {/* Date */}
+          <div>
+            <label className={labelCls}>Date</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputCls} />
+          </div>
+
+          {/* Payment Type */}
+          <div>
+            <label className={labelCls}>Payment Type</label>
             <select
-              {...register("paymentType")}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              value={paymentType}
+              onChange={e => setPaymentType(e.target.value as any)}
+              className={inputCls}
             >
               <option value="cash">Cash</option>
               <option value="bank">Bank / UPI</option>
@@ -192,92 +243,183 @@ export default function PurchaseModal({
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
+        {/* ── Items Section ──────────────────────────────────────── */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-[#1A1210]">Order Items</h3>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => append({ productId: "", productName: "", quantity: 1, price: 0, total: 0 })}
-            >
-              <Plus size={14} className="mr-1" /> Add Item
-            </Button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setLineItems(p => [...p, newProductRow()])}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-[#1B3A2D] text-white hover:bg-[#163222] transition-colors"
+              >
+                <Package size={14} /> Add Product
+              </button>
+              <button
+                type="button"
+                onClick={() => setLineItems(p => [...p, newMaterialRow()])}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+              >
+                <Layers size={14} /> Add Material
+              </button>
+            </div>
           </div>
 
-          <div className="border rounded-lg overflow-hidden">
+          <div className="rounded-xl border border-[#E5DDD5] overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-[#FAF8F6] border-b border-[#E5DDD5]">
                 <tr>
-                  <th className="py-2 px-3 text-left">Product</th>
-                  <th className="py-2 px-3 text-center w-24">Qty</th>
-                  <th className="py-2 px-3 text-right w-32">Price</th>
-                  <th className="py-2 px-3 text-right w-32">Total</th>
-                  <th className="py-2 px-3 text-center w-12"></th>
+                  <th className="py-2.5 px-3 text-left text-xs font-bold text-[#7A6055] uppercase w-24">Type</th>
+                  <th className="py-2.5 px-3 text-left text-xs font-bold text-[#7A6055] uppercase">Item / Material</th>
+                  <th className="py-2.5 px-3 text-left text-xs font-bold text-[#7A6055] uppercase w-28">Code</th>
+                  <th className="py-2.5 px-3 text-left text-xs font-bold text-[#7A6055] uppercase w-20">Unit</th>
+                  <th className="py-2.5 px-3 text-center text-xs font-bold text-[#7A6055] uppercase w-20">Qty</th>
+                  <th className="py-2.5 px-3 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Price (₹)</th>
+                  <th className="py-2.5 px-3 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Total (₹)</th>
+                  <th className="w-10"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
-                {fields.map((field, index) => (
-                  <tr key={field.id}>
-                    <td className="p-2">
-                      <select
-                        {...register(`items.${index}.productId`)}
-                        className="w-full rounded border-gray-300 text-sm"
-                        onChange={(e) => handleProductChange(index, e.target.value)}
+              <tbody className="divide-y divide-[#F0EBE5]">
+                {lineItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-10 text-center text-[#A89080] text-sm">
+                      Click <strong>Add Product</strong> or <strong>Add Material</strong> to begin
+                    </td>
+                  </tr>
+                ) : lineItems.map(item => (
+                  <tr key={item.id} className="hover:bg-[#FAF8F6]">
+                    {/* Type badge */}
+                    <td className="px-3 py-2">
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
+                        item.type === "product"
+                          ? "bg-[#E8F0EC] text-[#1B3A2D]"
+                          : "bg-amber-50 text-amber-700"
+                      }`}>
+                        {item.type === "product" ? <Package size={10} /> : <Layers size={10} />}
+                        {item.type}
+                      </span>
+                    </td>
+
+                    {/* Item selector */}
+                    <td className="px-3 py-2">
+                      {item.type === "product" ? (
+                        <select
+                          value={item.refId}
+                          onChange={e => selectProduct(item.id, e.target.value)}
+                          className="w-full rounded-lg border border-[#E5DDD5] px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
+                        >
+                          <option value="">— Select Product —</option>
+                          {products.map((p: any) => (
+                            <option key={p._id} value={p._id}>{p.name} ({p.itemNumber})</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <select
+                          value={item.refId}
+                          onChange={e => selectMaterial(item.id, e.target.value)}
+                          className="w-full rounded-lg border border-[#E5DDD5] px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
+                        >
+                          <option value="">— Select Material —</option>
+                          {materials.map((m: any) => (
+                            <option key={m._id} value={m._id}>{m.name} ({m.code})</option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
+
+                    {/* Code (read-only) */}
+                    <td className="px-3 py-2 font-mono text-xs text-[#7A6055]">
+                      {item.code || <span className="text-[#C5B8B0] italic">auto</span>}
+                    </td>
+
+                    {/* Unit (read-only) */}
+                    <td className="px-3 py-2 text-[#7A6055]">{item.unit}</td>
+
+                    {/* Qty */}
+                    <td className="px-3 py-2">
+                      <input
+                        type="number" min={1} value={item.qty}
+                        onChange={e => updateField(item.id, "qty", Math.max(1, Number(e.target.value)))}
+                        className="w-full rounded-lg border border-[#E5DDD5] px-2 py-1.5 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
+                      />
+                    </td>
+
+                    {/* Price */}
+                    <td className="px-3 py-2">
+                      <input
+                        type="number" min={0} step="0.01" value={item.price}
+                        onChange={e => updateField(item.id, "price", Number(e.target.value))}
+                        className="w-full rounded-lg border border-[#E5DDD5] px-2 py-1.5 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
+                      />
+                    </td>
+
+                    {/* Total */}
+                    <td className="px-3 py-2 text-right font-semibold text-[#1A1210]">
+                      {item.total.toLocaleString("en-IN")}
+                    </td>
+
+                    {/* Remove */}
+                    <td className="px-2 py-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => removeRow(item.id)}
+                        className="p-1 rounded-lg hover:bg-rose-50 text-rose-400 hover:text-rose-600 transition-colors"
                       >
-                        <option value="">Select Product</option>
-                        {products.map((p) => (
-                          <option key={p._id} value={p._id}>
-                            {p.name} ({p.itemNumber})
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="p-2">
-                      <input
-                        type="number"
-                        {...register(`items.${index}.quantity`)}
-                        className="w-full rounded border-gray-300 text-sm text-center"
-                        onChange={(e) => handleQtyChange(index, Number(e.target.value))}
-                      />
-                    </td>
-                    <td className="p-2">
-                      <input
-                        type="number"
-                        {...register(`items.${index}.price`)}
-                        className="w-full rounded border-gray-300 text-sm text-right"
-                        readOnly
-                      />
-                    </td>
-                    <td className="p-2 text-right font-medium">
-                      OMR {watchedItems[index]?.total?.toLocaleString() || 0}
-                    </td>
-                    <td className="p-2 text-center">
-                      <button type="button" onClick={() => remove(index)} className="text-red-500">
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                       </button>
                     </td>
                   </tr>
                 ))}
-                {fields.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="py-8 text-center text-gray-400">No items added yet</td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-2 pt-4 border-t">
-          <div className="flex items-center gap-4 text-lg">
-            <span className="font-medium text-gray-600">Grand Total:</span>
-            <span className="font-bold text-2xl text-[#1A1210]">OMR {watch("total")?.toLocaleString() || 0}</span>
+        {/* ── Batch info note ────────────────────────────────────── */}
+        {lineItems.length > 0 && (
+          <p className="text-xs text-[#A89080] -mt-2">
+            Each purchase creates a new batch entry — the same item can be purchased at different prices and tracked separately.
+          </p>
+        )}
+
+        {/* ── Footer ─────────────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 pt-2 border-t border-[#F0EBE5]">
+          {/* Note */}
+          <div className="w-full sm:w-64">
+            <label className={labelCls}>Note (optional)</label>
+            <input
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder="e.g. Received at warehouse"
+              className={inputCls}
+            />
           </div>
-          <div className="w-full max-w-xs">
-            <Input label="Paid Amount (Optional)" type="number" {...register("paidAmount")} />
+
+          {/* Totals */}
+          <div className="space-y-2 text-right">
+            <div className="flex items-center justify-end gap-4">
+              <span className="text-sm text-[#7A6055]">Grand Total</span>
+              <span className="text-2xl font-black text-[#1A1210]">
+                ₹ {grandTotal.toLocaleString("en-IN")}
+              </span>
+            </div>
+            <div className="flex items-center justify-end gap-3">
+              <label className="text-sm text-[#7A6055]">Paid Amount</label>
+              <input
+                type="number" min={0} value={paidAmount}
+                onChange={e => setPaidAmount(Number(e.target.value))}
+                className="w-36 rounded-lg border border-[#E5DDD5] px-3 py-1.5 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
+              />
+            </div>
           </div>
         </div>
+
+        {/* Error */}
+        {formError && (
+          <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-4 py-2">
+            {formError}
+          </p>
+        )}
       </form>
     </Modal>
   );

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Item from "@/models/Item";
+import Material from "@/models/Material";
 import User from "@/models/User";
 import { generateUniqueNumber } from "../../../lib/utils";
 import { getServerSession } from "next-auth";
@@ -105,6 +106,27 @@ export async function POST(req: NextRequest) {
     }
 
     const item = await Item.create(itemData);
+
+    // Deduct BOM quantities from material batch stock (only for manufactured products)
+    const bomRows = (body.bom || []).filter(
+      (r: any) => r.materialId && r.batchNumber && Number(r.quantity) > 0
+    );
+    if (bomRows.length > 0) {
+      await Promise.all(
+        bomRows.map((r: any) =>
+          Material.updateOne(
+            { _id: r.materialId, "batches.batchNumber": r.batchNumber },
+            {
+              $inc: {
+                currentStock: -Number(r.quantity),
+                "batches.$.quantity": -Number(r.quantity),
+              },
+            }
+          )
+        )
+      );
+    }
+
     return NextResponse.json({ success: true, data: item }, { status: 201 });
   } catch (err: unknown) {
     console.error("[POST /api/items]", err);

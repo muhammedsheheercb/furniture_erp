@@ -6,16 +6,14 @@ import {
     LayoutDashboard, Package, Users,
     TruckIcon, LogOut, ReceiptText, Hammer,
     Database, ShoppingBag, Truck, Receipt, Settings,
-    FileText, Bell, User
+    FileText, Bell, User, ChevronDown
 } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 const navItems = [
     { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
-    { href: "/quotations", label: "Quotations", icon: FileText },
-    { href: "/sales",      label: "Sales",      icon: ReceiptText },
-    { href: "/production", label: "Production", icon: Hammer },
-    { href: "/deliveries", label: "Delivery",   icon: Truck },
     { href: "/invoices",   label: "Invoice",    icon: Receipt },
     { href: "/products",   label: "Products",   icon: Package },
     { href: "/customers",  label: "Customers",  icon: Users },
@@ -26,9 +24,104 @@ const navItems = [
     { href: "/settings",   label: "Settings",   icon: Settings },
 ];
 
+const salesDropdownItems = [
+    { href: "/quotations", label: "Quotations", icon: FileText },
+    { href: "/sales",      label: "Sales",      icon: ReceiptText },
+    { href: "/production", label: "Production", icon: Hammer },
+    { href: "/deliveries", label: "Delivery",   icon: Truck },
+];
+
 export default function Navbar() {
     const { data: session } = useSession();
     const pathname = usePathname();
+    const [salesOpen, setSalesOpen] = useState(false);
+    const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const [mounted, setMounted] = useState(false);
+
+    const isSalesActive = salesDropdownItems.some(
+        ({ href }) => pathname === href || pathname.startsWith(href)
+    );
+
+    useEffect(() => { setMounted(true); }, []);
+
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            const target = e.target as Node;
+            const dropdown = document.getElementById("sales-dropdown-portal");
+            if (
+                buttonRef.current && !buttonRef.current.contains(target) &&
+                dropdown && !dropdown.contains(target)
+            ) {
+                setSalesOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    function openDropdown() {
+        if (buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            setDropdownPos({ top: rect.bottom + 6, left: rect.left });
+        }
+        setSalesOpen(prev => !prev);
+    }
+
+    const dropdown = salesOpen && mounted ? createPortal(
+        <div
+            id="sales-dropdown-portal"
+            style={{
+                position: "fixed",
+                top: dropdownPos.top,
+                left: dropdownPos.left,
+                background: "#1B3A2D",
+                border: "1px solid rgba(201,168,76,0.2)",
+                borderRadius: 10,
+                boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
+                minWidth: 190,
+                zIndex: 9999,
+                overflow: "hidden",
+            }}
+        >
+            {salesDropdownItems.map(({ href, label, icon: Icon }) => {
+                const active = pathname === href || pathname.startsWith(href);
+                return (
+                    <Link
+                        key={href}
+                        href={href}
+                        onClick={() => setSalesOpen(false)}
+                        style={{
+                            display: "flex", alignItems: "center", gap: 10,
+                            padding: "12px 18px",
+                            fontSize: 13, fontWeight: 500,
+                            textDecoration: "none",
+                            transition: "background 0.15s",
+                            background: active ? "rgba(201,168,76,0.1)" : "transparent",
+                            color: active ? "#E8C97A" : "rgba(255,255,255,0.75)",
+                            borderLeft: active ? "3px solid #E8C97A" : "3px solid transparent",
+                        }}
+                        onMouseEnter={e => {
+                            if (!active) {
+                                (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
+                                (e.currentTarget as HTMLElement).style.color = "#E8C97A";
+                            }
+                        }}
+                        onMouseLeave={e => {
+                            if (!active) {
+                                (e.currentTarget as HTMLElement).style.background = "transparent";
+                                (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.75)";
+                            }
+                        }}
+                    >
+                        <Icon size={15} color={active ? "#E8C97A" : "rgba(255,255,255,0.4)"} />
+                        <span>{label}</span>
+                    </Link>
+                );
+            })}
+        </div>,
+        document.body
+    ) : null;
 
     return (
         <header style={{ background: "#1B3A2D", color: "#E8F0EC", position: "sticky", top: 0, zIndex: 50, boxShadow: "0 2px 20px rgba(0,0,0,0.25)" }}>
@@ -115,6 +208,49 @@ export default function Navbar() {
             <div style={{ background: "#163222", overflowX: "auto", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
                 className="scrollbar-hide">
                 <nav style={{ maxWidth: 1600, margin: "0 auto", display: "flex", alignItems: "center", padding: "0 8px" }}>
+
+                    {/* Sales Dropdown Button */}
+                    <button
+                        ref={buttonRef}
+                        onClick={openDropdown}
+                        style={{
+                            display: "flex", alignItems: "center", gap: 7,
+                            padding: "10px 14px", borderRadius: 8,
+                            fontSize: 13, fontWeight: 500,
+                            whiteSpace: "nowrap", cursor: "pointer",
+                            transition: "all 0.15s",
+                            margin: "4px 1px",
+                            background: isSalesActive || salesOpen ? "rgba(201,168,76,0.12)" : "transparent",
+                            color: isSalesActive || salesOpen ? "#E8C97A" : "rgba(255,255,255,0.55)",
+                            border: isSalesActive || salesOpen ? "1px solid rgba(201,168,76,0.25)" : "1px solid transparent",
+                        }}
+                        onMouseEnter={e => {
+                            if (!isSalesActive && !salesOpen) {
+                                e.currentTarget.style.color = "#E8C97A";
+                                e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+                            }
+                        }}
+                        onMouseLeave={e => {
+                            if (!isSalesActive && !salesOpen) {
+                                e.currentTarget.style.color = "rgba(255,255,255,0.55)";
+                                e.currentTarget.style.background = "transparent";
+                            }
+                        }}
+                    >
+                        <ReceiptText size={16} color={isSalesActive || salesOpen ? "#E8C97A" : "rgba(255,255,255,0.35)"} />
+                        <span>Sales</span>
+                        <ChevronDown
+                            size={14}
+                            style={{
+                                transition: "transform 0.2s",
+                                transform: salesOpen ? "rotate(180deg)" : "rotate(0deg)",
+                                marginLeft: 2,
+                                color: isSalesActive || salesOpen ? "#E8C97A" : "rgba(255,255,255,0.35)",
+                            }}
+                        />
+                    </button>
+
+                    {/* Remaining nav items */}
                     {navItems.map(({ href, label, icon: Icon }) => {
                         const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
                         return (
@@ -152,6 +288,8 @@ export default function Navbar() {
                     })}
                 </nav>
             </div>
+
+            {dropdown}
         </header>
     );
 }
