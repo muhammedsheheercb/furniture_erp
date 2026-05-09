@@ -5,14 +5,33 @@ export interface IProductionDocument extends Document {
   saleNumber: string;
   customerId: mongoose.Types.ObjectId;
   customerName: string;
-  items: {
-    itemName: string;
-    quantity: number;
-    color?: string;
-    material?: string;
-    size?: string;
-    status: "pending" | "processing" | "finished";
-  }[];
+    items: {
+      itemName: string;
+      quantity: number;
+      color?: string;
+      material?: string;
+      size?: string;
+      status: "pending" | "processing" | "finished";
+      dimensions?: {
+        width?: number;
+        height?: number;
+        depth?: number;
+        weight?: number;
+        unit?: string;
+      };
+      bom?: {
+        materialId: string;
+        materialName: string;
+        materialCode: string;
+        unit: string;
+        quantity: number;
+      }[];
+      variants?: {
+        colors: string[];
+        sizes: string[];
+        finishes: string[];
+      };
+    }[];
   status: "pending" | "processing" | "finished";
   remarks?: string;
   deliveryDate?: Date;
@@ -34,6 +53,27 @@ const ProductionSchema = new Schema<IProductionDocument>(
         material: String,
         size: String,
         status: { type: String, enum: ["pending", "processing", "finished"], default: "pending" },
+        dimensions: {
+          width: Number,
+          height: Number,
+          depth: Number,
+          weight: Number,
+          unit: String
+        },
+        bom: [
+          {
+            materialId: { type: Schema.Types.ObjectId, ref: "Item" },
+            materialName: String,
+            materialCode: String,
+            unit: String,
+            quantity: Number
+          }
+        ],
+        variants: {
+          colors: [String],
+          sizes: [String],
+          finishes: [String]
+        }
       },
     ],
     status: { type: String, enum: ["pending", "processing", "finished"], default: "pending" },

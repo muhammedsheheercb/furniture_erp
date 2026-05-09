@@ -65,6 +65,7 @@ export default function ProductionPage() {
         status: "processing",
         remarks: data.remarks,
         deliveryDate: data.deliveryDate,
+        items: data.items,
       });
       if (res.data.success) {
         toast.success("Production started");
@@ -81,6 +82,8 @@ export default function ProductionPage() {
   const inProgress = productions.filter(p => p.status === "pending" || p.status === "processing");
   const finished   = productions.filter(p => p.status === "finished");
 
+  const [activeTab, setActiveTab] = useState<"pending" | "finished">("pending");
+
   const stages = [
     { name: "Pending",    icon: Clock,        color: "bg-gray-400",    key: "pending" },
     { name: "Processing", icon: PlayCircle,   color: "bg-amber-500",   key: "processing" },
@@ -89,7 +92,7 @@ export default function ProductionPage() {
 
   function ProductionCard({ prod }: { prod: any }) {
     return (
-      <div className="p-4 rounded-xl border border-[#E5DDD5] hover:border-[#C9A84C] transition-colors">
+      <div className="p-4 rounded-xl border border-[#E5DDD5] hover:border-[#C9A84C] transition-colors bg-white">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="h-12 w-12 rounded bg-[#FAF8F6] flex items-center justify-center text-[#8B5E3C] shrink-0">
@@ -137,26 +140,41 @@ export default function ProductionPage() {
     );
   }
 
+  const filteredProductions = productions.filter(p => {
+    if (activeTab === "pending") return p.status === "pending" || p.status === "processing";
+    return p.status === "finished";
+  });
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-extrabold text-[#1A1210]">Production Control</h2>
-        <p className="text-[#7A6055]">Monitor manufacturing stages for furniture orders.</p>
-      </div>
-
-      {/* Stage counters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {stages.map(stage => (
-          <Card key={stage.name} className="border-[#E5DDD5] text-center p-4">
-            <div className={`h-10 w-10 ${stage.color} rounded-full mx-auto mb-3 flex items-center justify-center text-white shadow-lg`}>
-              <stage.icon size={20} />
-            </div>
-            <p className="text-xs font-bold text-[#7A6055] uppercase tracking-tighter">{stage.name}</p>
-            <p className="text-xl font-bold text-[#1A1210] mt-1">
-              {productions.filter(p => p.status === stage.key).length}
-            </p>
-          </Card>
-        ))}
+      <div className="flex justify-between items-end">
+        <div>
+          <h2 className="text-3xl font-extrabold text-[#1A1210]">Production Control</h2>
+          <p className="text-[#7A6055]">Monitor manufacturing stages for furniture orders.</p>
+        </div>
+        
+        <div className="flex bg-[#F5F2EA] p-1 rounded-xl gap-1">
+          <button
+            onClick={() => setActiveTab("pending")}
+            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
+              activeTab === "pending" 
+                ? "bg-[#2C1810] text-white shadow-md" 
+                : "text-[#7A6055] hover:text-[#1A1210]"
+            }`}
+          >
+            Pending Production ({productions.filter(p => p.status === "pending" || p.status === "processing").length})
+          </button>
+          <button
+            onClick={() => setActiveTab("finished")}
+            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
+              activeTab === "finished" 
+                ? "bg-[#1E8449] text-white shadow-md" 
+                : "text-[#7A6055] hover:text-[#1A1210]"
+            }`}
+          >
+            Finished Production ({productions.filter(p => p.status === "finished").length})
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -164,52 +182,15 @@ export default function ProductionPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C9A84C]"></div>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* ── In Progress ──────────────────────────────────── */}
-          <Card className="border-[#E5DDD5]">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-amber-500"></div>
-                <CardTitle className="text-lg">Start Work / In Progress</CardTitle>
-                <span className="ml-1 text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                  {inProgress.length}
-                </span>
-              </div>
-              <CardDescription>Orders waiting to start or currently being manufactured.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {inProgress.length === 0 ? (
-                <div className="py-8 text-center text-[#A89080] text-sm">No pending or in-progress orders.</div>
-              ) : (
-                <div className="space-y-4">
-                  {inProgress.map(prod => <ProductionCard key={prod._id} prod={prod} />)}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* ── Finished ─────────────────────────────────────── */}
-          <Card className="border-[#E5DDD5]">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-emerald-500"></div>
-                <CardTitle className="text-lg">Finished</CardTitle>
-                <span className="ml-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  {finished.length}
-                </span>
-              </div>
-              <CardDescription>Completed production orders ready for delivery.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {finished.length === 0 ? (
-                <div className="py-8 text-center text-[#A89080] text-sm">No finished orders yet.</div>
-              ) : (
-                <div className="space-y-4">
-                  {finished.map(prod => <ProductionCard key={prod._id} prod={prod} />)}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <div className="space-y-4">
+          {filteredProductions.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-[#E5DDD5] py-20 text-center">
+              <Hammer size={48} className="mx-auto text-[#E5DDD5] mb-4" />
+              <p className="text-[#A89080]">No {activeTab} production orders found.</p>
+            </div>
+          ) : (
+            filteredProductions.map(prod => <ProductionCard key={prod._id} prod={prod} />)
+          )}
         </div>
       )}
 

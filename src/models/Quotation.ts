@@ -64,6 +64,27 @@ const QuotationSchema = new Schema<IQuotationDocument>(
         material: String,
         size: String,
         total: { type: Number, required: true },
+        dimensions: {
+          width: Number,
+          height: Number,
+          depth: Number,
+          weight: Number,
+          unit: String
+        },
+        bom: [
+          {
+            materialId: { type: Schema.Types.ObjectId, ref: "Item" },
+            materialName: String,
+            materialCode: String,
+            unit: String,
+            quantity: Number
+          }
+        ],
+        variants: {
+          colors: [String],
+          sizes: [String],
+          finishes: [String]
+        }
       },
     ],
     subtotal: { type: Number, required: true, default: 0 },

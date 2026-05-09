@@ -14,7 +14,9 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    const { searchParams } = new URL(req.url);
+    const url = new URL(req.url, "http://localhost");
+    const { searchParams } = url;
+
     const search    = searchParams.get("search") || "";
     const page      = parseInt(searchParams.get("page") || "1");
     const limit     = parseInt(searchParams.get("limit") || "10");
@@ -103,9 +105,26 @@ export async function GET(req: NextRequest) {
       }
     ];
 
+    if (!Customer) {
+      throw new Error("Customer model not initialized");
+    }
+
     const results = await Customer.aggregate(pipeline);
-    const customers = results[0].data;
-    const total = results[0].metadata[0]?.total || 0;
+    
+    if (!results || results.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+      });
+    }
+
+    const customers = results[0].data || [];
+    const total = results[0].metadata && results[0].metadata[0] ? results[0].metadata[0].total : 0;
+
 
     return NextResponse.json({
       success: true,
@@ -115,10 +134,16 @@ export async function GET(req: NextRequest) {
       limit,
       totalPages: Math.ceil(total / limit),
     });
-  } catch (err) {
-    console.error("[GET /api/customers]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+  } catch (err: any) {
+    console.error("[GET /api/customers] FATAL ERROR:", err);
+    return NextResponse.json({ 
+      success: false, 
+      error: "Server error", 
+      details: err.message,
+      stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+    }, { status: 500 });
   }
+
 }
 
 // POST /api/customers

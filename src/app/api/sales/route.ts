@@ -230,10 +230,14 @@ export async function POST(req: NextRequest) {
             color: it.color,
             material: it.material,
             size: it.size,
+            dimensions: it.dimensions,
+            bom: it.bom,
+            variants: it.variants,
             status: productionStatus,
         })),
         status: productionStatus,
-        remarks: body.remarks || ""
+        remarks: body.remarks || "",
+        deliveryDate: body.deliveryDate ? new Date(body.deliveryDate) : undefined,
     }], { session: dbSession });
 
     // 5 — for direct sales, create a delivery entry immediately (pending)

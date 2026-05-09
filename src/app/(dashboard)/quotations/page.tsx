@@ -69,13 +69,8 @@ function deliveryBadge(deliveryStatus: DeliveryStatus, deliveryDate?: string) {
   );
 }
 
-const emptyItem = (): IQuotationItem => ({
-  itemName: "", description: "", unit: "pcs", quantity: 1, price: 0, discount: 0, 
-  color: "", material: "", size: "", total: 0
-});
-
 const emptyForm = (): IQuotationForm => ({
-  customerName: "", customerMobile: "", customerAddress: "", items: [emptyItem()],
+  customerName: "", customerMobile: "", customerAddress: "", items: [],
   subtotal: 0, tax: 0, discount: 0, total: 0,
   status: "quote", deliveryStatus: "pending",
   deliveryDate: "", notes: "", validUntil: "",
@@ -131,6 +126,9 @@ export default function QuotationsPage() {
 
   const [itemModalOpen, setItemModalOpen] = useState(false);
   const [editingItemIdx, setEditingItemIdx] = useState<number | null>(null);
+  
+  const [statusConfirm, setStatusConfirm] = useState<{ id: string, status: QuotationStatus } | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -187,6 +185,14 @@ export default function QuotationsPage() {
     setItemModalOpen(true);
   };
 
+  const addBlankItem = () => {
+    const newItem: IQuotationItem = {
+      itemName: "", description: "", unit: "pcs", quantity: 1, price: 0, discount: 0, 
+      color: "", material: "", size: "", total: 0
+    };
+    recalc([...form.items, newItem], taxPct, discPct);
+  };
+
   const handleItemModalSubmit = (item: IQuotationItem) => {
     if (editingItemIdx !== null) {
       const items = form.items.map((it, i) => i === editingItemIdx ? item : it);
@@ -225,8 +231,14 @@ export default function QuotationsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.customerName.trim()) return toast.error("Customer name is required");
-    if (form.items.length === 0) return toast.error("Add at least one item");
-    if (form.items.some(i => !i.itemName.trim())) return toast.error("All items must have a name");
+    if (!form.customerMobile?.trim()) return toast.error("Mobile number is required");
+    if (!form.customerAddress?.trim()) return toast.error("Customer address is required");
+    if (!form.date) return toast.error("Date is required");
+    if (!form.validUntil) return toast.error("Valid Until date is required");
+    if (form.items.length === 0) return toast.error("Please add at least one product");
+    
+    if (form.items.some(i => !i.itemName.trim())) return toast.error("All products must have a name");
+    if (form.items.some(i => (i.price || 0) <= 0)) return toast.error("All products must have a valid price (> 0)");
 
     // If reject is clicked, we might want to just delete it, but the user said 
     // "reject click the quation remove this form" -> maybe delete from DB?
@@ -248,7 +260,10 @@ export default function QuotationsPage() {
         load();
         // Automatically download PDF after saving
         if (data.data) {
-          generateQuotationPDF(data.data);
+          // Add a tiny delay to ensure everything is settled before PDF generation
+          setTimeout(() => {
+            generateQuotationPDF(data.data);
+          }, 500);
         }
       } else {
         toast.error(data.error || "Failed to save");
@@ -258,50 +273,40 @@ export default function QuotationsPage() {
     }
   };
 
-  const handleStatusUpdate = async (id: string, status: QuotationStatus) => {
-    if (status === "reject") {
-      if (!confirm("Are you sure you want to reject and remove this quotation?")) return;
-      try {
+  const handleStatusUpdate = async () => {
+    if (!statusConfirm) return;
+    const { id, status } = statusConfirm;
+    
+    setUpdatingStatus(true);
+    try {
+      if (status === "reject") {
         const res = await fetch(`/api/quotations/${id}`, { method: "DELETE" });
         if ((await res.json()).success) {
           toast.success("Quotation removed");
           load();
         }
-      } catch (err) {
-        toast.error("Failed to remove");
-      }
-      return;
-    }
-
-    if (status === "sale") {
-      try {
+      } else if (status === "sale") {
+        const q = quotations.find(qt => qt._id === id);
+        if (q) {
+          setConvertingQuotation(q);
+          setSaleModalOpen(true);
+        }
+      } else {
         const res = await fetch(`/api/quotations/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "sale" }),
+          body: JSON.stringify({ status }),
         });
         if ((await res.json()).success) {
-          toast.success("Quotation accepted! Redirecting to Sales...");
-          router.push("/sales");
+          toast.success(`Quotation marked as ${status}`);
+          load();
         }
-      } catch (err) {
-        toast.error("Failed to accept quotation");
       }
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/quotations/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if ((await res.json()).success) {
-        toast.success(`Quotation marked as ${status}`);
-        load();
-      }
+      setStatusConfirm(null);
     } catch (err) {
       toast.error("Failed to update status");
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -326,6 +331,7 @@ export default function QuotationsPage() {
           items: saleData.items,
           subtotal: saleData.subtotal,
           tax: saleData.tax,
+          discount: saleData.discount,
           total: saleData.total,
           type: "Sale",
           isTaxInvoice: saleData.isTaxInvoice, 
@@ -484,6 +490,8 @@ export default function QuotationsPage() {
               <th className="th">Customer</th>
               <th className="th">Date</th>
               <th className="th">Items</th>
+              <th className="th text-right">Subtotal</th>
+              <th className="th text-right">Discount</th>
               <th className="th text-right">Total</th>
               <th className="th text-center">Status</th>
 
@@ -542,6 +550,22 @@ export default function QuotationsPage() {
                     </span>
                   </td>
                   <td className="td text-right">
+                    <span style={{ color: "#7A6055", fontSize: 13 }}>
+                      {formatCurrency(q.subtotal)}
+                    </span>
+                  </td>
+                  <td className="td text-right">
+                    {(q.discount || 0) > 0 ? (
+                      <span style={{ color: "#C0392B", fontWeight: 600, fontSize: 12 }}>
+                        -{formatCurrency(q.subtotal * (q.discount || 0) / 100)}
+                        <br/>
+                        <small>({q.discount}%)</small>
+                      </span>
+                    ) : (
+                      <span style={{ color: "#A89080", fontSize: 12 }}>—</span>
+                    )}
+                  </td>
+                  <td className="td text-right">
                     <span style={{ fontWeight: 700, color: "#2C1810", fontSize: 14 }}>
                       {formatCurrency(q.total)}
                     </span>
@@ -565,7 +589,7 @@ export default function QuotationsPage() {
                       {q.status === "quote" && (
                         <>
                           <button
-                            onClick={() => handleStatusUpdate(q._id, "sale")}
+                            onClick={() => setStatusConfirm({ id: q._id, status: "sale" })}
                             style={{
                               padding: "6px", borderRadius: 8, border: "1px solid #A9DFBF",
                               background: "#EAFAF1", cursor: "pointer", color: "#1E8449",
@@ -576,7 +600,7 @@ export default function QuotationsPage() {
                             <Check size={14} />
                           </button>
                           <button
-                            onClick={() => handleStatusUpdate(q._id, "reject")}
+                            onClick={() => setStatusConfirm({ id: q._id, status: "reject" })}
                             style={{
                               padding: "6px", borderRadius: 8, border: "1px solid #F5B7B1",
                               background: "#FDEDEC", cursor: "pointer", color: "#C0392B",
@@ -682,42 +706,45 @@ export default function QuotationsPage() {
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
-                MOBILE
+                MOBILE *
               </label>
               <input
                 value={form.customerMobile}
                 onChange={e => setForm(f => ({ ...f, customerMobile: e.target.value }))}
+                required
                 style={{
                   width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
                   padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
                   background: "#FAF8F6"
                 }}
-                placeholder="Mobile number"
+                placeholder="Mobile number *"
               />
             </div>
             <div style={{ gridColumn: "span 2" }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
-                CUSTOMER ADDRESS
+                CUSTOMER ADDRESS *
               </label>
               <textarea
                 value={form.customerAddress}
                 onChange={e => setForm(f => ({ ...f, customerAddress: e.target.value }))}
+                required
                 style={{
                   width: "100%", height: 60, border: "1.5px solid #E5DDD5", borderRadius: 8,
                   padding: "10px 12px", fontSize: 13, color: "#1A1210", outline: "none",
                   background: "#FAF8F6", resize: "none"
                 }}
-                placeholder="Customer address"
+                placeholder="Customer address *"
               />
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
-                DATE
+                DATE *
               </label>
               <input
                 type="date"
                 value={form.date}
                 onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                required
                 style={{
                   width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
                   padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
@@ -727,12 +754,13 @@ export default function QuotationsPage() {
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
-                VALID UNTIL
+                VALID UNTIL *
               </label>
               <input
                 type="date"
                 value={form.validUntil}
                 onChange={e => setForm(f => ({ ...f, validUntil: e.target.value }))}
+                required
                 style={{
                   width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
                   padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
@@ -769,27 +797,54 @@ export default function QuotationsPage() {
           <div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: "#5A4035", letterSpacing: "0.04em" }}>
-                FURNITURE ITEMS
+                PRODUCT DETAILS
               </label>
-              <button
-                type="button"
-                onClick={addItem}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6, padding: "5px 12px",
-                  borderRadius: 8, border: "1.5px solid #E5DDD5", background: "#fff",
-                  fontSize: 12, fontWeight: 600, color: "#2C1810", cursor: "pointer"
-                }}
-              >
-                <Plus size={13} /> Add Item
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button
+                    type="button"
+                    onClick={addBlankItem}
+                    style={{
+                    display: "flex", alignItems: "center", gap: 6, padding: "5px 12px",
+                    borderRadius: 8, border: "1.5px solid #E5DDD5", background: "#fff",
+                    fontSize: 12, fontWeight: 600, color: "#7A6055", cursor: "pointer"
+                    }}
+                >
+                    <Plus size={13} /> Add Blank Row
+                </button>
+                <button
+                    type="button"
+                    onClick={addItem}
+                    style={{
+                    display: "flex", alignItems: "center", gap: 6, padding: "5px 12px",
+                    borderRadius: 8, border: "1.5px solid #2C1810", background: "#2C1810",
+                    fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer"
+                    }}
+                >
+                    <Plus size={13} /> Add Product
+                </button>
+              </div>
             </div>
+
+            {form.items.length === 0 && (
+                <div style={{ 
+                    padding: "30px", border: "2px dashed #E5DDD5", borderRadius: 12, 
+                    textAlign: "center", background: "#FAF8F6", marginBottom: 20
+                }}>
+                    <p style={{ color: "#7A6055", fontSize: 13, marginBottom: 12 }}>No products added to this quotation yet.</p>
+                    <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+                        <button type="button" onClick={addBlankItem} style={{ fontSize: 12, color: "#C9A84C", fontWeight: 700, background: "none", border: "none", cursor: "pointer" }}>ADD BLANK ROW</button>
+                        <span style={{ color: "#E5DDD5" }}>|</span>
+                        <button type="button" onClick={addItem} style={{ fontSize: 12, color: "#C9A84C", fontWeight: 700, background: "none", border: "none", cursor: "pointer" }}>SELECT FROM PRODUCTS</button>
+                    </div>
+                </div>
+            )}
 
             {/* Item headers - hidden on mobile */}
             <div className="hidden md:grid" style={{
-              gridTemplateColumns: "1.5fr 1fr 1fr 1fr 80px 80px 80px 80px 80px 30px",
+              gridTemplateColumns: "1.5fr 1fr 80px 80px 80px 80px 30px",
               gap: 8, marginBottom: 6, padding: "0 4px"
             }}>
-              {["Item", "Color", "Material", "Size", "Unit", "Qty", "Price", "Disc%", "Total", ""].map(h => (
+              {["Product", "Color", "Qty", "Price", "Disc%", "Total", ""].map(h => (
                 <div key={h} style={{ fontSize: 10, fontWeight: 700, color: "#A89080", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: ["Qty", "Price", "Disc%", "Total"].includes(h) ? "right" : "left" }}>{h}</div>
               ))}
             </div>
@@ -806,14 +861,14 @@ export default function QuotationsPage() {
                   background: "#FAF8F6", borderRadius: 10, border: "1px solid #E5DDD5",
                   position: "relative"
                 }}
-                className="md:!grid md:!grid-cols-[1.5fr_1fr_1fr_1fr_80px_80px_80px_80px_80px_30px] md:!bg-transparent md:!border-none md:!p-0 md:!gap-2 md:!mb-2"
+                className="md:!grid md:!grid-cols-[1.5fr_1fr_80px_80px_80px_80px_30px] md:!bg-transparent md:!border-none md:!p-0 md:!gap-2 md:!mb-2"
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: 4, gridColumn: "span 2" }} className="md:!col-span-1">
-                  <label className="md:hidden" style={{ fontSize: 10, fontWeight: 700, color: "#A89080" }}>ITEM NAME</label>
+                  <label className="md:hidden" style={{ fontSize: 10, fontWeight: 700, color: "#A89080" }}>PRODUCT NAME</label>
                   <input
                     value={item.itemName}
                     onChange={e => updateItem(idx, "itemName", e.target.value)}
-                    placeholder="Item name *"
+                    placeholder="Product name *"
                     style={{
                       width: "100%", height: 36, border: "1.5px solid #E5DDD5", borderRadius: 7,
                       padding: "0 10px", fontSize: 13, color: "#1A1210", outline: "none",
@@ -821,7 +876,7 @@ export default function QuotationsPage() {
                     }}
                   />
                 </div>
-                {(["color", "material", "size"] as const).map(field => (
+                {(["color"] as const).map(field => (
                   <div key={field} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     <label className="md:hidden" style={{ fontSize: 10, fontWeight: 700, color: "#A89080" }}>{field.toUpperCase()}</label>
                     <input
@@ -836,20 +891,6 @@ export default function QuotationsPage() {
                     />
                   </div>
                 ))}
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <label className="md:hidden" style={{ fontSize: 10, fontWeight: 700, color: "#A89080" }}>UNIT</label>
-                  <select
-                    value={item.unit}
-                    onChange={e => updateItem(idx, "unit", e.target.value)}
-                    style={{
-                      height: 36, border: "1.5px solid #E5DDD5", borderRadius: 7,
-                      padding: "0 6px", fontSize: 12, color: "#1A1210", outline: "none",
-                      background: "#fff", cursor: "pointer"
-                    }}
-                  >
-                    {UNITS.map(u => <option key={u} value={u}>{unitLabel[u]}</option>)}
-                  </select>
-                </div>
                 {(["quantity", "price", "discount"] as const).map(field => (
                   <div key={field} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     <label className="md:hidden" style={{ fontSize: 10, fontWeight: 700, color: "#A89080" }}>{field.toUpperCase()}</label>
@@ -938,20 +979,46 @@ export default function QuotationsPage() {
                 />
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "120px 120px", gap: "6px 16px", textAlign: "right" }}>
-              <span style={{ fontSize: 12, color: "#7A6055", fontWeight: 500 }}>Subtotal</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#2C1810" }}>{form.subtotal.toFixed(3)}</span>
-              {taxPct > 0 && <>
-                <span style={{ fontSize: 12, color: "#7A6055", fontWeight: 500 }}>Tax ({taxPct}%)</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#2C1810" }}>{(form.subtotal * taxPct / 100).toFixed(3)}</span>
-              </>}
-              {discPct > 0 && <>
-                <span style={{ fontSize: 12, color: "#C0392B", fontWeight: 500 }}>Discount ({discPct}%)</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#C0392B" }}>-{(form.subtotal * discPct / 100).toFixed(3)}</span>
-              </>}
-              <span style={{ fontSize: 14, fontWeight: 800, color: "#1A1210", borderTop: "1px solid #E5DDD5", paddingTop: 6 }}>TOTAL</span>
-              <span style={{ fontSize: 16, fontWeight: 800, color: "#2C1810", borderTop: "1px solid #E5DDD5", paddingTop: 6 }}>{form.total.toFixed(3)}</span>
-            </div>
+            {(() => {
+              const grossTotal = form.items.reduce((s, i) => s + (i.price * i.quantity), 0);
+              const itemDiscountTotal = form.items.reduce((s, i) => s + (i.price * i.quantity * (i.discount || 0) / 100), 0);
+              const globalDiscountAmt = form.subtotal * (discPct / 100);
+              const totalDiscount = itemDiscountTotal + globalDiscountAmt;
+              const taxAmt = form.subtotal * (taxPct / 100);
+              
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: "140px 120px", gap: "6px 16px", textAlign: "right" }}>
+                  <span style={{ fontSize: 12, color: "#7A6055", fontWeight: 500 }}>Gross Total</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#2C1810" }}>{formatCurrency(grossTotal)}</span>
+                  
+                  {itemDiscountTotal > 0 && <>
+                    <span style={{ fontSize: 12, color: "#C0392B", fontWeight: 500 }}>Item Discounts</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#C0392B" }}>-{formatCurrency(itemDiscountTotal)}</span>
+                  </>}
+                  
+                  <span style={{ fontSize: 12, color: "#7A6055", fontWeight: 500, borderTop: "1px dashed #E5DDD5", paddingTop: 4 }}>Subtotal</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#2C1810", borderTop: "1px dashed #E5DDD5", paddingTop: 4 }}>{formatCurrency(form.subtotal)}</span>
+                  
+                  {taxPct > 0 && <>
+                    <span style={{ fontSize: 12, color: "#7A6055", fontWeight: 500 }}>Tax ({taxPct}%)</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#2C1810" }}>{formatCurrency(taxAmt)}</span>
+                  </>}
+                  
+                  {discPct > 0 && <>
+                    <span style={{ fontSize: 12, color: "#C0392B", fontWeight: 500 }}>Extra Discount ({discPct}%)</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#C0392B" }}>-{formatCurrency(globalDiscountAmt)}</span>
+                  </>}
+                  
+                  {totalDiscount > 0 && <>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#C0392B", background: "#FDEDEC", padding: "2px 6px", borderRadius: 4 }}>TOTAL DISCOUNT</span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: "#C0392B", background: "#FDEDEC", padding: "2px 6px", borderRadius: 4 }}>{formatCurrency(totalDiscount)}</span>
+                  </>}
+                  
+                  <span style={{ fontSize: 14, fontWeight: 800, color: "#1A1210", borderTop: "2px solid #E5DDD5", paddingTop: 8, marginTop: 4 }}>GRAND TOTAL</span>
+                  <span style={{ fontSize: 18, fontWeight: 900, color: "#2C1810", borderTop: "2px solid #E5DDD5", paddingTop: 8, marginTop: 4 }}>{formatCurrency(form.total)}</span>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Notes */}
@@ -1123,6 +1190,20 @@ export default function QuotationsPage() {
       </Modal>
 
       <ConfirmModal
+        open={!!statusConfirm}
+        onClose={() => setStatusConfirm(null)}
+        onConfirm={handleStatusUpdate}
+        title={statusConfirm?.status === "sale" ? "Accept Quotation" : "Reject Quotation"}
+        message={statusConfirm?.status === "sale" 
+          ? "Are you sure you want to accept this quotation and convert it to a sale? This will start the production process."
+          : "Are you sure you want to reject and permanently remove this quotation?"
+        }
+        confirmLabel={statusConfirm?.status === "sale" ? "Accept" : "Reject"}
+        loading={updatingStatus}
+        variant={statusConfirm?.status === "sale" ? "success" : "danger"}
+      />
+
+      <ConfirmModal
         open={!!deleteId}
         onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
@@ -1161,12 +1242,17 @@ export default function QuotationsPage() {
             itemName: it.itemName,
             quantity: it.quantity,
             price: it.price,
+            discount: it.discount,
             color: it.color,
             material: it.material,
             size: it.size,
-            total: it.total
+            total: it.total,
+            dimensions: it.dimensions,
+            bom: it.bom
           })),
           subtotal: convertingQuotation.subtotal,
+          tax: convertingQuotation.tax,
+          discount: convertingQuotation.discount,
           total: convertingQuotation.total,
           isConversion: true
         } : null}

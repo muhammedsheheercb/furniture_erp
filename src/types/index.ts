@@ -152,6 +152,25 @@ export interface IQuotationItem {
   material?: string;
   size?: string;
   total: number;
+  dimensions?: {
+    width?: number;
+    height?: number;
+    depth?: number;
+    weight?: number;
+    unit?: string;
+  };
+  bom?: {
+    materialId: string;
+    materialName: string;
+    materialCode: string;
+    unit: string;
+    quantity: number;
+  }[];
+  variants?: {
+    colors: string[];
+    sizes: string[];
+    finishes: string[];
+  };
 }
 
 export interface IQuotation {
@@ -215,10 +234,32 @@ export interface ISaleItem {
   price: number;
   discount: number;
   isFOC?: boolean;
-  manufacturingDate: string;
-  expiryDate: string;
+  manufacturingDate?: string;
+  expiryDate?: string;
   batch?: string;
+  color?: string;
+  material?: string;
+  size?: string;
   total: number;
+  dimensions?: {
+    width?: number;
+    height?: number;
+    depth?: number;
+    weight?: number;
+    unit?: string;
+  };
+  bom?: {
+    materialId: string;
+    materialName: string;
+    materialCode: string;
+    unit: string;
+    quantity: number;
+  }[];
+  variants?: {
+    colors: string[];
+    sizes: string[];
+    finishes: string[];
+  };
 }
 
 export interface ISale {

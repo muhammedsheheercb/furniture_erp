@@ -16,12 +16,14 @@ interface LineItem {
   unit: string;
   qty: number;
   price: number;
-  discount: number;
+  discount: number; // percentage
   batchNumber: string;
   color: string;
   material: string;
   size: string;
   total: number;
+  dimensions?: any;
+  bom?: any[];
 }
 
 interface SaleModalProps {
@@ -56,16 +58,27 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
   const [date,            setDate]            = useState(new Date().toISOString().slice(0, 10));
   const [paymentType,     setPaymentType]     = useState<"cash" | "bank" | "credit">("cash");
   const [advancePaid,     setAdvancePaid]     = useState(0);
+  const [previousPaid,    setPreviousPaid]    = useState(0);
+
   const [deliveryDate,    setDeliveryDate]    = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [remarks,         setRemarks]         = useState("");
   const [lineItems,       setLineItems]       = useState<LineItem[]>([]);
+  const [taxPct,          setTaxPct]          = useState(0);
+  const [discPct,         setDiscPct]         = useState(0);
   const [formError,       setFormError]       = useState("");
 
-  const subtotalBeforeDiscount = lineItems.reduce((s, i) => s + i.qty * i.price, 0);
-  const totalDiscount          = lineItems.reduce((s, i) => s + i.discount, 0);
-  const grandTotal             = Math.max(0, subtotalBeforeDiscount - totalDiscount);
-  const balance                = Math.max(0, grandTotal - advancePaid);
+  const subtotalAfterItemDiscount = lineItems.reduce((s, i) => {
+    const itemTotal = i.qty * i.price * (1 - (i.discount || 0) / 100);
+    return s + itemTotal;
+  }, 0);
+  
+  const taxAmount = subtotalAfterItemDiscount * (taxPct / 100);
+  const extraDiscountAmount = subtotalAfterItemDiscount * (discPct / 100);
+  const grandTotal = Math.max(0, subtotalAfterItemDiscount + taxAmount - extraDiscountAmount);
+  const balance = grandTotal - advancePaid - previousPaid;
+
+  
   const isConversion = sale?.isConversion === true;
   const isEdit       = !!sale?._id;
 
@@ -95,9 +108,13 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
       setDate           (new Date(sale.date || new Date()).toISOString().slice(0, 10));
       setPaymentType    (sale.paymentType     || "cash");
       setAdvancePaid    (sale.advancePaid     || 0);
+      setPreviousPaid   (sale.previousPaid    || 0);
+
       setDeliveryDate   (sale.deliveryDate ? new Date(sale.deliveryDate).toISOString().slice(0, 10) : "");
       setDeliveryAddress(sale.deliveryAddress || "");
       setRemarks        (sale.remarks         || "");
+      setTaxPct         (sale.tax || 0);
+      setDiscPct        (sale.discount || 0);
       setLineItems(
         (sale.items || []).map((it: any) => ({
           id: uid(), itemId: it.itemId || "", itemNumber: it.itemNumber || "",
@@ -106,6 +123,8 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
           batchNumber: it.batch || "",
           color: it.color || "", material: it.material || "", size: it.size || "",
           total: it.total || 0,
+          dimensions: it.dimensions,
+          bom: it.bom
         }))
       );
     } else {
@@ -114,6 +133,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
       setDate(new Date().toISOString().slice(0, 10));
       setPaymentType("cash"); setAdvancePaid(0);
       setDeliveryDate(""); setDeliveryAddress(""); setRemarks("");
+      setTaxPct(0); setDiscPct(0);
       setLineItems([]);
     }
     setFormError("");
@@ -136,7 +156,6 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
       if (res.data.success) {
         const c = res.data.data;
         setCustomers(p => [c, ...p]);
-        // Set directly from response — don't use pickCustomer (customers state not updated yet)
         setCustomerId(c._id);
         setCustomerName(c.name           || "");
         setCustomerNumber(c.customerNumber || "");
@@ -170,7 +189,9 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
       color,
       material,
       size,
-      total: Math.max(0, price * i.qty - i.discount),
+      total: Math.max(0, price * i.qty * (1 - (i.discount || 0) / 100)),
+      dimensions: p.dimensions,
+      bom: p.bom
     }));
   }
 
@@ -182,7 +203,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
     setLineItems(prev => prev.map(i => {
       if (i.id !== lineId) return i;
       const price = batch?.salePrice || i.price;
-      return { ...i, batchNumber: batchNum, price, total: Math.max(0, i.qty * price - i.discount) };
+      return { ...i, batchNumber: batchNum, price, total: Math.max(0, i.qty * price * (1 - (i.discount || 0) / 100)) };
     }));
   }
 
@@ -196,7 +217,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
         val = Math.min(Math.max(1, Number(val)), stock);
       }
       const u = { ...i, [field]: val };
-      u.total = Math.max(0, u.qty * u.price - u.discount);
+      u.total = Math.max(0, u.qty * u.price * (1 - (u.discount || 0) / 100));
       return u;
     }));
   }
@@ -210,17 +231,18 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
     e.preventDefault();
     setFormError("");
     if (!customerId)              { setFormError("Please select or create a customer."); return; }
+    if (!deliveryDate)            { setFormError("Delivery Date is required."); return; }
+    if (!deliveryAddress.trim())  { setFormError("Delivery Address is required."); return; }
     if (lineItems.length === 0)   { setFormError("Add at least one product."); return; }
     if (lineItems.some(i => !i.itemName.trim())) { setFormError("All rows must have a product."); return; }
-    if (!isConversion) {
-      if (!deliveryDate)    { setFormError("Delivery date is required."); return; }
-      if (!deliveryAddress.trim()) { setFormError("Delivery address is required."); return; }
-    }
-
+    
     await onSubmit({
       customerId, customerName, customerNumber, customerMobile, customerAddress,
-      date, paymentType, advancePaid,
-      subtotal: grandTotal, total: grandTotal,
+      date, paymentType, advancePaid, previousPaid,
+      subtotal: subtotalAfterItemDiscount, 
+      tax: taxPct,
+      discount: discPct,
+      total: grandTotal,
       deliveryDate: deliveryDate || undefined,
       deliveryAddress, remarks,
       isDirect: !isConversion,
@@ -237,6 +259,8 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
         material: i.material,
         size:     i.size,
         total:    i.total,
+        dimensions: i.dimensions,
+        bom:      i.bom
       })),
     });
   }
@@ -249,7 +273,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? "Edit Sale Order" : "New Direct Sales Bill"}
+      title={isEdit ? "Edit Sale Order" : "New Sales Bill"}
       size="xl"
       footer={
         <>
@@ -296,37 +320,21 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
           </div>
         </div>
 
-        {/* Customer details — shown after selection */}
+        {/* Customer details */}
         {customerId && (
           <div className="rounded-xl border border-[#E5DDD5] bg-[#FAF8F6] p-4 -mt-1">
-            <p className="text-xs font-bold text-[#7A6055] uppercase tracking-wider mb-3">Customer Details</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className={lbl}>Customer ID</label>
-                <input
-                  readOnly
-                  value={customerNumber}
-                  className={inp + " bg-white cursor-default"}
-                  placeholder="—"
-                />
+                <input readOnly value={customerNumber} className={inp + " bg-white"} placeholder="—" />
               </div>
               <div>
-                <label className={lbl}>Phone Number</label>
-                <input
-                  readOnly
-                  value={customerMobile}
-                  className={inp + " bg-white cursor-default"}
-                  placeholder="—"
-                />
+                <label className={lbl}>Phone</label>
+                <input readOnly value={customerMobile} className={inp + " bg-white"} placeholder="—" />
               </div>
               <div>
                 <label className={lbl}>Address</label>
-                <input
-                  readOnly
-                  value={customerAddress}
-                  className={inp + " bg-white cursor-default"}
-                  placeholder="—"
-                />
+                <input readOnly value={customerAddress} className={inp + " bg-white"} placeholder="—" />
               </div>
             </div>
           </div>
@@ -344,12 +352,14 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
           </div>
           <div>
             <label className={lbl}>Advance Paid (₹)</label>
-            <input
-              type="number" min={0} value={advancePaid}
-              onChange={e => setAdvancePaid(Number(e.target.value))}
-              className={inp}
-            />
+            <input type="number" min={0} value={advancePaid} onChange={e => setAdvancePaid(Number(e.target.value))} className={inp} />
           </div>
+          {isConversion && (
+            <div>
+              <label className={lbl}>Previously Paid (₹)</label>
+              <input type="number" min={0} value={previousPaid} onChange={e => setPreviousPaid(Number(e.target.value))} className={inp} />
+            </div>
+          )}
         </div>
 
         {/* ── Products table ───────────────────────────────────────── */}
@@ -374,7 +384,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
                   <th className="py-2.5 px-2 text-left text-xs font-bold text-[#7A6055] uppercase w-24">Color</th>
                   <th className="py-2.5 px-2 text-center text-xs font-bold text-[#7A6055] uppercase w-16">Qty</th>
                   <th className="py-2.5 px-2 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Price (₹)</th>
-                  <th className="py-2.5 px-2 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Discount (₹)</th>
+                  <th className="py-2.5 px-2 text-right text-xs font-bold text-[#7A6055] uppercase w-20">Disc %</th>
                   <th className="py-2.5 px-2 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Total (₹)</th>
                   <th className="w-10" />
                 </tr>
@@ -382,139 +392,38 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
               <tbody className="divide-y divide-[#F0EBE5]">
                 {lineItems.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-10 text-center text-[#A89080] text-sm">
-                      Click <strong>Add Product</strong> to begin
-                    </td>
+                    <td colSpan={7} className="py-10 text-center text-[#A89080] text-sm">Add a product to continue</td>
                   </tr>
                 ) : lineItems.map(item => (
                   <tr key={item.id} className="hover:bg-[#FAF8F6]">
-                    {/* Product selector + batch */}
-                    <td className="px-3 py-2 min-w-45">
+                    <td className="px-3 py-2">
                       {isConversion ? (
-                        <span className="text-sm font-semibold text-[#1A1210]">{item.itemName}</span>
+                        <span className="font-semibold">{item.itemName}</span>
                       ) : (
-                        <>
-                          <select
-                            value={item.itemId}
-                            onChange={e => selectProduct(item.id, e.target.value)}
-                            className="w-full rounded-lg border border-[#E5DDD5] px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
-                          >
-                            <option value="">— Select Product —</option>
-                            {products.map(p => (
-                              <option key={p._id} value={p._id}>{p.name} ({p.itemNumber})</option>
-                            ))}
-                          </select>
-
-                          {/* Batch selector — only when product has available batches */}
-                          {item.itemId && (() => {
-                            const prod = products.find(p => p._id === item.itemId);
-                            const batches = (prod?.batches || []).filter((b: any) => (b.quantity || 0) > 0);
-                            if (batches.length === 0) return null;
-                            return (
-                              <select
-                                value={item.batchNumber}
-                                onChange={e => selectBatch(item.id, e.target.value)}
-                                className="mt-1 w-full rounded-lg border border-[#C9A84C]/50 px-2 py-1 text-xs bg-amber-50 text-[#7A6055] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
-                              >
-                                <option value="">— Batch (FIFO) —</option>
-                                {batches.map((b: any) => (
-                                  <option key={b.batchNumber} value={b.batchNumber}>
-                                    {b.batchNumber} · Qty: {b.quantity} · ₹{(b.salePrice || 0).toLocaleString("en-IN")}
-                                  </option>
-                                ))}
-                              </select>
-                            );
-                          })()}
-                        </>
+                        <select value={item.itemId} onChange={e => selectProduct(item.id, e.target.value)} className={inp}>
+                          <option value="">— Select Product —</option>
+                          {products.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+                        </select>
                       )}
                     </td>
-
-                    {/* Color */}
                     <td className="px-2 py-2">
-                      {(() => {
-                        const prod = products.find(p => p._id === item.itemId);
-                        const opts = prod?.variants?.colors?.filter(Boolean) || [];
-                        return opts.length > 0 ? (
-                          <select
-                            value={item.color}
-                            onChange={e => updateField(item.id, "color", e.target.value)}
-                            className="w-full rounded-lg border border-[#E5DDD5] px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
-                          >
-                            <option value="">— Color —</option>
-                            {opts.map((c: string) => <option key={c} value={c}>{c}</option>)}
-                          </select>
-                        ) : (
-                          <input
-                            value={item.color}
-                            onChange={e => updateField(item.id, "color", e.target.value)}
-                            placeholder="Color"
-                            className="w-full rounded-lg border border-[#E5DDD5] px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
-                          />
-                        );
-                      })()}
+                      <input value={item.color} onChange={e => updateField(item.id, "color", e.target.value)} className={inp} placeholder="Color" />
                     </td>
-
-                    {/* Qty */}
                     <td className="px-2 py-2">
-                      {(() => {
-                        const prod  = products.find(p => p._id === item.itemId);
-                        const stock = prod?.quantity ?? null;
-                        const over  = stock !== null && item.qty > stock;
-                        return (
-                          <>
-                            <input
-                              type="number" min={1} max={stock ?? undefined} value={item.qty}
-                              onChange={e => updateField(item.id, "qty", Number(e.target.value))}
-                              disabled={isConversion}
-                              className={`w-full rounded-lg border px-2 py-1.5 text-sm text-center bg-white focus:outline-none focus:ring-2 disabled:bg-[#FAF8F6] ${
-                                over ? "border-rose-400 focus:ring-rose-300" : "border-[#E5DDD5] focus:ring-[#C9A84C]/30"
-                              }`}
-                            />
-                            {stock !== null && (
-                              <p className={`text-[9px] mt-0.5 text-center ${over ? "text-rose-500 font-semibold" : "text-[#A89080]"}`}>
-                                Stock: {stock}
-                              </p>
-                            )}
-                          </>
-                        );
-                      })()}
+                      <input type="number" min={1} value={item.qty} onChange={e => updateField(item.id, "qty", Number(e.target.value))} className={inp + " text-center"} disabled={isConversion} />
                     </td>
-
-                    {/* Price */}
                     <td className="px-2 py-2">
-                      <input
-                        type="number" min={0} value={item.price}
-                        onChange={e => updateField(item.id, "price", Number(e.target.value))}
-                        disabled={isConversion}
-                        className="w-full rounded-lg border border-[#E5DDD5] px-2 py-1.5 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30 disabled:bg-[#FAF8F6]"
-                      />
+                      <input type="number" value={item.price} onChange={e => updateField(item.id, "price", Number(e.target.value))} className={inp + " text-right"} disabled={isConversion} />
                     </td>
-
-                    {/* Discount */}
                     <td className="px-2 py-2">
-                      <input
-                        type="number" min={0} value={item.discount}
-                        onChange={e => updateField(item.id, "discount", Number(e.target.value))}
-                        className="w-full rounded-lg border border-[#E5DDD5] px-2 py-1.5 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
-                        placeholder="0"
-                      />
+                      <input type="number" value={item.discount} onChange={e => updateField(item.id, "discount", Number(e.target.value))} className={inp + " text-right"} placeholder="0" />
                     </td>
-
-                    {/* Total */}
-                    <td className="px-3 py-2 text-right font-semibold text-[#1A1210]">
+                    <td className="px-3 py-2 text-right font-semibold">
                       {item.total.toLocaleString("en-IN")}
                     </td>
-
-                    {/* Remove */}
                     <td className="px-2 py-2 text-center">
                       {!isConversion && (
-                        <button
-                          type="button"
-                          onClick={() => removeRow(item.id)}
-                          className="p-1 rounded-lg hover:bg-rose-50 text-rose-400 hover:text-rose-600 transition-colors"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <button type="button" onClick={() => removeRow(item.id)} className="text-rose-400 hover:text-rose-600"><Trash2 size={15} /></button>
                       )}
                     </td>
                   </tr>
@@ -526,79 +435,65 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
 
         {/* ── Delivery + Totals ────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-[#F0EBE5]">
-          {/* Delivery details */}
           <div className="space-y-3">
             <div>
-              <label className={lbl}>Delivery Date {!isConversion && <span className="text-rose-500">*</span>}</label>
-              <input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className={inp} />
+              <label className={lbl}>Delivery Date *</label>
+              <input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className={inp} required />
             </div>
             <div>
-              <label className={lbl}>Delivery Address {!isConversion && <span className="text-rose-500">*</span>}</label>
-              <textarea
-                value={deliveryAddress}
-                onChange={e => setDeliveryAddress(e.target.value)}
-                rows={2}
-                className={inp + " resize-none"}
-                placeholder="Where to deliver?"
-              />
-            </div>
-            <div>
-              <label className={lbl}>Remarks / Production Notes</label>
-              <input
-                value={remarks}
-                onChange={e => setRemarks(e.target.value)}
-                className={inp}
-                placeholder="Special instructions..."
+              <label className={lbl}>Delivery Address *</label>
+              <textarea 
+                value={deliveryAddress} 
+                onChange={e => setDeliveryAddress(e.target.value)} 
+                rows={3} 
+                placeholder="Enter full delivery address *"
+                className={inp + " resize-none"} 
+                required
               />
             </div>
           </div>
 
-          {/* Totals summary */}
-          <div className="flex flex-col justify-end">
-            <div className="p-4 rounded-xl bg-[#FAF8F6] border border-[#E5DDD5] space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-[#7A6055]">Subtotal</span>
-                <span className="font-semibold text-[#1A1210]">₹ {subtotalBeforeDiscount.toLocaleString("en-IN")}</span>
-              </div>
-              {totalDiscount > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-[#7A6055]">Discount</span>
-                  <span className="font-semibold text-rose-500">- ₹ {totalDiscount.toLocaleString("en-IN")}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm">
-                <span className="text-[#7A6055]">Advance Paid</span>
-                <span className="font-semibold text-emerald-600">- ₹ {advancePaid.toLocaleString("en-IN")}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-[#E5DDD5]">
-                <span className="text-sm font-bold text-[#1A1210]">Balance Due</span>
-                <span className={`font-bold text-base ${balance > 0 ? "text-rose-600" : "text-emerald-600"}`}>
-                  ₹ {balance.toLocaleString("en-IN")}
-                </span>
-              </div>
-              <div className="flex justify-between pt-1">
-                <span className="font-bold text-[#1A1210]">Grand Total</span>
-                <span className="font-black text-2xl text-[#1A1210]">₹ {grandTotal.toLocaleString("en-IN")}</span>
-              </div>
+          <div className="p-4 rounded-xl bg-[#FAF8F6] border border-[#E5DDD5] space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-[#7A6055]">Subtotal</span>
+              <span className="font-semibold">₹ {subtotalAfterItemDiscount.toLocaleString("en-IN")}</span>
             </div>
+            <div className="flex justify-between text-sm items-center">
+              <span className="text-[#7A6055]">Discount (%)</span>
+              <input type="number" value={discPct} onChange={e => setDiscPct(Number(e.target.value))} className="w-20 text-right border rounded px-1" />
+            </div>
+            <div className="flex justify-between text-sm items-center">
+              <span className="text-[#7A6055]">VAT (%)</span>
+              <input type="number" value={taxPct} onChange={e => setTaxPct(Number(e.target.value))} className="w-20 text-right border rounded px-1" />
+            </div>
+            <div className="flex justify-between pt-2 border-t border-[#E5DDD5] font-black text-xl">
+              <span>Grand Total</span>
+              <span>₹ {grandTotal.toLocaleString("en-IN")}</span>
+            </div>
+            <div className={`flex justify-between text-sm ${balance < 0 ? "text-emerald-600" : "text-rose-500"} font-bold`}>
+              <span>{balance < 0 ? "Credit Balance" : "Balance Due"}</span>
+              <span>₹ {Math.abs(balance).toLocaleString("en-IN")}</span>
+            </div>
+
           </div>
         </div>
 
-        {/* Error */}
-        {formError && (
-          <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-4 py-2">
-            {formError}
-          </p>
-        )}
+        {/* ── Special Instructions ─────────────────────────────────── */}
+        <div className="pt-2">
+          <label className={lbl}>Special Instructions / Remarks</label>
+          <textarea
+            value={remarks}
+            onChange={e => setRemarks(e.target.value)}
+            rows={4}
+            placeholder="Enter any special instructions for production or delivery (e.g., custom finishes, specific materials)..."
+            className={inp + " resize-y min-h-[100px]"}
+          />
+        </div>
+
+        {formError && <p className="text-sm text-rose-600 bg-rose-50 px-4 py-2 rounded-lg border border-rose-200">{formError}</p>}
       </form>
 
-      {/* Customer creation modal */}
-      <CustomerModal
-        open={custModalOpen}
-        onClose={() => setCustModalOpen(false)}
-        onSubmit={handleCreateCustomer}
-        loading={savingCust}
-      />
+      <CustomerModal open={custModalOpen} onClose={() => setCustModalOpen(false)} onSubmit={handleCreateCustomer} loading={savingCust} />
     </Modal>
   );
 }

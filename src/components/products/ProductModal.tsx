@@ -17,15 +17,14 @@ const MFG_TABS = [
   { id: "dimensions", label: "Dimensions",  icon: Ruler   },
   { id: "pricing",    label: "Pricing",     icon: Tag     },
   { id: "bom",        label: "BOM",         icon: Layers  },
-  { id: "variants",   label: "Variants",    icon: Palette },
 ];
 
 const BUY_TABS = [
   { id: "basic",      label: "Basic Info",  icon: Package },
   { id: "dimensions", label: "Dimensions",  icon: Ruler   },
   { id: "pricing",    label: "Pricing",     icon: Tag     },
-  { id: "variants",   label: "Variants",    icon: Palette },
 ];
+
 
 // ── types ─────────────────────────────────────────────────────────────────────
 interface BomRow {
@@ -216,11 +215,8 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
           quantity:     Number(r.quantity     || 1),
           subtotal:     Number(r.subtotal     || 0),
         })),
-        variants: {
-          colors:   Array.from(product.variants?.colors   || []).map(String),
-          sizes:    Array.from(product.variants?.sizes    || []).map(String),
-          finishes: Array.from(product.variants?.finishes || []).map(String),
-        },
+        variants: { colors: [], sizes: [], finishes: [] },
+
       });
     } else {
       const m: Mode = "manufacture";
@@ -460,34 +456,23 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
               </div>
             </div>
 
-            {mode === "manufacture" && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={lbl}>Primary Material</label>
-                  <input
-                    value={form.primaryMaterial}
-                    onChange={e => setForm(p => ({ ...p, primaryMaterial: e.target.value }))}
-                    placeholder="e.g. Teak Wood, Metal, Fabric"
-                    className={inp}
-                  />
-                </div>
-                <div>
-                  <label className={lbl}>Default Color</label>
-                  <input
-                    value={form.color}
-                    onChange={e => setForm(p => ({ ...p, color: e.target.value }))}
-                    placeholder="e.g. Brown, Black, White"
-                    className={inp}
-                  />
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={lbl}>Color</label>
+                <input
+                  value={form.color}
+                  onChange={e => setForm(p => ({ ...p, color: e.target.value }))}
+                  placeholder="e.g. Brown, Black, White"
+                  className={inp}
+                />
               </div>
-            )}
-
-            <div>
-              <label className={lbl}>Current Stock</label>
-              <input type="number" min={0} value={form.currentStock}
-                onChange={e => setForm(p => ({ ...p, currentStock: Number(e.target.value) }))} className={inp} />
+              <div>
+                <label className={lbl}>Current Stock</label>
+                <input type="number" min={0} value={form.currentStock}
+                  onChange={e => setForm(p => ({ ...p, currentStock: Number(e.target.value) }))} className={inp} />
+              </div>
             </div>
+
 
             <div>
               <label className={lbl}>Description</label>

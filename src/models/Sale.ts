@@ -16,6 +16,27 @@ const SaleItemSchema = new Schema(
     material: { type: String },
     size: { type: String },
     total: { type: Number, required: true, min: 0 },
+    dimensions: {
+      width: Number,
+      height: Number,
+      depth: Number,
+      weight: Number,
+      unit: String
+    },
+    bom: [
+      {
+        materialId: { type: Schema.Types.ObjectId, ref: "Item" },
+        materialName: String,
+        materialCode: String,
+        unit: String,
+        quantity: Number
+      }
+    ],
+    variants: {
+      colors: [String],
+      sizes: [String],
+      finishes: [String]
+    }
   },
   { _id: false }
 );
@@ -42,9 +63,29 @@ export interface ISaleDocument extends Document {
     material?: string;
     size?: string;
     total: number;
+    dimensions?: {
+      width?: number;
+      height?: number;
+      depth?: number;
+      weight?: number;
+      unit?: string;
+    };
+    bom?: {
+      materialId: string;
+      materialName: string;
+      materialCode: string;
+      unit: string;
+      quantity: number;
+    }[];
+    variants?: {
+      colors: string[];
+      sizes: string[];
+      finishes: string[];
+    };
   }[];
   subtotal: number;
   tax: number;
+  discount: number;
   total: number;
   paymentType: "cash" | "bank" | "credit";
   date: Date;
@@ -80,6 +121,7 @@ const SaleSchema = new Schema<ISaleDocument>(
     items: { type: [SaleItemSchema], required: true },
     subtotal: { type: Number, required: true, min: 0 },
     tax: { type: Number, default: 0, min: 0 },
+    discount: { type: Number, default: 0, min: 0 },
     total: { type: Number, required: true, min: 0 },
     paymentType: {
       type: String,

@@ -16,11 +16,13 @@ export const formatCurrency = (amount: number): string => {
 
 export const formatDate = (date: Date | string): string => {
   if (!date) return "-";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "-";
   return new Intl.DateTimeFormat("en-IN", {
     month: "short",
     day: "2-digit",
     year: "numeric",
-  }).format(new Date(date));
+  }).format(d);
 };
 
 export const formatDateInput = (date: Date | string): string => {
