@@ -134,7 +134,7 @@ export default function QuotationItemModal({
         )}
 
         <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                   <label className={lbl}>Product Name *</label>
                   <input
@@ -144,6 +144,23 @@ export default function QuotationItemModal({
                       placeholder="e.g. 3-Seater Sofa"
                       className={inp}
                   />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={lbl}>Category</label>
+                    <select value={category} onChange={e => setCategory(e.target.value)} className={inp}>
+                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={lbl}>Color</label>
+                    <input
+                        value={color}
+                        onChange={e => setColor(e.target.value)}
+                        placeholder="e.g. Brown"
+                        className={inp}
+                    />
+                  </div>
               </div>
           </div>
 
