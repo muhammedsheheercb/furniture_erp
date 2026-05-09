@@ -6,6 +6,7 @@ export interface InvoiceItem {
     itemNumber: string;
     quantity: number;
     price: number;
+    discount?: number;
     total: number;
     isFOC?: boolean;
     manufacturingDate?: string;
@@ -40,7 +41,9 @@ const containsArabic = (text: string) => {
 export const generateInvoicePDF = (data: InvoiceData) => {
     const isArabic = containsArabic(data.customerAddress || "") || containsArabic(data.customerOrSupplier || "");
     const dir = isArabic ? "rtl" : "ltr";
-    
+    const totalDiscount = data.items.reduce((s, i) => s + (i.discount || 0), 0);
+    const hasDiscount = totalDiscount > 0;
+
     const html = `
         <div style="font-family: Arial, sans-serif; padding: 40px; color: #333; direction: ${dir}; text-align: ${isArabic ? 'right' : 'left'}">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #3F51B5; padding-bottom: 20px; margin-bottom: 30px">
@@ -88,6 +91,7 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                         <th style="padding: 12px; text-align: left; border: 1px solid #3F51B5">Description</th>
                         <th style="padding: 12px; text-align: center; border: 1px solid #3F51B5; width: 60px">Qty</th>
                         <th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 100px">Unit Price</th>
+                        ${hasDiscount ? `<th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 100px">Discount</th>` : ''}
                         <th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 120px">Total</th>
                     </tr>
                 </thead>
@@ -101,6 +105,7 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                             </td>
                             <td style="padding: 12px; text-align: center; border: 1px solid #DEE2E6; font-weight: 500">${item.quantity}</td>
                             <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6">${item.isFOC ? '0.00' : formatCurrency(item.price)}</td>
+                            ${hasDiscount ? `<td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6; color: #DC3545">${(item.discount || 0) > 0 ? '- ' + formatCurrency(item.discount || 0) : '—'}</td>` : ''}
                             <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6; font-weight: bold">${formatCurrency(item.total)}</td>
                         </tr>
                     `).join('')}
@@ -113,10 +118,16 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                         <span style="color: #6C757D">Subtotal:</span>
                         <span style="font-weight: 500">${formatCurrency(data.subtotal)}</span>
                     </div>
+                    ${hasDiscount ? `
+                    <div style="display: flex; justify-content: space-between; padding: 5px 0">
+                        <span style="color: #6C757D">Discount:</span>
+                        <span style="font-weight: 500; color: #DC3545">- ${formatCurrency(totalDiscount)}</span>
+                    </div>` : ''}
+                    ${data.tax ? `
                     <div style="display: flex; justify-content: space-between; padding: 5px 0">
                         <span style="color: #6C757D">Tax (${data.tax}%):</span>
                         <span style="font-weight: 500">${formatCurrency(data.subtotal * (data.tax / 100))}</span>
-                    </div>
+                    </div>` : ''}
                     <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid #3F51B5; margin-top: 10px">
                         <span style="font-weight: bold; font-size: 18px; color: #212529">Grand Total:</span>
                         <span style="font-weight: bold; font-size: 18px; color: #3F51B5">${formatCurrency(data.total)}</span>

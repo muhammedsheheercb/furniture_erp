@@ -8,15 +8,17 @@ import { toast } from "sonner";
 
 // ── types ─────────────────────────────────────────────────────────────────────
 interface LineItem {
-  id:     string;
-  type:   "product" | "material";
-  refId:  string;
-  name:   string;
-  code:   string;
-  unit:   string;
-  qty:    number;
-  price:  number;
-  total:  number;
+  id:           string;
+  type:         "product" | "material";
+  refId:        string;
+  name:         string;
+  code:         string;
+  unit:         string;
+  qty:          number;
+  price:        number;
+  sellingPrice: number;
+  batchNumber:  string;
+  total:        number;
 }
 
 interface PurchaseModalProps {
@@ -31,10 +33,10 @@ interface PurchaseModalProps {
 function uid() { return Math.random().toString(36).slice(2); }
 
 function newProductRow(): LineItem {
-  return { id: uid(), type: "product", refId: "", name: "", code: "", unit: "Piece", qty: 1, price: 0, total: 0 };
+  return { id: uid(), type: "product",  refId: "", name: "", code: "", unit: "Piece", qty: 1, price: 0, sellingPrice: 0, batchNumber: "", total: 0 };
 }
 function newMaterialRow(): LineItem {
-  return { id: uid(), type: "material", refId: "", name: "", code: "", unit: "Sheet", qty: 1, price: 0, total: 0 };
+  return { id: uid(), type: "material", refId: "", name: "", code: "", unit: "Sheet", qty: 1, price: 0, sellingPrice: 0, batchNumber: "", total: 0 };
 }
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -87,15 +89,17 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
       setPaidAmount  (purchase.paidAmount      || 0);
       setLineItems(
         (purchase.items || []).map((item: any) => ({
-          id:    uid(),
-          type:  item.itemType || "product",
-          refId: item.materialId || item.itemId || "",
-          name:  item.itemName,
-          code:  item.itemNumber,
-          unit:  item.unit || "Piece",
-          qty:   item.quantity,
-          price: item.price,
-          total: item.total,
+          id:           uid(),
+          type:         item.itemType || "product",
+          refId:        item.materialId || item.itemId || "",
+          name:         item.itemName,
+          code:         item.itemNumber,
+          unit:         item.unit || "Piece",
+          qty:          item.quantity,
+          price:        item.price,
+          sellingPrice: item.sellingPrice || 0,
+          batchNumber:  item.batch || "",
+          total:        item.total,
         }))
       );
     } else {
@@ -114,6 +118,7 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
     setLineItems(prev => prev.map(i => i.id !== lineId ? i : {
       ...i, refId: prodId, name: p.name, code: p.itemNumber,
       unit: p.unit || "Piece", price: p.purchaseAmount || 0,
+      sellingPrice: p.salesAmount || 0,
       total: (p.purchaseAmount || 0) * i.qty,
     }));
   }
@@ -128,7 +133,7 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
     }));
   }
 
-  function updateField(lineId: string, field: "qty" | "price", value: number) {
+  function updateField(lineId: string, field: "qty" | "price" | "sellingPrice", value: number) {
     setLineItems(prev => prev.map(i => {
       if (i.id !== lineId) return i;
       const updated = { ...i, [field]: value };
@@ -150,6 +155,15 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
     if (lineItems.length === 0) { setFormError("Add at least one item."); return; }
     const missing = lineItems.find(i => !i.refId);
     if (missing) { setFormError("Please select an item for every row."); return; }
+    const belowCost = lineItems.find(i => i.type === "product" && i.sellingPrice < i.price);
+    if (belowCost) {
+      setFormError(`Sales price for "${belowCost.name}" cannot be less than its purchase price (₹${belowCost.price.toLocaleString("en-IN")}).`);
+      return;
+    }
+    if (paidAmount > grandTotal) {
+      setFormError(`Paid amount (₹${paidAmount.toLocaleString("en-IN")}) cannot exceed Grand Total (₹${grandTotal.toLocaleString("en-IN")}).`);
+      return;
+    }
 
     const payload = {
       supplierId,
@@ -169,10 +183,10 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
         itemName:    i.name,
         unit:        i.unit,
         quantity:    i.qty,
-        price:       i.price,
-        sellingPrice: i.price,
-        total:       i.total,
-        batch:       `B${Date.now()}${idx}`,
+        price:        i.price,
+        sellingPrice: i.sellingPrice,
+        total:        i.total,
+        batch:        i.batchNumber.trim() || `B${Date.now()}${idx}`,
       })),
     };
 
@@ -274,7 +288,9 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
                   <th className="py-2.5 px-3 text-left text-xs font-bold text-[#7A6055] uppercase w-28">Code</th>
                   <th className="py-2.5 px-3 text-left text-xs font-bold text-[#7A6055] uppercase w-20">Unit</th>
                   <th className="py-2.5 px-3 text-center text-xs font-bold text-[#7A6055] uppercase w-20">Qty</th>
-                  <th className="py-2.5 px-3 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Price (₹)</th>
+                  <th className="py-2.5 px-3 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Purchase ₹</th>
+                  <th className="py-2.5 px-3 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Sales ₹</th>
+                  <th className="py-2.5 px-3 text-left text-xs font-bold text-[#7A6055] uppercase w-28">Batch No.</th>
                   <th className="py-2.5 px-3 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Total (₹)</th>
                   <th className="w-10"></th>
                 </tr>
@@ -282,7 +298,7 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
               <tbody className="divide-y divide-[#F0EBE5]">
                 {lineItems.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-10 text-center text-[#A89080] text-sm">
+                    <td colSpan={10} className="py-10 text-center text-[#A89080] text-sm">
                       Click <strong>Add Product</strong> or <strong>Add Material</strong> to begin
                     </td>
                   </tr>
@@ -344,13 +360,37 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
                       />
                     </td>
 
-                    {/* Price */}
+                    {/* Purchase Price */}
                     <td className="px-3 py-2">
                       <input
                         type="number" min={0} step="0.01" value={item.price}
                         onChange={e => updateField(item.id, "price", Number(e.target.value))}
                         className="w-full rounded-lg border border-[#E5DDD5] px-2 py-1.5 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
                       />
+                    </td>
+
+                    {/* Sales Price — product only */}
+                    <td className="px-3 py-2">
+                      {item.type === "product" ? (
+                        <input
+                          type="number" min={item.price} step="0.01" value={item.sellingPrice}
+                          onChange={e => updateField(item.id, "sellingPrice", Number(e.target.value))}
+                          className={`w-full rounded-lg border px-2 py-1.5 text-sm text-right bg-white focus:outline-none focus:ring-2 ${
+                            item.sellingPrice < item.price
+                              ? "border-rose-400 focus:ring-rose-300 text-rose-600"
+                              : "border-[#E5DDD5] focus:ring-[#C9A84C]/30"
+                          }`}
+                        />
+                      ) : (
+                        <span className="block text-center text-[#C5B8B0]">—</span>
+                      )}
+                    </td>
+
+                    {/* Batch No. — auto-generated, read-only */}
+                    <td className="px-3 py-2">
+                      <span className="block px-2 py-1.5 rounded-lg bg-[#F0EBE5] text-xs font-mono text-[#7A6055] border border-[#E5DDD5] select-all">
+                        {item.batchNumber || "Auto"}
+                      </span>
                     </td>
 
                     {/* Total */}
@@ -406,11 +446,18 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
             <div className="flex items-center justify-end gap-3">
               <label className="text-sm text-[#7A6055]">Paid Amount</label>
               <input
-                type="number" min={0} value={paidAmount}
-                onChange={e => setPaidAmount(Number(e.target.value))}
-                className="w-36 rounded-lg border border-[#E5DDD5] px-3 py-1.5 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
+                type="number" min={0} max={grandTotal} value={paidAmount}
+                onChange={e => setPaidAmount(Math.min(grandTotal, Math.max(0, Number(e.target.value))))}
+                className={`w-36 rounded-lg border px-3 py-1.5 text-sm text-right bg-white focus:outline-none focus:ring-2 ${
+                  paidAmount > grandTotal
+                    ? "border-rose-400 focus:ring-rose-300 text-rose-600"
+                    : "border-[#E5DDD5] focus:ring-[#C9A84C]/30"
+                }`}
               />
             </div>
+            {paidAmount > grandTotal && (
+              <p className="text-xs text-rose-500 text-right">Paid amount cannot exceed Grand Total (₹{grandTotal.toLocaleString("en-IN")})</p>
+            )}
           </div>
         </div>
 

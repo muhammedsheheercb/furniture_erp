@@ -18,6 +18,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { generateQuotationPDF, generateInvoicePDF } from "@/lib/pdf-utils";
 import CustomerModal from "@/components/customers/CustomerModal";
 import SaleModal from "@/components/sales/SaleModal";
+import QuotationItemModal from "@/components/quotations/QuotationItemModal";
 import axios from "axios";
 import { ICustomer } from "@/types";
 
@@ -128,6 +129,9 @@ export default function QuotationsPage() {
   const [saleModalOpen, setSaleModalOpen] = useState(false);
   const [convertingQuotation, setConvertingQuotation] = useState<IQuotation | null>(null);
 
+  const [itemModalOpen, setItemModalOpen] = useState(false);
+  const [editingItemIdx, setEditingItemIdx] = useState<number | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -178,7 +182,20 @@ export default function QuotationsPage() {
     recalc(items, taxPct, discPct);
   };
 
-  const addItem = () => recalc([...form.items, emptyItem()], taxPct, discPct);
+  const addItem = () => {
+    setEditingItemIdx(null);
+    setItemModalOpen(true);
+  };
+
+  const handleItemModalSubmit = (item: IQuotationItem) => {
+    if (editingItemIdx !== null) {
+      const items = form.items.map((it, i) => i === editingItemIdx ? item : it);
+      recalc(items, taxPct, discPct);
+    } else {
+      recalc([...form.items, item], taxPct, discPct);
+    }
+  };
+
   const removeItem = (idx: number) => recalc(form.items.filter((_, i) => i !== idx), taxPct, discPct);
 
   const openCreate = () => {
@@ -859,21 +876,37 @@ export default function QuotationsPage() {
                     {item.total.toFixed(3)}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeItem(idx)}
-                  disabled={form.items.length === 1}
-                  style={{
-                    position: "absolute", top: -10, right: -10,
-                    height: 24, width: 24, display: "flex", alignItems: "center", justifyContent: "center",
-                    border: "1.5px solid #F5B7B1", borderRadius: "50%", background: "#FDEDEC",
-                    color: "#C0392B", cursor: "pointer", opacity: form.items.length === 1 ? 0.3 : 1,
-                    zIndex: 1
-                  }}
-                  className="md:!static md:!h-9 md:!w-[30px] md:!rounded-lg md:!mt-0"
+                <div
+                  style={{ position: "absolute", top: -10, right: -10, display: "flex", gap: 4, zIndex: 1 }}
+                  className="md:!static md:!flex md:!flex-col md:!gap-1"
                 >
-                  <Trash2 size={13} />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingItemIdx(idx); setItemModalOpen(true); }}
+                    style={{
+                      height: 24, width: 24, display: "flex", alignItems: "center", justifyContent: "center",
+                      border: "1.5px solid #AED6F1", borderRadius: "50%", background: "#EBF5FB",
+                      color: "#2980B9", cursor: "pointer",
+                    }}
+                    title="Edit item details"
+                    className="md:!h-9 md:!w-[30px] md:!rounded-lg"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(idx)}
+                    disabled={form.items.length === 1}
+                    style={{
+                      height: 24, width: 24, display: "flex", alignItems: "center", justifyContent: "center",
+                      border: "1.5px solid #F5B7B1", borderRadius: "50%", background: "#FDEDEC",
+                      color: "#C0392B", cursor: "pointer", opacity: form.items.length === 1 ? 0.3 : 1,
+                    }}
+                    className="md:!h-9 md:!w-[30px] md:!rounded-lg md:!mt-0"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -1105,7 +1138,14 @@ export default function QuotationsPage() {
         onSubmit={handleCreateCustomer}
       />
 
-      <SaleModal 
+      <QuotationItemModal
+        open={itemModalOpen}
+        onClose={() => { setItemModalOpen(false); setEditingItemIdx(null); }}
+        onSubmit={handleItemModalSubmit}
+        editItem={editingItemIdx !== null ? form.items[editingItemIdx] : null}
+      />
+
+      <SaleModal
         open={saleModalOpen}
         onClose={() => setSaleModalOpen(false)}
         onSubmit={handleSaleSubmit}

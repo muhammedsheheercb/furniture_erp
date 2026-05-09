@@ -255,7 +255,7 @@ export default function SuppliersPage() {
                            <CurrencySymbol /> {(supplier.creditBalance || 0).toLocaleString()}
                         </td>
                         <td className="py-4 px-6 text-right">
-                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex justify-end gap-2">
                             <Button 
                               variant="ghost" 
                               size="icon" 

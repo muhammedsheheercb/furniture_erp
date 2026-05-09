@@ -1,15 +1,18 @@
 "use client";
-import { 
-  Plus, 
-  Search, 
-  Filter, 
+import {
+  Plus,
+  Search,
+  Filter,
   Download,
   MoreHorizontal,
   Eye,
   Edit,
   Trash2,
   Hammer,
-  AlertTriangle
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -38,6 +41,15 @@ export default function ProductsPage() {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+
+  function toggleBatches(id: string) {
+    setExpandedBatches(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -248,6 +260,29 @@ export default function ProductsPage() {
                               <span className="flex items-center gap-1 text-[9px] font-bold text-rose-500 uppercase">
                                 <AlertTriangle size={10} /> Low Stock
                               </span>
+                            )}
+                            {product.batches && product.batches.filter((b: any) => b.quantity > 0).length > 0 && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleBatches(product._id)}
+                                  className="mt-1 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors"
+                                >
+                                  <Layers size={10} />
+                                  {product.batches.filter((b: any) => b.quantity > 0).length} Batches
+                                  {expandedBatches.has(product._id) ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                                </button>
+                                {expandedBatches.has(product._id) && (
+                                  <div className="mt-1 flex flex-col gap-0.5 w-full">
+                                    {product.batches.filter((b: any) => b.quantity > 0).map((b: any) => (
+                                      <div key={b.batchNumber} className="flex items-center justify-between gap-2 px-2 py-0.5 rounded bg-amber-50 border border-amber-100">
+                                        <span className="font-mono text-[9px] text-amber-700 truncate max-w-22.5">{b.batchNumber}</span>
+                                        <span className="text-[9px] font-bold text-amber-800 whitespace-nowrap">{b.quantity} {product.unit || "Pcs"}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
                         </td>

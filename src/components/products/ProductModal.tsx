@@ -43,13 +43,15 @@ interface BomRow {
 type Mode = "manufacture" | "direct";
 
 interface FormState {
-  productName:    string;
-  productCode:    string;
-  category:       string;
-  status:         string;
-  isManufactured: boolean;
-  description:    string;
-  currentStock:   number;
+  productName:     string;
+  productCode:     string;
+  category:        string;
+  primaryMaterial: string;
+  color:           string;
+  status:          string;
+  isManufactured:  boolean;
+  description:     string;
+  currentStock:    number;
   dimensions: { width: string; height: string; depth: string; weight: string; unit: string };
   pricing: {
     materialCost:  number;
@@ -69,6 +71,7 @@ interface FormState {
 function makeEmpty(mode: Mode): FormState {
   return {
     productName: "", productCode: "", category: "Sofa",
+    primaryMaterial: "", color: "",
     status: "active", isManufactured: mode === "manufacture", description: "",
     currentStock: 0,
     dimensions: { width: "", height: "", depth: "", weight: "", unit: "cm" },
@@ -175,13 +178,15 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
       const m: Mode = product.isManufactured ? "manufacture" : "direct";
       setMode(m);
       setForm({
-        productName:    product.name || "",
-        productCode:    product.itemNumber || "",
-        category:       product.category || "Sofa",
-        status:         product.status || "active",
-        isManufactured: !!product.isManufactured,
-        description:    product.description || "",
-        currentStock:   product.quantity ?? 0,
+        productName:     product.name || "",
+        productCode:     product.itemNumber || "",
+        category:        product.category || "Sofa",
+        primaryMaterial: product.primaryMaterial !== "—" ? (product.primaryMaterial || "") : "",
+        color:           product.color || "",
+        status:          product.status || "active",
+        isManufactured:  !!product.isManufactured,
+        description:     product.description || "",
+        currentStock:    product.quantity ?? 0,
         dimensions: {
           width:  product.dimensions?.width  ?? "",
           height: product.dimensions?.height ?? "",
@@ -326,16 +331,17 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
 
     const isDirect = mode === "direct";
     const payload  = {
-      name:           form.productName,
-      itemNumber:     form.productCode,
-      category:       form.category,
-      unit:           "Piece",
-      status:         form.status,
-      isManufactured: !isDirect,
-      description:    form.description,
-      primaryMaterial: "—",
-      reorderLevel:   0,
-      quantity:       form.currentStock,
+      name:            form.productName,
+      itemNumber:      form.productCode,
+      category:        form.category,
+      unit:            "Piece",
+      status:          form.status,
+      isManufactured:  !isDirect,
+      description:     form.description,
+      primaryMaterial: form.primaryMaterial || "—",
+      color:           form.color || "",
+      reorderLevel:    0,
+      quantity:        form.currentStock,
       purchaseAmount: isDirect ? form.pricing.purchasePrice : form.pricing.totalCost,
       salesAmount:    isDirect ? form.pricing.salesPrice    : form.pricing.sellingPrice,
       mrp:            isDirect ? 0                          : form.pricing.discountPrice,
@@ -453,6 +459,29 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
                 </select>
               </div>
             </div>
+
+            {mode === "manufacture" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={lbl}>Primary Material</label>
+                  <input
+                    value={form.primaryMaterial}
+                    onChange={e => setForm(p => ({ ...p, primaryMaterial: e.target.value }))}
+                    placeholder="e.g. Teak Wood, Metal, Fabric"
+                    className={inp}
+                  />
+                </div>
+                <div>
+                  <label className={lbl}>Default Color</label>
+                  <input
+                    value={form.color}
+                    onChange={e => setForm(p => ({ ...p, color: e.target.value }))}
+                    placeholder="e.g. Brown, Black, White"
+                    className={inp}
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <label className={lbl}>Current Stock</label>

@@ -12,6 +12,7 @@ export interface IDeliveryDocument extends Document {
   }[];
   status: "pending" | "delivered";
   deliveryDate?: Date;
+  deliveryAddress?: string;
   remarks?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -32,6 +33,7 @@ const DeliverySchema = new Schema<IDeliveryDocument>(
     ],
     status: { type: String, enum: ["pending", "delivered"], default: "pending" },
     deliveryDate: Date,
+    deliveryAddress: String,
     remarks: String,
   },
   { timestamps: true }

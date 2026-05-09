@@ -163,19 +163,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Credit purchase → update supplier balance
-    if (body.paymentType === "credit") {
+    // Track unpaid balance against supplier for any payment type
+    const unpaidBalance = Number(body.total) - Number(body.paidAmount || 0);
+    if (unpaidBalance > 0) {
       await Supplier.findByIdAndUpdate(
         body.supplierId,
         {
-          $inc: { creditBalance: body.total },
+          $inc: { creditBalance: unpaidBalance },
           $push: {
             balanceHistory: {
               date:          new Date(),
-              amount:        body.total,
+              amount:        unpaidBalance,
               type:          "adjustment",
-              paymentMethod: "credit",
-              note:          `Purchase #${purchaseNumber}`,
+              paymentMethod: body.paymentType,
+              note:          `Purchase #${purchaseNumber} — Balance due (Bill: ₹${body.total}, Paid: ₹${body.paidAmount || 0})`,
             },
           },
         },

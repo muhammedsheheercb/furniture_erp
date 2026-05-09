@@ -217,6 +217,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 4 — create production entry
+    // Direct sales bills skip production (items already produced) — mark as finished immediately
+    const productionStatus = body.isDirect ? "finished" : "pending";
     await Production.create([{
         saleId: sale._id,
         saleNumber: sale.saleNumber,
@@ -228,12 +230,32 @@ export async function POST(req: NextRequest) {
             color: it.color,
             material: it.material,
             size: it.size,
-            status: "pending"
+            status: productionStatus,
         })),
+        status: productionStatus,
         remarks: body.remarks || ""
     }], { session: dbSession });
 
-    // 5 — if converted from quotation, update quotation
+    // 5 — for direct sales, create a delivery entry immediately (pending)
+    if (body.isDirect) {
+      await Delivery.create([{
+        saleId:          sale._id,
+        saleNumber:      sale.saleNumber,
+        customerId:      sale.customerId,
+        customerName:    sale.customerName,
+        items:           body.items.map((it: any) => ({
+          itemName: it.itemName,
+          quantity: it.quantity,
+          status:   "pending",
+        })),
+        status:          "pending",
+        deliveryDate:    body.deliveryDate    ? new Date(body.deliveryDate)    : undefined,
+        deliveryAddress: body.deliveryAddress || "",
+        remarks:         body.remarks         || "",
+      }], { session: dbSession });
+    }
+
+    // 7 — if converted from quotation, update quotation
     if (body.quotationId) {
         await Quotation.findByIdAndUpdate(body.quotationId, {
             status: "sale",
