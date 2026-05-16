@@ -6,31 +6,58 @@ import {
     LayoutDashboard, Package, Users, ShoppingCart,
     TruckIcon, Briefcase, LogOut, ChevronLeft, ChevronRight,
     ReceiptText, Hammer, Database, ShoppingBag, 
-    Truck, Receipt, BarChart3, Settings, FileText
+    Truck, Receipt, BarChart3, Settings, FileText,
+    Shield, Ban, Undo2
 } from "lucide-react";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 
-const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/quotations", label: "Quotations", icon: FileText },
-    { href: "/sales", label: "Sales Orders", icon: ReceiptText },
-    { href: "/production", label: "Production", icon: Hammer },
-    { href: "/deliveries", label: "Delivery", icon: Truck },
-    { href: "/invoices", label: "Invoice", icon: Receipt },
-    { href: "/products", label: "Products", icon: Package },
-    { href: "/customers", label: "Customers", icon: Users },
-    { href: "/suppliers", label: "Suppliers", icon: TruckIcon },
-    { href: "/materials", label: "Raw Materials", icon: Database },
-    { href: "/purchases", label: "Purchases", icon: ShoppingBag },
-    { href: "/expenses", label: "Expenses", icon: Receipt },
-    { href: "/settings", label: "Settings", icon: Settings },
+interface NavItem {
+    href: string;
+    label: string;
+    icon: any;
+    permissionKey?: string;
+    adminOnly?: boolean;
+}
+
+const navItems: NavItem[] = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permissionKey: "dashboard" },
+    { href: "/quotations", label: "Quotations", icon: FileText, permissionKey: "quotations" },
+    { href: "/sales", label: "Sales Orders", icon: ReceiptText, permissionKey: "sales" },
+    { href: "/production", label: "Production", icon: Hammer, permissionKey: "production" },
+    { href: "/deliveries", label: "Delivery", icon: Truck, permissionKey: "deliveries" },
+    { href: "/items", label: "Inventory", icon: Package, permissionKey: "items" },
+    { href: "/customers", label: "Customers", icon: Users, permissionKey: "customers" },
+    { href: "/suppliers", label: "Suppliers", icon: TruckIcon, permissionKey: "suppliers" },
+    { href: "/users", label: "Workers", icon: Shield, adminOnly: true },
+    { href: "/materials", label: "Raw Materials", icon: Database, permissionKey: "items" },
+    { href: "/purchases", label: "Purchases", icon: ShoppingBag, permissionKey: "purchases" },
+    { href: "/expenses", label: "Expenses", icon: Receipt, permissionKey: "expenses" },
+    { href: "/settings", label: "Settings", icon: Settings, adminOnly: true },
 ];
 
 export default function Sidebar() {
     const { data: session } = useSession();
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
+
+    const isAdmin = session?.user?.role === "admin";
+    const userPermissions = (session?.user as any)?.permissions || {};
+
+    const filteredNavItems = navItems.filter(item => {
+        // Admins see everything
+        if (isAdmin) return true;
+        
+        // Non-admins can't see adminOnly items
+        if (item.adminOnly) return false;
+        
+        // If there's a permission key, check for 'view' permission
+        if (item.permissionKey) {
+            return userPermissions[item.permissionKey]?.view === true;
+        }
+        
+        return true;
+    });
 
     const w = collapsed ? 72 : 260;
 
@@ -88,7 +115,7 @@ export default function Sidebar() {
                 overflowY: "auto",
                 scrollbarWidth: "none"
             }}>
-                {navItems.map(({ href, label, icon: Icon }) => {
+                {filteredNavItems.map(({ href, label, icon: Icon }) => {
                     const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
                     return (
                         <Link key={href} href={href} title={collapsed ? label : undefined}

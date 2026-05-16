@@ -6,29 +6,38 @@ import {
     LayoutDashboard, Package, Users,
     TruckIcon, LogOut, ReceiptText, Hammer,
     Database, ShoppingBag, Truck, Receipt, Settings,
-    FileText, Bell, User, ChevronDown
+    FileText, Bell, User, ChevronDown, Shield
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 
-const navItems = [
-    { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
-    { href: "/invoices",   label: "Invoice",    icon: Receipt },
-    { href: "/products",   label: "Products",   icon: Package },
-    { href: "/customers",  label: "Customers",  icon: Users },
-    { href: "/suppliers",  label: "Suppliers",  icon: TruckIcon },
-    { href: "/materials",  label: "Materials",  icon: Database },
-    { href: "/purchases",  label: "Purchases",  icon: ShoppingBag },
-    { href: "/expenses",   label: "Expenses",   icon: Receipt },
-    { href: "/settings",   label: "Settings",   icon: Settings },
+interface NavItem {
+    href: string;
+    label: string;
+    icon: any;
+    permissionKey?: string;
+    adminOnly?: boolean;
+}
+
+const navItems: NavItem[] = [
+    { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard, permissionKey: "dashboard" },
+    { href: "/invoices",   label: "Invoice",    icon: Receipt, permissionKey: "invoices" },
+    { href: "/products",   label: "Products",   icon: Package, permissionKey: "items" },
+    { href: "/customers",  label: "Customers",  icon: Users, permissionKey: "customers" },
+    { href: "/suppliers",  label: "Suppliers",  icon: TruckIcon, permissionKey: "suppliers" },
+    { href: "/users",      label: "Workers",    icon: Shield, adminOnly: true },
+    { href: "/materials",  label: "Materials",  icon: Database, permissionKey: "items" },
+    { href: "/purchases",  label: "Purchases",  icon: ShoppingBag, permissionKey: "purchases" },
+    { href: "/expenses",   label: "Expenses",   icon: Receipt, permissionKey: "expenses" },
+    { href: "/settings",   label: "Settings",   icon: Settings, adminOnly: true },
 ];
 
-const salesDropdownItems = [
-    { href: "/quotations", label: "Quotations", icon: FileText },
-    { href: "/sales",      label: "Sales",      icon: ReceiptText },
-    { href: "/production", label: "Production", icon: Hammer },
-    { href: "/deliveries", label: "Delivery",   icon: Truck },
+const salesDropdownItems: NavItem[] = [
+    { href: "/quotations", label: "Quotations", icon: FileText, permissionKey: "quotations" },
+    { href: "/sales",      label: "Sales",      icon: ReceiptText, permissionKey: "sales" },
+    { href: "/production", label: "Production", icon: Hammer, permissionKey: "production" },
+    { href: "/deliveries", label: "Delivery",   icon: Truck, permissionKey: "deliveries" },
 ];
 
 export default function Navbar() {
@@ -39,7 +48,23 @@ export default function Navbar() {
     const buttonRef = useRef<HTMLButtonElement>(null);
     const [mounted, setMounted] = useState(false);
 
-    const isSalesActive = salesDropdownItems.some(
+    const isAdmin = session?.user?.role === "admin";
+    const userPermissions = (session?.user as any)?.permissions || {};
+
+    const filteredNavItems = navItems.filter(item => {
+        if (isAdmin) return true;
+        if (item.adminOnly) return false;
+        if (item.permissionKey) return userPermissions[item.permissionKey]?.view === true;
+        return true;
+    });
+
+    const filteredSalesItems = salesDropdownItems.filter(item => {
+        if (isAdmin) return true;
+        if (item.permissionKey) return userPermissions[item.permissionKey]?.view === true;
+        return true;
+    });
+
+    const isSalesActive = filteredSalesItems.some(
         ({ href }) => pathname === href || pathname.startsWith(href)
     );
 
@@ -84,7 +109,7 @@ export default function Navbar() {
                 overflow: "hidden",
             }}
         >
-            {salesDropdownItems.map(({ href, label, icon: Icon }) => {
+            {filteredSalesItems.map(({ href, label, icon: Icon }) => {
                 const active = pathname === href || pathname.startsWith(href);
                 return (
                     <Link
@@ -210,48 +235,50 @@ export default function Navbar() {
                 <nav style={{ maxWidth: 1600, margin: "0 auto", display: "flex", alignItems: "center", padding: "0 8px" }}>
 
                     {/* Sales Dropdown Button */}
-                    <button
-                        ref={buttonRef}
-                        onClick={openDropdown}
-                        style={{
-                            display: "flex", alignItems: "center", gap: 7,
-                            padding: "10px 14px", borderRadius: 8,
-                            fontSize: 13, fontWeight: 500,
-                            whiteSpace: "nowrap", cursor: "pointer",
-                            transition: "all 0.15s",
-                            margin: "4px 1px",
-                            background: isSalesActive || salesOpen ? "rgba(201,168,76,0.12)" : "transparent",
-                            color: isSalesActive || salesOpen ? "#E8C97A" : "rgba(255,255,255,0.55)",
-                            border: isSalesActive || salesOpen ? "1px solid rgba(201,168,76,0.25)" : "1px solid transparent",
-                        }}
-                        onMouseEnter={e => {
-                            if (!isSalesActive && !salesOpen) {
-                                e.currentTarget.style.color = "#E8C97A";
-                                e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-                            }
-                        }}
-                        onMouseLeave={e => {
-                            if (!isSalesActive && !salesOpen) {
-                                e.currentTarget.style.color = "rgba(255,255,255,0.55)";
-                                e.currentTarget.style.background = "transparent";
-                            }
-                        }}
-                    >
-                        <ReceiptText size={16} color={isSalesActive || salesOpen ? "#E8C97A" : "rgba(255,255,255,0.35)"} />
-                        <span>Sales</span>
-                        <ChevronDown
-                            size={14}
+                    {filteredSalesItems.length > 0 && (
+                        <button
+                            ref={buttonRef}
+                            onClick={openDropdown}
                             style={{
-                                transition: "transform 0.2s",
-                                transform: salesOpen ? "rotate(180deg)" : "rotate(0deg)",
-                                marginLeft: 2,
-                                color: isSalesActive || salesOpen ? "#E8C97A" : "rgba(255,255,255,0.35)",
+                                display: "flex", alignItems: "center", gap: 7,
+                                padding: "10px 14px", borderRadius: 8,
+                                fontSize: 13, fontWeight: 500,
+                                whiteSpace: "nowrap", cursor: "pointer",
+                                transition: "all 0.15s",
+                                margin: "4px 1px",
+                                background: isSalesActive || salesOpen ? "rgba(201,168,76,0.12)" : "transparent",
+                                color: isSalesActive || salesOpen ? "#E8C97A" : "rgba(255,255,255,0.55)",
+                                border: isSalesActive || salesOpen ? "1px solid rgba(201,168,76,0.25)" : "1px solid transparent",
                             }}
-                        />
-                    </button>
+                            onMouseEnter={e => {
+                                if (!isSalesActive && !salesOpen) {
+                                    e.currentTarget.style.color = "#E8C97A";
+                                    e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+                                }
+                            }}
+                            onMouseLeave={e => {
+                                if (!isSalesActive && !salesOpen) {
+                                    e.currentTarget.style.color = "rgba(255,255,255,0.55)";
+                                    e.currentTarget.style.background = "transparent";
+                                }
+                            }}
+                        >
+                            <ReceiptText size={16} color={isSalesActive || salesOpen ? "#E8C97A" : "rgba(255,255,255,0.35)"} />
+                            <span>Sales</span>
+                            <ChevronDown
+                                size={14}
+                                style={{
+                                    transition: "transform 0.2s",
+                                    transform: salesOpen ? "rotate(180deg)" : "rotate(0deg)",
+                                    marginLeft: 2,
+                                    color: isSalesActive || salesOpen ? "#E8C97A" : "rgba(255,255,255,0.35)",
+                                }}
+                            />
+                        </button>
+                    )}
 
                     {/* Remaining nav items */}
-                    {navItems.map(({ href, label, icon: Icon }) => {
+                    {filteredNavItems.map(({ href, label, icon: Icon }) => {
                         const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
                         return (
                             <Link

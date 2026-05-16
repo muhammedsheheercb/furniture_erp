@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
 import { 
@@ -33,6 +34,13 @@ import { Badge } from "@/components/ui/Badge";
 import Spinner from "@/components/ui/Spinner";
 
 export default function ExpensesPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
+  const perms = (session?.user?.permissions as any)?.expenses;
+  const canCreate = isAdmin || perms?.create;
+  const canEdit = isAdmin || perms?.edit;
+  const canDelete = isAdmin || perms?.delete;
+
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalAmount, setTotalAmount] = useState(0);
@@ -135,12 +143,14 @@ export default function ExpensesPage() {
           <h2 className="text-3xl font-extrabold text-[#1A1210]">Expense Tracking</h2>
           <p className="text-[#7A6055]">Monitor operational costs and overheads.</p>
         </div>
-        <Button 
-          onClick={() => { setSelectedExpense(null); setModalOpen(true); }}
-          className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white shadow-lg shadow-[#2C1810]/20"
-        >
-          <Plus size={18} className="mr-2" /> Record Expense
-        </Button>
+        {canCreate && (
+          <Button 
+            onClick={() => { setSelectedExpense(null); setModalOpen(true); }}
+            className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white shadow-lg shadow-[#2C1810]/20"
+          >
+            <Plus size={18} className="mr-2" /> Record Expense
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -235,20 +245,24 @@ export default function ExpensesPage() {
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button 
-                              onClick={() => openEditModal(exp)}
-                              className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
-                              title="Edit"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button 
-                              onClick={() => openDeleteConfirm(exp)}
-                              className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            {canEdit && (
+                              <button 
+                                onClick={() => openEditModal(exp)}
+                                className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+                                title="Edit"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button 
+                                onClick={() => openDeleteConfirm(exp)}
+                                className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

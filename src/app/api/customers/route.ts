@@ -5,12 +5,14 @@ import User from "@/models/User";
 import { generateUniqueNumber } from "../../../lib/utils";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 
 // GET /api/customers
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!(await hasPermission("customers", "view"))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
 
     await connectDB();
 

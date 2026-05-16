@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
 import {
@@ -18,6 +19,11 @@ import {
 import { formatDate } from "@/lib/utils";
 
 export default function DeliveriesPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
+  const perms = (session?.user?.permissions as any)?.deliveries;
+  const canEdit = isAdmin || perms?.edit;
+
   const [deliveries, setDeliveries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"pending" | "delivered">("pending");
@@ -163,7 +169,7 @@ export default function DeliveriesPage() {
                         {delivery.deliveryAddress}
                       </p>
                     )}
-                    {delivery.status !== "delivered" && (
+                    {canEdit && delivery.status !== "delivered" && (
                       <Button
                         onClick={() => handleMarkDone(delivery._id)}
                         className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"

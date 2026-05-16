@@ -1,15 +1,7 @@
 import mongoose, { Schema, model, models } from 'mongoose';
 
-const UserSchema = new Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  passwordHash: { type: String },
-  password: { type: String }, // For compatibility with legacy scripts
-  role: { type: String, default: 'owner', enum: ['owner', 'admin', 'staff'] },
-  createdAt: { type: Date, default: Date.now },
-});
-
-export const User = models.User || model('User', UserSchema);
+import User from "@/models/User";
+export { User };
 
 const ProductSchema = new Schema({
   sku: { type: String, required: true, unique: true },

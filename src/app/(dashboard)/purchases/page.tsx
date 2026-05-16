@@ -16,6 +16,7 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -25,6 +26,13 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 
 export default function PurchasesPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
+  const perms = (session?.user?.permissions as any)?.purchases;
+  const canCreate = isAdmin || perms?.create;
+  const canEdit = isAdmin || perms?.edit;
+  const canDelete = isAdmin || perms?.delete;
+
   const [purchases, setPurchases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -112,15 +120,17 @@ export default function PurchasesPage() {
           <h2 className="text-3xl font-extrabold text-[#1A1210]">Purchase Orders</h2>
           <p className="text-[#7A6055]">Procure raw materials and track supplier shipments.</p>
         </div>
-        <Button 
-          className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
-          onClick={() => {
-            setEditPurchase(null);
-            setModalOpen(true);
-          }}
-        >
-          <Plus size={18} className="mr-2" /> Create PO
-        </Button>
+        {canCreate && (
+          <Button 
+            className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
+            onClick={() => {
+              setEditPurchase(null);
+              setModalOpen(true);
+            }}
+          >
+            <Plus size={18} className="mr-2" /> Create PO
+          </Button>
+        )}
       </div>
 
       <PurchaseModal 
@@ -187,22 +197,26 @@ export default function PurchasesPage() {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-[#7A6055]"
-                              onClick={() => handleEdit(po)}
-                            >
-                              <Edit size={16} />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-rose-500"
-                              onClick={() => handleDelete(po._id)}
-                            >
-                              <Trash2 size={16} />
-                            </Button>
+                            {canEdit && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-[#7A6055]"
+                                onClick={() => handleEdit(po)}
+                              >
+                                <Edit size={16} />
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-rose-500"
+                                onClick={() => handleDelete(po._id)}
+                              >
+                                <Trash2 size={16} />
+                              </Button>
+                            )}
                             <Button variant="ghost" size="icon" className="text-[#C9A84C]">
                                 <ChevronRight size={16} />
                             </Button>

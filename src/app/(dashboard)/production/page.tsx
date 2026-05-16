@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
 import {
@@ -20,6 +21,11 @@ import {
 } from "@/components/ui/card";
 
 export default function ProductionPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
+  const perms = (session?.user?.permissions as any)?.production;
+  const canEdit = isAdmin || perms?.edit;
+
   const [productions, setProductions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProd, setSelectedProd] = useState<any | null>(null);
@@ -126,7 +132,7 @@ export default function ProductionPage() {
                 {prod.status}
               </Badge>
             </div>
-            {prod.status !== "finished" && (
+            {canEdit && prod.status !== "finished" && (
               <Button
                 onClick={() => handleUpdateStatus(prod._id, prod.status)}
                 className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"

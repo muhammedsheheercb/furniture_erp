@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
 import { 
@@ -32,6 +33,13 @@ import CustomerLedgerModal from "@/components/customers/CustomerLedgerModal";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 
 export default function CustomersPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
+  const perms = (session?.user?.permissions as any)?.customers;
+  const canCreate = isAdmin || perms?.create;
+  const canEdit = isAdmin || perms?.edit;
+  const canDelete = isAdmin || perms?.delete;
+
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -142,15 +150,17 @@ export default function CustomersPage() {
           <h2 className="text-3xl font-extrabold text-[#1A1210]">Customers</h2>
           <p className="text-[#7A6055]">Manage your customer relationships and credit history.</p>
         </div>
-        <Button 
-          className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
-          onClick={() => {
-            setEditCustomer(null);
-            setModalOpen(true);
-          }}
-        >
-          <UserPlus size={18} className="mr-2" /> Add Customer
-        </Button>
+        {canCreate && (
+          <Button 
+            className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
+            onClick={() => {
+              setEditCustomer(null);
+              setModalOpen(true);
+            }}
+          >
+            <UserPlus size={18} className="mr-2" /> Add Customer
+          </Button>
+        )}
       </div>
 
       <CustomerModal 
@@ -249,15 +259,17 @@ export default function CustomersPage() {
                         </td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-emerald-600"
-                              title="Receive Payment"
-                              onClick={() => handleOpenBalance(customer)}
-                            >
-                              <Wallet size={16} />
-                            </Button>
+                            {canEdit && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-emerald-600"
+                                title="Receive Payment"
+                                onClick={() => handleOpenBalance(customer)}
+                              >
+                                <Wallet size={16} />
+                              </Button>
+                            )}
                             <Button 
                               variant="ghost" 
                               size="icon" 
@@ -267,24 +279,28 @@ export default function CustomersPage() {
                             >
                               <Eye size={16} />
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-[#7A6055]"
-                              title="Edit Profile"
-                              onClick={() => handleEdit(customer)}
-                            >
-                              <Edit size={16} />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-rose-500"
-                              title="Delete Customer"
-                              onClick={() => handleDelete(customer._id)}
-                            >
-                              <Trash2 size={16} />
-                            </Button>
+                            {canEdit && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-[#7A6055]"
+                                title="Edit Profile"
+                                onClick={() => handleEdit(customer)}
+                              >
+                                <Edit size={16} />
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-rose-500"
+                                title="Delete Customer"
+                                onClick={() => handleDelete(customer._id)}
+                              >
+                                <Trash2 size={16} />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>

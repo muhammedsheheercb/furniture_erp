@@ -6,7 +6,7 @@ import {
   Users, Mail, Shield, Plus, Edit2, Trash2,
   LayoutDashboard, Package, ShoppingCart,
   TruckIcon, Receipt, ReceiptText, Undo2, Ban,
-  Eye, EyeOff, FileText, UserCheck
+  Eye, EyeOff, FileText, UserCheck, Hammer, Truck
 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
@@ -19,15 +19,17 @@ import { motion, AnimatePresence } from "framer-motion";
 const PAGES = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "quotations", label: "Quotations", icon: FileText },
+  { id: "sales", label: "Sales Orders", icon: ReceiptText },
+  { id: "production", label: "Production", icon: Hammer },
+  { id: "deliveries", label: "Deliveries", icon: Truck },
   { id: "items", label: "Inventory", icon: Package },
   { id: "customers", label: "Customers", icon: Users },
   { id: "suppliers", label: "Suppliers", icon: TruckIcon },
-  { id: "sales", label: "Sales", icon: ReceiptText },
   { id: "purchases", label: "Purchases", icon: ShoppingCart },
   { id: "expenses", label: "Expenses", icon: Receipt },
   { id: "sales_returns", label: "Sales Returns", icon: Undo2 },
   { id: "damaged_items", label: "Damaged Items", icon: Ban },
-  { id: "users", label: "Users", icon: Shield },
+  { id: "users", label: "Workers", icon: Shield },
 ];
 
 const ACTIONS = ["view", "create", "edit", "delete"] as const;
@@ -47,6 +49,7 @@ export default function UsersPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [createConfirmOpen, setCreateConfirmOpen] = useState(false);
 
   const initialPermissions = PAGES.reduce((acc, page) => ({
     ...acc,
@@ -55,7 +58,7 @@ export default function UsersPage() {
 
   const [formData, setFormData] = useState({
     name: "",
-    email: "",
+    email: "diamondhome2026@gmail.com",
     password: "",
     role: "staff" as "admin" | "staff",
     permissions: initialPermissions
@@ -77,7 +80,7 @@ export default function UsersPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return toast.error("Name is required");
     if (!formData.email.includes("@")) return toast.error("Valid email is required");
@@ -85,6 +88,11 @@ export default function UsersPage() {
     const hasAnyPermission = Object.values(formData.permissions).some(p => p.view || p.create || p.edit || p.delete);
     if (!hasAnyPermission) return toast.error("Select at least one module permission");
 
+    setCreateConfirmOpen(true);
+  };
+
+  const executeSubmit = async () => {
+    setCreateConfirmOpen(false);
     try {
       const url = editingUser ? `/api/users/${editingUser._id}` : "/api/users";
       const method = editingUser ? "PUT" : "POST";
@@ -134,7 +142,7 @@ export default function UsersPage() {
         style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}
       >
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: "#1A1210", margin: 0 }}>User Management</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: "#1A1210", margin: 0 }}>Worker Management</h1>
           <p style={{ fontSize: 13, color: "#7A6055", margin: "4px 0 0" }}>
             Manage staff accounts and module permissions
           </p>
@@ -145,7 +153,7 @@ export default function UsersPage() {
             whileTap={{ scale: 0.98 }}
             onClick={() => {
               setEditingUser(null);
-              setFormData({ name: "", email: "", password: "", role: "staff", permissions: initialPermissions });
+              setFormData({ name: "", email: "diamondhome2026@gmail.com", password: "", role: "staff", permissions: initialPermissions });
               setModalOpen(true);
             }}
             style={{
@@ -295,7 +303,7 @@ export default function UsersPage() {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingUser ? "Edit User" : "Add New User"}
+        title={editingUser ? "Edit Worker" : "Add New Worker"}
         size="xl"
       >
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -313,6 +321,8 @@ export default function UsersPage() {
               value={formData.email}
               onChange={e => setFormData({ ...formData, email: e.target.value })}
               required
+              readOnly
+              style={{ background: "#F5F2EA", opacity: 0.8 }}
             />
             <div style={{ position: "relative" }}>
               <Input
@@ -502,7 +512,7 @@ export default function UsersPage() {
                 boxShadow: "0 4px 14px rgba(44,24,16,0.2)"
               }}
             >
-              {editingUser ? "Update User" : "Create User"}
+              {editingUser ? "Update Worker" : "Create Worker"}
             </button>
           </div>
         </form>
@@ -512,10 +522,22 @@ export default function UsersPage() {
         open={!!deleteId}
         onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
-        title="Delete User"
-        message="Are you sure you want to delete this user? This action cannot be undone."
+        title="Delete Worker"
+        message="Are you sure you want to delete this worker? This action cannot be undone."
         confirmLabel="Delete"
         loading={deleting}
+      />
+
+      <ConfirmModal
+        open={createConfirmOpen}
+        title={editingUser ? "Update Worker?" : "Create New Worker?"}
+        message={editingUser 
+          ? `Are you sure you want to update permissions for ${formData.name}?` 
+          : `This will create a new account for ${formData.name} with the shared corporate email.`
+        }
+        onClose={() => setCreateConfirmOpen(false)}
+        onConfirm={executeSubmit}
+        confirmLabel={editingUser ? "Update" : "Create"}
       />
     </div>
   );

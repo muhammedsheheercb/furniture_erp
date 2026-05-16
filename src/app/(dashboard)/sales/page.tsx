@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -45,6 +46,13 @@ function printSale(item: any) {
 
 // ── page ──────────────────────────────────────────────────────────────────────
 export default function SalesPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
+  const perms = (session?.user?.permissions as any)?.sales;
+  const canCreate = isAdmin || perms?.create;
+  const canEdit = isAdmin || perms?.edit;
+  const canDelete = isAdmin || perms?.delete;
+
   const [activeTab, setActiveTab] = useState("convert");
   const [sales,     setSales]     = useState<any[]>([]);
   const [loading,   setLoading]   = useState(true);
@@ -143,12 +151,14 @@ export default function SalesPage() {
           <p className="text-[#7A6055]">Manage quotations, direct sales, and invoices.</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            className="bg-[#1B3A2D] hover:bg-[#163222] text-white font-bold"
-            onClick={() => { setEditSale(null); setModalOpen(true); }}
-          >
-            <Plus size={16} className="mr-2" /> Direct Sales Bill
-          </Button>
+          {canCreate && (
+            <Button
+              className="bg-[#1B3A2D] hover:bg-[#163222] text-white font-bold"
+              onClick={() => { setEditSale(null); setModalOpen(true); }}
+            >
+              <Plus size={16} className="mr-2" /> Direct Sales Bill
+            </Button>
+          )}
         </div>
       </div>
 
@@ -244,42 +254,44 @@ export default function SalesPage() {
                               <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100 text-[10px] uppercase">Quotation</Badge>
                             </td>
                             <td className="py-4 px-6 text-right">
-                              <Button
-                                size="sm"
-                                className="h-8 bg-[#2C1810] hover:bg-[#1A0F0A] text-white px-3 text-xs"
-                                onClick={() => {
-                                  setEditSale({
-                                    customerId:      q.customerId?._id || q.customerId,
-                                    customerName:    q.customerName,
-                                    customerNumber:  q.customerId?.customerNumber || "",
-                                    customerMobile:  q.customerMobile  || "",
-                                    customerAddress: q.customerAddress || "",
-                                    items: q.items.map((it: any) => ({
-                                      itemId:     it.itemId,
-                                      itemNumber: it.itemNumber,
-                                      itemName:   it.itemName,
-                                      quantity:   it.quantity,
-                                      price:      it.price,
-                                      discount:   it.discount,
-                                      color:      it.color,
-                                      material:   it.material,
-                                      size:       it.size,
-                                      total:      it.total,
-                                      dimensions: it.dimensions,
-                                      bom:        it.bom
-                                    })),
-                                    subtotal:    q.subtotal,
-                                    tax:         q.tax,
-                                    discount:    q.discount,
-                                    total:       q.total,
-                                    quotationId: q._id,
-                                    isConversion: true,
-                                  });
-                                  setModalOpen(true);
-                                }}
-                              >
-                                Convert to Sale
-                              </Button>
+                              {canCreate && (
+                                <Button
+                                  size="sm"
+                                  className="h-8 bg-[#2C1810] hover:bg-[#1A0F0A] text-white px-3 text-xs"
+                                  onClick={() => {
+                                    setEditSale({
+                                      customerId:      q.customerId?._id || q.customerId,
+                                      customerName:    q.customerName,
+                                      customerNumber:  q.customerId?.customerNumber || "",
+                                      customerMobile:  q.customerMobile  || "",
+                                      customerAddress: q.customerAddress || "",
+                                      items: q.items.map((it: any) => ({
+                                        itemId:     it.itemId,
+                                        itemNumber: it.itemNumber,
+                                        itemName:   it.itemName,
+                                        quantity:   it.quantity,
+                                        price:      it.price,
+                                        discount:   it.discount,
+                                        color:      it.color,
+                                        material:   it.material,
+                                        size:       it.size,
+                                        total:      it.total,
+                                        dimensions: it.dimensions,
+                                        bom:        it.bom
+                                      })),
+                                      subtotal:    q.subtotal,
+                                      tax:         q.tax,
+                                      discount:    q.discount,
+                                      total:       q.total,
+                                      quotationId: q._id,
+                                      isConversion: true,
+                                    });
+                                    setModalOpen(true);
+                                  }}
+                                >
+                                  Convert to Sale
+                                </Button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -398,9 +410,9 @@ export default function SalesPage() {
                                     >
                                       <Printer size={15} />
                                     </Button>
-
+                                    
                                     {/* Receive balance payment */}
-                                    {bal > 0 && (
+                                    {canEdit && bal > 0 && (
                                       <Button
                                         variant="ghost"
                                         size="icon"
@@ -413,7 +425,7 @@ export default function SalesPage() {
                                     )}
 
                                     {/* Delete (only if not fully completed) */}
-                                    {item.status !== "delivered" && item.status !== "invoiced" && (
+                                    {canDelete && item.status !== "delivered" && item.status !== "invoiced" && (
                                       <Button
                                         variant="ghost"
                                         size="icon"

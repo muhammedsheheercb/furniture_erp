@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
 import { 
@@ -32,6 +33,13 @@ import SupplierLedgerModal from "@/components/suppliers/SupplierLedgerModal";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 
 export default function SuppliersPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
+  const perms = (session?.user?.permissions as any)?.suppliers;
+  const canCreate = isAdmin || perms?.create;
+  const canEdit = isAdmin || perms?.edit;
+  const canDelete = isAdmin || perms?.delete;
+
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -154,15 +162,17 @@ export default function SuppliersPage() {
           <h2 className="text-3xl font-extrabold text-[#1A1210]">Suppliers</h2>
           <p className="text-[#7A6055]">Manage your supply chain and procurement history.</p>
         </div>
-        <Button 
-          className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
-          onClick={() => {
-            setEditSupplier(null);
-            setModalOpen(true);
-          }}
-        >
-          <Truck size={18} className="mr-2" /> Add Supplier
-        </Button>
+        {canCreate && (
+          <Button 
+            className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
+            onClick={() => {
+              setEditSupplier(null);
+              setModalOpen(true);
+            }}
+          >
+            <Truck size={18} className="mr-2" /> Add Supplier
+          </Button>
+        )}
       </div>
 
       <SupplierModal 
@@ -253,15 +263,17 @@ export default function SuppliersPage() {
                         </td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex justify-end gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-rose-500"
-                              title="Record Payment"
-                              onClick={() => handleOpenBalance(supplier)}
-                            >
-                              <Wallet size={16} />
-                            </Button>
+                            {canEdit && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-rose-500"
+                                title="Record Payment"
+                                onClick={() => handleOpenBalance(supplier)}
+                              >
+                                <Wallet size={16} />
+                              </Button>
+                            )}
                             <Button 
                               variant="ghost" 
                               size="icon" 
@@ -271,24 +283,28 @@ export default function SuppliersPage() {
                             >
                               <Eye size={16} />
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-[#7A6055]"
-                              title="Edit Supplier"
-                              onClick={() => handleEdit(supplier)}
-                            >
-                              <Edit size={16} />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-rose-500"
-                              title="Delete Supplier"
-                              onClick={() => handleDelete(supplier._id)}
-                            >
-                              <Trash2 size={16} />
-                            </Button>
+                            {canEdit && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-[#7A6055]"
+                                title="Edit Supplier"
+                                onClick={() => handleEdit(supplier)}
+                              >
+                                <Edit size={16} />
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-rose-500"
+                                title="Delete Supplier"
+                                onClick={() => handleDelete(supplier._id)}
+                              >
+                                <Trash2 size={16} />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>

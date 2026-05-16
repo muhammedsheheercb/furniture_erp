@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import {
   Database, Plus, Search, AlertTriangle,
   Pencil, Trash2, X, Loader2, ChevronDown, ChevronRight,
@@ -345,6 +346,13 @@ function BatchRows({ batches, unit }: { batches: Batch[]; unit: string }) {
 
 // ─── page ─────────────────────────────────────────────────────────────────────
 export default function MaterialsPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
+  const perms = (session?.user?.permissions as any)?.items;
+  const canCreate = isAdmin || perms?.create;
+  const canEdit = isAdmin || perms?.edit;
+  const canDelete = isAdmin || perms?.delete;
+
   const [materials,   setMaterials]   = useState<Material[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [search,      setSearch]      = useState("");
@@ -413,9 +421,11 @@ export default function MaterialsPage() {
           <h2 className="text-3xl font-extrabold text-[#1A1210]">Raw Materials</h2>
           <p className="text-[#7A6055]">Monitor inventory and track batch-wise purchase history.</p>
         </div>
-        <Button onClick={() => { setEditItem(null); setModalOpen(true); }} className="bg-[#1B3A2D] hover:bg-[#163222] text-white">
-          <Plus size={18} className="mr-2" /> New Material
-        </Button>
+        {canCreate && (
+          <Button onClick={() => { setEditItem(null); setModalOpen(true); }} className="bg-[#1B3A2D] hover:bg-[#163222] text-white">
+            <Plus size={18} className="mr-2" /> New Material
+          </Button>
+        )}
       </div>
 
       {/* stats */}
@@ -550,18 +560,22 @@ export default function MaterialsPage() {
 
                         {/* actions */}
                         <td className="py-3 px-4 text-right whitespace-nowrap">
-                          <button
-                            onClick={() => { setEditItem(mat); setModalOpen(true); }}
-                            className="p-1.5 rounded-lg hover:bg-[#E8F0EC] text-[#1B3A2D] mr-1" title="Edit"
-                          >
-                            <Pencil size={15} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteItem(mat)}
-                            className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-500" title="Delete"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => { setEditItem(mat); setModalOpen(true); }}
+                              className="p-1.5 rounded-lg hover:bg-[#E8F0EC] text-[#1B3A2D] mr-1" title="Edit"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => setDeleteItem(mat)}
+                              className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-500" title="Delete"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
                         </td>
                       </tr>
 

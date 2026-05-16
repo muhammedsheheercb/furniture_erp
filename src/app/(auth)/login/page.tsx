@@ -10,7 +10,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const schema = z.object({
-  email: z.string().email("Enter a valid email"),
+  email: z.string().min(1, "Name or Email is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 type FormData = z.infer<typeof schema>;
@@ -41,7 +41,7 @@ export default function LoginPage() {
       password: data.password,
       redirect: false,
     });
-    if (res?.error) setAuthError("Invalid email or password");
+    if (res?.error) setAuthError("Invalid credentials");
     else {
       router.push("/");
       router.refresh();
@@ -202,12 +202,12 @@ export default function LoginPage() {
                     marginBottom: 8,
                   }}
                 >
-                  Email *
+                  Name or Email *
                 </label>
                 <input
                   className="login-input"
-                  type="email"
-                  placeholder="Yourname@gmail.com"
+                  type="text"
+                  placeholder="Enter Name or Email"
                   {...register("email")}
                   onFocus={() => setFocusedField("email")}
                   onBlur={() => setFocusedField(null)}
@@ -224,6 +224,9 @@ export default function LoginPage() {
                     transition: "border-color 0.2s, box-shadow 0.2s",
                   }}
                 />
+                <p style={{ margin: "4px 0 0 2px", fontSize: 11, color: "#C9A84C", fontWeight: 500 }}>
+                  Workers: Use your Name to log in
+                </p>
                 <AnimatePresence>
                   {errors.email && (
                     <motion.p
@@ -255,7 +258,7 @@ export default function LoginPage() {
                   <input
                     className="login-input"
                     type={showPwd ? "text" : "password"}
-                    placeholder="Yourname@gmail.com"
+                    placeholder="••••••••"
                     {...register("password")}
                     onFocus={() => setFocusedField("password")}
                     onBlur={() => setFocusedField(null)}

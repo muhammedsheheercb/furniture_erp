@@ -5,6 +5,7 @@ import Material from "@/models/Material";
 import User from "@/models/User";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 
 type Params = { params: Promise<{ id: string }> };
 
