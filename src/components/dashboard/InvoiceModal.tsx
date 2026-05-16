@@ -30,6 +30,7 @@ interface InvoiceData {
     type: "Sale" | "Purchase";
     isTaxInvoice?: boolean;
     advancePaid?: number;
+    createdBy?: { name: string };
 }
 
 interface InvoiceModalProps {
@@ -68,7 +69,8 @@ export default function InvoiceModal({ open, onClose, data }: InvoiceModalProps)
             total: data.total,
             type: data.type,
             isTaxInvoice: data.isTaxInvoice,
-            advancePaid: data.advancePaid
+            advancePaid: data.advancePaid,
+            createdBy: data.createdBy?.name
         });
     };
 
@@ -118,6 +120,14 @@ export default function InvoiceModal({ open, onClose, data }: InvoiceModalProps)
                             </label>
                             <p className="text-sm font-semibold text-gray-800">{data.items.length} Units</p>
                         </div>
+                        {data.createdBy && (
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase font-bold text-gray-400 tracking-wider flex items-center gap-1.5">
+                                    <User size={10} /> Created By
+                                </label>
+                                <p className="text-sm font-semibold text-indigo-600">{data.createdBy.name}</p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Items Table */}

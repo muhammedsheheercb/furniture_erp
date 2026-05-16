@@ -107,7 +107,10 @@ export default function ProductionPage() {
             <div>
               <h4 className="font-bold text-[#1A1210] text-lg">{prod.customerName}</h4>
               <p className="text-sm text-[#A89080]">Sale #: {prod.saleNumber} · {prod.items.length} item{prod.items.length !== 1 ? "s" : ""}</p>
-              {prod.remarks && <p className="text-xs text-[#8B5E3C] mt-0.5">Remarks: {prod.remarks}</p>}
+              <div className="flex gap-2 mt-1">
+                {prod.remarks && <p className="text-xs text-[#8B5E3C]">Remarks: {prod.remarks}</p>}
+                <p className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">Sales: {prod.saleId?.createdBy?.name || "—"}</p>
+              </div>
             </div>
           </div>
 

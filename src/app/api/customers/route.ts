@@ -12,7 +12,21 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    if (!(await hasPermission("customers", "view"))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    
+    const isWorker = (session.user as any).role === "worker";
+
+    if (
+      !isWorker &&
+      !(await hasPermission("customers", "view")) && 
+      !(await hasPermission("quotations", "view")) && 
+      !(await hasPermission("sales", "view")) &&
+      !(await hasPermission("production", "view")) &&
+      !(await hasPermission("production", "edit")) &&
+      !(await hasPermission("quotations", "create")) &&
+      !(await hasPermission("sales", "create"))
+    ) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
 
     await connectDB();
 
@@ -153,6 +167,17 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const isWorker = (session.user as any).role === "worker";
+
+    if (
+      !isWorker &&
+      !(await hasPermission("customers", "create")) && 
+      !(await hasPermission("quotations", "create")) && 
+      !(await hasPermission("sales", "create")) &&
+      !(await hasPermission("production", "edit"))
+    ) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
 
     await connectDB();
     const { creditBalance, balanceHistory, ...safeBody } = await req.json();

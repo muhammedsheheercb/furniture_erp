@@ -201,7 +201,8 @@ export default function ProductionModal({
                 color: it.color,
                 size: it.dimensions.width + "x" + it.dimensions.height + "x" + it.dimensions.depth
             })),
-            remarks: remarks
+            remarks: remarks,
+            createdBy: production.saleId?.createdBy?.name
         });
     } catch (err) {
         console.error("PDF Generation failed:", err);

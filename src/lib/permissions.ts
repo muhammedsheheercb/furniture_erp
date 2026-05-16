@@ -8,8 +8,8 @@ export async function hasPermission(module: string, action: PermissionAction): P
   
   if (!session) return false;
   
-  // Admin has all permissions
-  if (session.user.role === "admin") return true;
+  // Admin and Owner have all permissions
+  if (session.user.role === "admin" || session.user.role === "owner") return true;
   
   const userPermissions = (session.user as any).permissions || {};
   const modulePerms = userPermissions[module];

@@ -31,6 +31,7 @@ export interface InvoiceData {
     deliveryAddress?: string;
     deliveryDate?: string | Date;
     customerMobile?: string;
+    createdBy?: string;
 }
 
 const containsArabic = (text: string) => {
@@ -149,8 +150,15 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                 </div>
             </div>
 
-            <div style="margin-top: 80px; text-align: center; color: #6C757D; font-size: 12px; border-top: 1px solid #E9ECEF; padding-top: 20px">
-                This is a computer generated invoice.
+            <div style="margin-top: 60px; border-top: 1px solid #E9ECEF; padding-top: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div style="font-size: 10px; color: #6C757D;">
+                    ${data.createdBy ? `<p style="margin: 0;"><strong>Sales Person:</strong> ${data.createdBy}</p>` : ''}
+                    <p style="margin: 3px 0 0 0;"><strong>Printed on:</strong> ${new Date().toLocaleString()}</p>
+                </div>
+                <div style="text-align: center; width: 150px;">
+                    <div style="border-bottom: 1px solid #333; margin-bottom: 5px;"></div>
+                    <p style="font-size: 10px; color: #6C757D; margin: 0;">Authorized Signature</p>
+                </div>
             </div>
         </div>
     `;
@@ -273,8 +281,15 @@ export const generateQuotationPDF = (data: any) => {
             </div>
             ` : ''}
 
-            <div style="margin-top: 80px; text-align: center; color: #A89080; font-size: 12px; border-top: 1px solid #F0EAE3; padding-top: 20px">
-                Thank you for choosing Diamond Home Furniture
+            <div style="margin-top: 60px; border-top: 1px solid #F0EAE3; padding-top: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div style="font-size: 10px; color: #A89080;">
+                    ${data.createdBy ? `<p style="margin: 0;"><strong>Sales Person:</strong> ${data.createdBy}</p>` : ''}
+                    <p style="margin: 3px 0 0 0;"><strong>Printed on:</strong> ${new Date().toLocaleString()}</p>
+                </div>
+                <div style="text-align: center; width: 150px;">
+                    <div style="border-bottom: 1px solid #333; margin-bottom: 5px;"></div>
+                    <p style="font-size: 10px; color: #A89080; margin: 0;">Authorized Signature</p>
+                </div>
             </div>
         </div>
     `;
@@ -357,9 +372,18 @@ export const generateProductionJobCardPDF = (data: any) => {
             </div>
             ` : ''}
 
-            <div style="margin-top: 60px; display: flex; justify-content: space-between">
-                <div style="text-align: center; width: 200px; border-top: 1px solid #333; padding-top: 10px; font-size: 12px">Workshop Supervisor</div>
-                <div style="text-align: center; width: 200px; border-top: 1px solid #333; padding-top: 10px; font-size: 12px">Worker Signature</div>
+            <div style="margin-top: 60px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div style="text-align: center; width: 200px; border-top: 1.5px solid #2C1810; padding-top: 10px; font-size: 11px; font-weight: bold; color: #2C1810;">
+                    Workshop Supervisor
+                    ${data.createdBy ? `<div style="margin-top: 4px; font-size: 10px; font-weight: normal; color: #7A6055;">(Sales: ${data.createdBy})</div>` : ''}
+                </div>
+                <div style="font-size: 9px; color: #A89080; font-family: monospace;">
+                    Job Card ID: ${data.saleNumber}<br>
+                    Printed: ${new Date().toLocaleString()}
+                </div>
+                <div style="text-align: center; width: 200px; border-top: 1.5px solid #2C1810; padding-top: 10px; font-size: 11px; font-weight: bold; color: #2C1810;">
+                    Worker Signature
+                </div>
             </div>
         </div>
     `;

@@ -89,12 +89,26 @@ function calcTotals(items: IQuotationItem[], taxPct: number, discPct: number) {
 
 export default function QuotationsPage() {
   const router = useRouter();
-  const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "admin";
+  const { data: session, status } = useSession();
+  const isAdmin = session?.user?.role === "admin" || session?.user?.role === "owner";
   const perms = (session?.user?.permissions as any)?.quotations;
   const canCreate = isAdmin || perms?.create;
   const canEdit = isAdmin || perms?.edit;
   const canDelete = isAdmin || perms?.delete;
+  const canView = isAdmin || perms?.view;
+
+  if (status === "loading") return <div className="flex items-center justify-center min-h-[400px]"><Spinner /></div>;
+
+  if (!canView) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <XCircle size={48} className="text-rose-500" />
+        <h2 className="text-2xl font-bold text-[#1A1210]">Access Denied</h2>
+        <p className="text-[#7A6055]">You don't have permission to view quotations.</p>
+        <button onClick={() => router.push("/")} className="px-6 py-2 bg-[#2C1810] text-white rounded-lg">Go Home</button>
+      </div>
+    );
+  }
 
   const [quotations, setQuotations] = useState<IQuotation[]>([]);
   const [total, setTotal] = useState(0);
@@ -262,7 +276,10 @@ export default function QuotationsPage() {
         if (data.data) {
           // Add a tiny delay to ensure everything is settled before PDF generation
           setTimeout(() => {
-            generateQuotationPDF(data.data);
+            generateQuotationPDF({
+              ...data.data,
+              createdBy: session?.user?.name
+            });
           }, 500);
         }
       } else {
@@ -494,7 +511,7 @@ export default function QuotationsPage() {
               <th className="th text-right">Discount</th>
               <th className="th text-right">Total</th>
               <th className="th text-center">Status</th>
-
+              <th className="th text-center">Sales Person</th>
               <th className="th text-right">Actions</th>
             </tr>
           </thead>
@@ -571,6 +588,11 @@ export default function QuotationsPage() {
                     </span>
                   </td>
                   <td className="td text-center">{statusBadge(q.status)}</td>
+                  <td className="td text-center">
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#2980B9", background: "#EBF5FB", padding: "3px 10px", borderRadius: 20 }}>
+                      {q.createdBy?.name || "—"}
+                    </span>
+                  </td>
 
                   <td className="td text-right">
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
@@ -1102,6 +1124,10 @@ export default function QuotationsPage() {
                 <div style={{ fontSize: 11, color: "#A89080", fontWeight: 600, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total</div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: "#2C1810" }}>{formatCurrency(viewingQuotation.total)}</div>
               </div>
+              <div>
+                <div style={{ fontSize: 11, color: "#A89080", fontWeight: 600, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Sales Person</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#2980B9" }}>{viewingQuotation.createdBy?.name || "—"}</div>
+              </div>
             </div>
 
             {/* Items table */}
@@ -1171,7 +1197,10 @@ export default function QuotationsPage() {
                 </>
               )}
               <button
-                onClick={() => generateQuotationPDF(viewingQuotation)}
+                onClick={() => generateQuotationPDF({
+                  ...viewingQuotation,
+                  createdBy: viewingQuotation.createdBy?.name
+                })}
                 style={{
                   height: 40, width: 40, background: "#F7F4F0", border: "1px solid #E5DDD5",
                   color: "#2C1810", borderRadius: 8, cursor: "pointer", display: "flex",

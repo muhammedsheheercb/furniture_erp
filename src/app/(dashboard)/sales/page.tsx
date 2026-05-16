@@ -41,6 +41,7 @@ function printSale(item: any) {
     customerAddress:          item.customerAddress,
     deliveryAddress:          item.deliveryAddress,
     deliveryDate:             item.deliveryDate,
+    createdBy:                item.createdBy?.name,
   });
 }
 
@@ -313,6 +314,7 @@ export default function SalesPage() {
                           <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Balance</th>
                           <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-center">Payment</th>
                           <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-center">Order Status</th>
+                          <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-center">Sales Person</th>
                           <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-right">Actions</th>
                         </tr>
                       </thead>
@@ -385,17 +387,24 @@ export default function SalesPage() {
                                 </td>
 
                                 {/* Order status */}
-                                <td className="py-4 px-6 text-center">
-                                  {delivered ? (
-                                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[10px] uppercase font-bold">Delivered</Badge>
-                                  ) : item.productionStatus === "finished" || item.status === "delivered" ? (
-                                    <Badge className="bg-blue-50 text-blue-700 border-blue-100 text-[10px] uppercase font-bold">Delivery Pending</Badge>
-                                  ) : item.productionStatus === "processing" ? (
-                                    <Badge className="bg-amber-50 text-amber-700 border-amber-100 text-[10px] uppercase font-bold">In Production</Badge>
-                                  ) : (
-                                    <Badge className="bg-gray-50 text-gray-600 border-gray-100 text-[10px] uppercase font-bold">Pending</Badge>
-                                  )}
-                                </td>
+                                  <td className="py-4 px-6 text-center">
+                                    {delivered ? (
+                                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[10px] uppercase font-bold">Delivered</Badge>
+                                    ) : item.productionStatus === "finished" || item.status === "delivered" ? (
+                                      <Badge className="bg-blue-50 text-blue-700 border-blue-100 text-[10px] uppercase font-bold">Delivery Pending</Badge>
+                                    ) : item.productionStatus === "processing" ? (
+                                      <Badge className="bg-amber-50 text-amber-700 border-amber-100 text-[10px] uppercase font-bold">In Production</Badge>
+                                    ) : (
+                                      <Badge className="bg-gray-50 text-gray-600 border-gray-100 text-[10px] uppercase font-bold">Pending</Badge>
+                                    )}
+                                  </td>
+
+                                  {/* Created By */}
+                                  <td className="py-4 px-6 text-center">
+                                    <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+                                      {item.createdBy?.name || "—"}
+                                    </span>
+                                  </td>
 
                                 {/* Actions */}
                                 <td className="py-4 px-6">
@@ -458,6 +467,7 @@ export default function SalesPage() {
                           <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Total</th>
                           <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-center">Status</th>
                           <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-center">Date</th>
+                          <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-center">Sales Person</th>
                           <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-right">Print</th>
                         </tr>
                       </thead>
@@ -500,6 +510,11 @@ export default function SalesPage() {
                               </td>
                               <td className="py-4 px-6 text-center text-sm text-[#7A6055]">
                                 {format(new Date(item.date || item.createdAt), "dd MMM yyyy")}
+                              </td>
+                              <td className="py-4 px-6 text-center">
+                                <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+                                  {item.createdBy?.name || "—"}
+                                </span>
                               </td>
                               <td className="py-4 px-6 text-right">
                                 <Button

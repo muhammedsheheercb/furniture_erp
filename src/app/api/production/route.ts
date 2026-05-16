@@ -16,7 +16,13 @@ export async function GET(req: NextRequest) {
     const query: any = {};
     if (status) query.status = status;
 
-    const productions = await Production.find(query).sort({ createdAt: -1 }).lean();
+    const productions = await Production.find(query)
+      .populate({
+        path: "saleId",
+        populate: { path: "createdBy", select: "name" }
+      })
+      .sort({ createdAt: -1 })
+      .lean();
 
     return NextResponse.json({ success: true, data: productions });
   } catch (err) {

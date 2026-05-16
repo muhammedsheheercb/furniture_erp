@@ -180,6 +180,7 @@ export default function PurchasesPage() {
                     <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">Order Date</th>
                     <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">Amount</th>
                     <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">Status</th>
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">Created By</th>
                     <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
@@ -194,6 +195,11 @@ export default function PurchasesPage() {
                         <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100">
                           <span className="flex items-center gap-1"><CheckCircle2 size={12} /> Received</span>
                         </Badge>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+                          {po.createdBy?.name || "—"}
+                        </span>
                       </td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
