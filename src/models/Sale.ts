@@ -25,17 +25,29 @@ const SaleItemSchema = new Schema(
     },
     bom: [
       {
-        materialId: { type: Schema.Types.ObjectId, ref: "Item" },
+        materialId: { type: Schema.Types.ObjectId, ref: "Material" },
         materialName: String,
         materialCode: String,
         unit: String,
-        quantity: Number
+        batchNumber: String,
+        pricePerUnit: Number,
+        quantity: Number,
+        subtotal: Number
       }
     ],
     variants: {
       colors: [String],
       sizes: [String],
       finishes: [String]
+    },
+    pricing: {
+      materialCost: Number,
+      laborCost: Number,
+      extraCost: Number,
+      totalCost: Number,
+      profitMargin: Number,
+      sellingPrice: Number,
+      discountPrice: Number
     }
   },
   { _id: false }

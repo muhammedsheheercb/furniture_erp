@@ -219,6 +219,12 @@ export async function POST(req: NextRequest) {
     // 4 — create production entry
     // Direct sales bills skip production (items already produced) — mark as finished immediately
     const productionStatus = body.isDirect ? "finished" : "pending";
+    console.log("[POST /api/sales] Creating production with items:", JSON.stringify(body.items.map((it: any) => ({
+        itemName: it.itemName,
+        bom: it.bom,
+        pricing: it.pricing
+    })), null, 2));
+
     await Production.create([{
         saleId: sale._id,
         saleNumber: sale.saleNumber,
@@ -232,6 +238,7 @@ export async function POST(req: NextRequest) {
             size: it.size,
             dimensions: it.dimensions,
             bom: it.bom,
+            pricing: it.pricing,
             variants: it.variants,
             status: productionStatus,
         })),

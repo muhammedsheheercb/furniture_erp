@@ -125,7 +125,7 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                     </div>` : ''}
                     ${data.discount ? `
                     <div style="display: flex; justify-content: space-between; padding: 5px 0">
-                        <span style="color: #6C757D">Extra Discount (${data.discount}%):</span>
+                        <span style="color: #6C757D">Discount:</span>
                         <span style="font-weight: 500; color: #DC3545">- ${formatCurrency(data.subtotal * (data.discount / 100))}</span>
                     </div>` : ''}
                     ${data.tax ? `
@@ -217,7 +217,7 @@ export const generateQuotationPDF = (data: any) => {
                     <tr style="background: #8B5E3C; color: #fff">
                         <th style="padding: 12px; text-align: center; border: 1px solid #8B5E3C; width: 40px">#</th>
                         <th style="padding: 12px; text-align: left; border: 1px solid #8B5E3C">Description</th>
-                        <th style="padding: 12px; text-align: center; border: 1px solid #8B5E3C">Color/Size</th>
+                        <th style="padding: 12px; text-align: center; border: 1px solid #8B5E3C">Color</th>
                         <th style="padding: 12px; text-align: center; border: 1px solid #8B5E3C; width: 60px">Qty</th>
                         <th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 100px">Unit Price</th>
                         ${totalItemDiscount > 0 ? `<th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 100px">Disc%</th>` : ''}
@@ -233,7 +233,7 @@ export const generateQuotationPDF = (data: any) => {
                                 <div style="font-size: 11px; color: #888">${item.material || ''}</div>
                             </td>
                             <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5; font-size: 13px; color: #666">
-                                ${item.color || '—'} / ${item.size || '—'}
+                                ${item.color || '—'}
                             </td>
                             <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5; font-weight: 500">${item.quantity}</td>
                             <td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5">${formatCurrency(item.price)}</td>

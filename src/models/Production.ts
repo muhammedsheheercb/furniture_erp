@@ -71,11 +71,14 @@ const ProductionSchema = new Schema<IProductionDocument>(
         },
         bom: [
           {
-            materialId: { type: Schema.Types.ObjectId, ref: "Item" },
+            materialId: { type: Schema.Types.ObjectId, ref: "Material" },
             materialName: String,
             materialCode: String,
             unit: String,
-            quantity: Number
+            batchNumber: String,
+            pricePerUnit: Number,
+            quantity: Number,
+            subtotal: Number
           }
         ],
         variants: {

@@ -25,6 +25,7 @@ interface LineItem {
   total: number;
   dimensions?: any;
   bom?: any[];
+  pricing?: any;
 }
 
 interface SaleModalProps {
@@ -65,7 +66,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
   const [remarks,         setRemarks]         = useState("");
   const [lineItems,       setLineItems]       = useState<LineItem[]>([]);
   const [taxPct,          setTaxPct]          = useState(0);
-  const [discPct,         setDiscPct]         = useState(0);
+  const [discAmt,         setDiscAmt]         = useState(0);
   const [formError,       setFormError]       = useState("");
 
   const subtotalAfterItemDiscount = lineItems.reduce((s, i) => {
@@ -74,8 +75,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
   }, 0);
   
   const taxAmount = subtotalAfterItemDiscount * (taxPct / 100);
-  const extraDiscountAmount = subtotalAfterItemDiscount * (discPct / 100);
-  const grandTotal = Math.max(0, subtotalAfterItemDiscount + taxAmount - extraDiscountAmount);
+  const grandTotal = Math.max(0, subtotalAfterItemDiscount + taxAmount - discAmt);
   const balance = grandTotal - advancePaid;
 
   
@@ -112,8 +112,10 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
       setDeliveryDate   (sale.deliveryDate ? new Date(sale.deliveryDate).toISOString().slice(0, 10) : "");
       setDeliveryAddress(sale.deliveryAddress || "");
       setRemarks        (sale.remarks         || "");
-      setTaxPct         (sale.tax || 0);
-      setDiscPct        (sale.discount || 0);
+      setTaxPct(sale.tax || 0);
+      const loadedSubtotal = (sale.items || []).reduce((s: number, it: any) =>
+        s + (it.price || 0) * (it.quantity || 1) * (1 - (it.discount || 0) / 100), 0);
+      setDiscAmt(loadedSubtotal * (sale.discount || 0) / 100);
       setLineItems(
         (sale.items || []).map((it: any) => ({
           id: uid(), itemId: it.itemId || "", itemNumber: it.itemNumber || "",
@@ -123,7 +125,8 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
           color: it.color || "", material: it.material || "", size: it.size || "",
           total: it.total || 0,
           dimensions: it.dimensions,
-          bom: it.bom
+          bom: it.bom,
+          pricing: it.pricing
         }))
       );
     } else {
@@ -132,7 +135,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
       setDate(new Date().toISOString().slice(0, 10));
       setPaymentType("cash"); setAdvancePaid(0);
       setDeliveryDate(""); setDeliveryAddress(""); setRemarks("");
-      setTaxPct(0); setDiscPct(0);
+      setTaxPct(0); setDiscAmt(0);
       setLineItems([]);
     }
     setFormError("");
@@ -190,7 +193,8 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
       size,
       total: Math.max(0, price * i.qty * (1 - (i.discount || 0) / 100)),
       dimensions: p.dimensions,
-      bom: p.bom
+      bom: p.bom,
+      pricing: p.pricing
     }));
   }
 
@@ -247,9 +251,9 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
     await onSubmit({
       customerId, customerName, customerNumber, customerMobile, customerAddress,
       date, paymentType, advancePaid, previousPaid: 0,
-      subtotal: subtotalAfterItemDiscount, 
+      subtotal: subtotalAfterItemDiscount,
       tax: taxPct,
-      discount: discPct,
+      discount: subtotalAfterItemDiscount > 0 ? (discAmt / subtotalAfterItemDiscount) * 100 : 0,
       total: grandTotal,
       deliveryDate: deliveryDate || undefined,
       deliveryAddress, remarks,
@@ -268,7 +272,8 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
         size:     i.size,
         total:    i.total,
         dimensions: i.dimensions,
-        bom:      i.bom
+        bom:      i.bom,
+        pricing:  i.pricing
       })),
     });
   }
@@ -458,8 +463,8 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
               <span className="font-semibold"><CurrencySymbol className="w-3 h-3 mr-1" /> {subtotalAfterItemDiscount.toLocaleString("en-IN")}</span>
             </div>
             <div className="flex justify-between text-sm items-center">
-              <span className="text-[#7A6055]">Discount (%)</span>
-              <input type="number" value={discPct} onChange={e => setDiscPct(Number(e.target.value))} className="w-20 text-right border rounded px-1" />
+              <span className="text-[#7A6055]">Discount Amount</span>
+              <input type="number" min={0} step="0.001" value={discAmt} onChange={e => setDiscAmt(Number(e.target.value))} className="w-24 text-right border rounded px-1" />
             </div>
             <div className="flex justify-between text-sm items-center">
               <span className="text-[#7A6055]">VAT (%)</span>

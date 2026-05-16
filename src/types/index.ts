@@ -164,12 +164,24 @@ export interface IQuotationItem {
     materialName: string;
     materialCode: string;
     unit: string;
+    batchNumber?: string;
+    pricePerUnit?: number;
     quantity: number;
+    subtotal?: number;
   }[];
   variants?: {
     colors: string[];
     sizes: string[];
     finishes: string[];
+  };
+  pricing?: {
+    materialCost: number;
+    laborCost: number;
+    extraCost: number;
+    totalCost: number;
+    profitMargin: number;
+    sellingPrice: number;
+    discountPrice?: number;
   };
 }
 
@@ -253,12 +265,24 @@ export interface ISaleItem {
     materialName: string;
     materialCode: string;
     unit: string;
+    batchNumber?: string;
+    pricePerUnit?: number;
     quantity: number;
+    subtotal?: number;
   }[];
   variants?: {
     colors: string[];
     sizes: string[];
     finishes: string[];
+  };
+  pricing?: {
+    materialCost: number;
+    laborCost: number;
+    extraCost: number;
+    totalCost: number;
+    profitMargin: number;
+    sellingPrice: number;
+    discountPrice?: number;
   };
 }
 

@@ -677,7 +677,7 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
                                 <option value="">— Select Batch —</option>
                                 {batches.map((b: any, bi: number) => (
                                   <option key={bi} value={b.batchNumber}>
-                                    {b.batchNumber || `Batch ${bi + 1}`} — <CurrencySymbol className="w-3 h-3 mr-1" />{b.purchasePrice} | {b.quantity} {row.unit}
+                                    {b.batchNumber || `Batch ${bi + 1}`} — <CurrencySymbol plain />{b.purchasePrice} | {b.quantity} {row.unit}
                                   </option>
                                 ))}
                               </select>

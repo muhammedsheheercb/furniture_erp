@@ -47,7 +47,7 @@ export default function ProductionModal({
   }, [open]);
 
   useEffect(() => {
-    if (open && production) {
+    if (open && production && materials.length) {
       setDeliveryDate(production.deliveryDate ? production.deliveryDate.split("T")[0] : "");
       setRemarks(production.remarks || "");
       
@@ -66,28 +66,45 @@ export default function ProductionModal({
           weight: item.dimensions?.weight || "",
           unit: item.dimensions?.unit || "cm"
         },
-        pricing: {
-          materialCost: 0,
-          laborCost: 0,
-          extraCost: 0,
-          totalCost: 0,
-          profitMargin: 20,
-          sellingPrice: 0,
-          discountPrice: 0
-        },
-        bom: (item.bom || []).map((b: any) => ({
-          ...b,
-          batchNumber: b.batchNumber || "",
-          pricePerUnit: 0,
-          availableQty: 0,
-          subtotal: 0
-        })),
+        pricing: (() => {
+          const matCost = (item.bom || []).reduce((s: number, b: any) => {
+            const sub = b.subtotal ?? ((b.pricePerUnit || 0) * (b.quantity || 1));
+            return s + sub;
+          }, 0);
+          const stored  = item.pricing || {};
+          const labor   = stored.laborCost  || 0;
+          const extra   = stored.extraCost  || 0;
+          const margin  = stored.profitMargin ?? 20;
+          const total   = matCost + labor + extra;
+          const sell    = stored.sellingPrice || Math.round(total * (1 + margin / 100));
+          return { materialCost: matCost, laborCost: labor, extraCost: extra, totalCost: total, profitMargin: margin, sellingPrice: sell, discountPrice: stored.discountPrice || 0 };
+        })(),
+        bom: (item.bom || []).map((b: any) => {
+          const priceFromDb = b.pricePerUnit || 0;
+          const qty = b.quantity || 1;
+          
+          // try to find material and batch to get fresh stock info
+          const mat = materials.find((m: any) => m._id.toString() === b.materialId?.toString());
+          const batch = mat?.batches?.find((bt: any) => bt.batchNumber === b.batchNumber);
+          
+          const price = priceFromDb || batch?.purchasePrice || 0;
+          const avail = batch?.quantity || 0;
+          const sub = b.subtotal ?? (price * qty);
+
+          return {
+            ...b,
+            batchNumber:  b.batchNumber || "",
+            pricePerUnit: price,
+            availableQty: avail,
+            subtotal:     sub,
+          };
+        }),
       }));
       setItemStates(states);
       setActiveItemIdx(0);
       setTab("basic");
     }
-  }, [open, production]);
+  }, [open, production, materials]);
 
   const updateItemState = (idx: number, updates: any) => {
     setItemStates(prev => prev.map((s, i) => i === idx ? { ...s, ...updates } : s));
@@ -104,7 +121,7 @@ export default function ProductionModal({
   const updateBomBatch = (itemIdx: number, bomIdx: number, batchNumber: string) => {
     const s = itemStates[itemIdx];
     const bomRow = s.bom[bomIdx];
-    const mat = materials.find(m => m._id === bomRow.materialId);
+    const mat = materials.find(m => m._id.toString() === bomRow.materialId?.toString());
     const batch = mat?.batches?.find((b: any) => b.batchNumber === batchNumber);
     
     const updatedBom = s.bom.map((r: any, i: number) => {
@@ -150,7 +167,7 @@ export default function ProductionModal({
   };
 
   const updateBomMaterial = (itemIdx: number, bomIdx: number, matId: string) => {
-    const mat = materials.find(m => m._id === matId);
+    const mat = materials.find(m => m._id.toString() === matId.toString());
     setItemStates(prev => prev.map((item, i) => {
         if (i !== itemIdx) return item;
         const updatedBom = item.bom.map((r: any, bi: number) => {
@@ -472,13 +489,13 @@ export default function ProductionModal({
                           </td>
                         </tr>
                       ) : currentItem.bom.map((row: any, bIdx: number) => {
-                        const mat = materials.find(m => m._id === row.materialId);
+                        const mat = materials.find(m => m._id.toString() === row.materialId?.toString());
                         const batches = mat?.batches || [];
                         return (
                           <tr key={bIdx} className="hover:bg-[#FAF8F6]">
                             <td className="px-3 py-2">
                               <select 
-                                value={row.materialId} 
+                                value={row.materialId?.toString()} 
                                 onChange={e => updateBomMaterial(activeItemIdx, bIdx, e.target.value)}
                                 className="w-full rounded-lg border border-[#E5DDD5] px-2 py-1.5 text-xs outline-none bg-white"
                               >

@@ -1109,7 +1109,7 @@ export default function QuotationsPage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "#F7F4F0" }}>
-                    {["Item", "Color", "Material", "Size", "Unit", "Qty", "Price", "Disc%", "Total"].map(h => (
+                    {["Item", "Color", "Qty", "Price", "Disc%", "Total"].map(h => (
                       <th key={h} style={{ padding: "8px 12px", fontSize: 10, fontWeight: 700, color: "#A89080", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: h === "Item" ? "left" : "right" }}>{h}</th>
                     ))}
                   </tr>
@@ -1121,9 +1121,6 @@ export default function QuotationsPage() {
                         <div style={{ fontSize: 13, fontWeight: 600, color: "#1A1210" }}>{item.itemName}</div>
                       </td>
                       <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, color: "#7A6055" }}>{item.color || "—"}</td>
-                      <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, color: "#7A6055" }}>{item.material || "—"}</td>
-                      <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, color: "#7A6055" }}>{item.size || "—"}</td>
-                      <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, color: "#7A6055" }}>{item.unit}</td>
                       <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 13, fontWeight: 600, color: "#1A1210" }}>{item.quantity}</td>
                       <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, color: "#7A6055" }}>{item.price.toFixed(3)}</td>
                       <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, color: "#7A6055" }}>{item.discount}%</td>
@@ -1133,7 +1130,7 @@ export default function QuotationsPage() {
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: "2px solid #E5DDD5", background: "#FBF9F7" }}>
-                    <td colSpan={8} style={{ padding: "10px 12px", textAlign: "right", fontSize: 13, fontWeight: 800, color: "#1A1210" }}>TOTAL</td>
+                    <td colSpan={5} style={{ padding: "10px 12px", textAlign: "right", fontSize: 13, fontWeight: 800, color: "#1A1210" }}>TOTAL</td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 15, fontWeight: 800, color: "#2C1810" }}>{formatCurrency(viewingQuotation.total)}</td>
                   </tr>
                 </tfoot>
@@ -1152,7 +1149,7 @@ export default function QuotationsPage() {
               {viewingQuotation.status === "quote" && (
                 <>
                   <button
-                    onClick={() => handleStatusUpdate(viewingQuotation._id, "sale")}
+                    onClick={() => { setViewModalOpen(false); setStatusConfirm({ id: viewingQuotation._id, status: "sale" }); }}
                     style={{
                       flex: 1, height: 40, background: "#EAFAF1", border: "1px solid #A9DFBF",
                       color: "#1E8449", borderRadius: 8, fontWeight: 700, fontSize: 13,
@@ -1162,7 +1159,7 @@ export default function QuotationsPage() {
                     <Check size={16} /> Accept & Convert
                   </button>
                   <button
-                    onClick={() => handleStatusUpdate(viewingQuotation._id, "reject")}
+                    onClick={() => { setViewModalOpen(false); setStatusConfirm({ id: viewingQuotation._id, status: "reject" }); }}
                     style={{
                       flex: 1, height: 40, background: "#FDEDEC", border: "1px solid #F5B7B1",
                       color: "#C0392B", borderRadius: 8, fontWeight: 700, fontSize: 13,
@@ -1248,7 +1245,8 @@ export default function QuotationsPage() {
             size: it.size,
             total: it.total,
             dimensions: it.dimensions,
-            bom: it.bom
+            bom: it.bom,
+            pricing: (it as any).pricing
           })),
           subtotal: convertingQuotation.subtotal,
           tax: convertingQuotation.tax,
