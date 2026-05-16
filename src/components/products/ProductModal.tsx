@@ -7,6 +7,7 @@ import {
   Plus, Trash2, X, Info, ShoppingCart, Hammer,
 } from "lucide-react";
 import axios from "axios";
+import CurrencySymbol from "@/components/ui/CurrencySymbol";
 
 // ── constants ─────────────────────────────────────────────────────────────────
 const CATEGORIES = ["Sofa", "Bed", "Chair", "Table", "Wardrobe", "Office", "Dining", "Other"];
@@ -524,18 +525,18 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className={lbl}>
-                    Material Cost (₹)
+                    Material Cost (<CurrencySymbol className="w-3 h-3" />)
                     <span className="ml-1 text-[10px] text-[#A89080]">auto from BOM</span>
                   </label>
                   <input readOnly value={form.pricing.materialCost} className={roInp} />
                 </div>
                 <div>
-                  <label className={lbl}>Labour Cost (₹)</label>
+                  <label className={lbl}>Labour Cost (<CurrencySymbol className="w-3 h-3" />)</label>
                   <input type="number" min={0} value={form.pricing.laborCost}
                     onChange={e => setPricingField("laborCost", Number(e.target.value))} className={inp} />
                 </div>
                 <div>
-                  <label className={lbl}>Extra / Overhead (₹)</label>
+                  <label className={lbl}>Extra / Overhead (<CurrencySymbol className="w-3 h-3" />)</label>
                   <input type="number" min={0} value={form.pricing.extraCost}
                     onChange={e => setPricingField("extraCost", Number(e.target.value))} className={inp} />
                 </div>
@@ -545,7 +546,7 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
             <div className="rounded-xl bg-[#1B3A2D] px-5 py-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-white/60 uppercase tracking-wide">Total Cost</p>
-                <p className="text-2xl font-black text-white">₹ {form.pricing.totalCost.toLocaleString("en-IN")}</p>
+                <p className="text-2xl font-black text-white"><CurrencySymbol className="w-5 h-5 mr-1" /> {form.pricing.totalCost.toLocaleString("en-IN")}</p>
               </div>
               <p className="text-xs text-white/40">{form.pricing.materialCost} + {form.pricing.laborCost} + {form.pricing.extraCost}</p>
             </div>
@@ -559,12 +560,12 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
                     onChange={e => setPricingField("profitMargin", Number(e.target.value))} className={inp} />
                 </div>
                 <div>
-                  <label className={lbl}>Selling Price (₹) <span className="text-[10px] text-[#A89080]">auto-calculated</span></label>
+                  <label className={lbl}>Selling Price (<CurrencySymbol className="w-3 h-3" />) <span className="text-[10px] text-[#A89080]">auto-calculated</span></label>
                   <input type="number" min={0} value={form.pricing.sellingPrice}
                     onChange={e => setForm(p => ({ ...p, pricing: { ...p.pricing, sellingPrice: Number(e.target.value) } }))} className={inp} />
                 </div>
                 <div>
-                  <label className={lbl}>Discount Price (₹)</label>
+                  <label className={lbl}>Discount Price (<CurrencySymbol className="w-3 h-3" />)</label>
                   <input type="number" min={0} value={form.pricing.discountPrice}
                     onChange={e => setForm(p => ({ ...p, pricing: { ...p.pricing, discountPrice: Number(e.target.value) } }))} className={inp} />
                 </div>
@@ -575,7 +576,7 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
               <div className="flex gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
                 <Info size={16} className="shrink-0 mt-0.5 text-amber-500" />
                 <span>
-                  Profit = ₹ {(form.pricing.sellingPrice - form.pricing.totalCost).toLocaleString("en-IN")} &nbsp;|&nbsp;
+                  Profit = <CurrencySymbol className="w-3 h-3 mr-1" /> {(form.pricing.sellingPrice - form.pricing.totalCost).toLocaleString("en-IN")} &nbsp;|&nbsp;
                   Margin = {form.pricing.totalCost > 0 ? (((form.pricing.sellingPrice - form.pricing.totalCost) / form.pricing.totalCost) * 100).toFixed(1) : 0}%
                 </span>
               </div>
@@ -610,7 +611,7 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
               <div className="flex gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
                 <Info size={16} className="shrink-0 mt-0.5 text-amber-500" />
                 <span>
-                  Profit = ₹ {(form.pricing.salesPrice - form.pricing.purchasePrice).toLocaleString("en-IN")} &nbsp;|&nbsp;
+                  Profit = <CurrencySymbol className="w-3 h-3 mr-1" /> {(form.pricing.salesPrice - form.pricing.purchasePrice).toLocaleString("en-IN")} &nbsp;|&nbsp;
                   Margin = {((( form.pricing.salesPrice - form.pricing.purchasePrice) / form.pricing.purchasePrice) * 100).toFixed(1)}%
                 </span>
               </div>
@@ -676,7 +677,7 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
                                 <option value="">— Select Batch —</option>
                                 {batches.map((b: any, bi: number) => (
                                   <option key={bi} value={b.batchNumber}>
-                                    {b.batchNumber || `Batch ${bi + 1}`} — ₹{b.purchasePrice} | {b.quantity} {row.unit}
+                                    {b.batchNumber || `Batch ${bi + 1}`} — <CurrencySymbol className="w-3 h-3 mr-1" />{b.purchasePrice} | {b.quantity} {row.unit}
                                   </option>
                                 ))}
                               </select>
@@ -696,7 +697,7 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
 
                         {/* Price per unit (read-only) */}
                         <td className="px-3 py-2 text-right font-mono text-xs text-[#7A6055]">
-                          {row.pricePerUnit > 0 ? `₹ ${row.pricePerUnit}` : "—"}
+                          {row.pricePerUnit > 0 ? <><CurrencySymbol className="w-3 h-3 mr-1" /> {row.pricePerUnit}</> : "—"}
                         </td>
 
                         {/* Qty */}
@@ -713,7 +714,7 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
 
                         {/* Subtotal */}
                         <td className="px-3 py-2 text-right font-semibold text-[#1A1210] text-xs">
-                          {row.subtotal > 0 ? `₹ ${row.subtotal.toLocaleString("en-IN")}` : "—"}
+                          {row.subtotal > 0 ? <><CurrencySymbol className="w-3 h-3 mr-1" /> {row.subtotal.toLocaleString("en-IN")}</> : "—"}
                         </td>
 
                         {/* Remove */}
@@ -732,7 +733,7 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
                     <tr className="border-t-2 border-[#E5DDD5] bg-[#FAF8F6]">
                       <td colSpan={4} className="px-3 py-2.5 text-xs font-bold text-[#7A6055]">Total Material Cost</td>
                       <td className="px-3 py-2.5 text-right text-sm font-black text-[#1B3A2D]">
-                        ₹ {form.pricing.materialCost.toLocaleString("en-IN")}
+                        <CurrencySymbol className="w-3 h-3 mr-1" /> {form.pricing.materialCost.toLocaleString("en-IN")}
                       </td>
                       <td />
                     </tr>

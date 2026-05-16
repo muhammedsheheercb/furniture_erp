@@ -26,7 +26,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const production = await Production.findById(id).session(dbSession);
     if (!production) return NextResponse.json({ success: false, error: "Production not found" }, { status: 404 });
 
-    // Handle "processing" start (Material deduction & Product registration)
+    // Handle "processing" start (Material deduction & Configuration saving)
     if (status === "processing" && production.status === "pending" && items) {
         for (const config of items) {
             // 1. Decrease Material Stock
@@ -48,11 +48,22 @@ export async function PUT(req: NextRequest, { params }: Params) {
                 material.currentStock -= totalNeeded;
                 await material.save({ session: dbSession });
             }
+        }
 
-            // 2. Register/Update Product (Item)
-            // We search for an existing product with the same name and color/material/size
+        // Update production items with the new configuration
+        production.items = items.map((it: any) => ({
+            ...it,
+            itemName: it.productName,
+            status: "processing"
+        }));
+    }
+
+    // Handle "finished" (Product registration)
+    if (status === "finished" && production.status !== "finished") {
+        for (const config of production.items) {
+            // Register/Update Product (Item)
             let product = await Item.findOne({ 
-                name: config.productName,
+                name: config.itemName,
                 color: config.color,
                 primaryMaterial: config.material,
                 isManufactured: true
@@ -61,8 +72,11 @@ export async function PUT(req: NextRequest, { params }: Params) {
             if (product) {
                 // Update existing product stock
                 product.quantity = (product.quantity || 0) + config.quantity;
-                // Update other details if needed
-                product.pricing = config.pricing;
+                if (config.pricing) {
+                    product.pricing = config.pricing;
+                    product.purchaseAmount = config.pricing.totalCost;
+                    product.salesAmount = config.pricing.sellingPrice;
+                }
                 product.dimensions = config.dimensions;
                 product.bom = config.bom;
                 product.variants = config.variants;
@@ -72,7 +86,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
                 const sku = `PROD-${Math.floor(1000 + Math.random() * 9000)}`;
                 await Item.create([{
                     itemNumber: sku,
-                    name: config.productName,
+                    name: config.itemName,
                     category: "Furniture",
                     primaryMaterial: config.material || "—",
                     color: config.color,
@@ -80,9 +94,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
                     isManufactured: true,
                     unit: "Piece",
                     status: "active",
-                    purchaseAmount: config.pricing.totalCost,
-                    salesAmount: config.pricing.sellingPrice,
-                    mrp: config.pricing.discountPrice || 0,
+                    purchaseAmount: config.pricing?.totalCost || 0,
+                    salesAmount: config.pricing?.sellingPrice || 0,
+                    mrp: config.pricing?.discountPrice || 0,
                     pricing: config.pricing,
                     bom: config.bom,
                     dimensions: config.dimensions,
@@ -90,13 +104,6 @@ export async function PUT(req: NextRequest, { params }: Params) {
                 }], { session: dbSession });
             }
         }
-        
-        // Update production items with the new configuration
-        production.items = items.map((it: any) => ({
-            ...it,
-            itemName: it.productName,
-            status: "processing"
-        }));
     }
 
     production.status = status;

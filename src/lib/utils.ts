@@ -6,12 +6,10 @@ export const cn = (...inputs: ClassValue[]) => {
 };
 
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return "OMR " + (amount || 0).toLocaleString("en-OM", {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
+  });
 };
 
 export const formatDate = (date: Date | string): string => {

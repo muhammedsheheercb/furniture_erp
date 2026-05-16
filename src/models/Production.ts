@@ -31,6 +31,15 @@ export interface IProductionDocument extends Document {
         sizes: string[];
         finishes: string[];
       };
+      pricing?: {
+        materialCost: number;
+        laborCost: number;
+        extraCost: number;
+        totalCost: number;
+        profitMargin: number;
+        sellingPrice: number;
+        discountPrice?: number;
+      };
     }[];
   status: "pending" | "processing" | "finished";
   remarks?: string;
@@ -73,6 +82,15 @@ const ProductionSchema = new Schema<IProductionDocument>(
           colors: [String],
           sizes: [String],
           finishes: [String]
+        },
+        pricing: {
+          materialCost: Number,
+          laborCost: Number,
+          extraCost: Number,
+          totalCost: Number,
+          profitMargin: Number,
+          sellingPrice: Number,
+          discountPrice: Number
         }
       },
     ],

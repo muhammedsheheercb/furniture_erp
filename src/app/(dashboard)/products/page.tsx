@@ -272,7 +272,7 @@ export default function ProductsPage() {
                           </div>
                         </td>
                         <td className="py-4 px-6 text-sm font-bold text-[#1A1210]">
-                          ₹ {(product.salesAmount || 0).toLocaleString()}
+                          <CurrencySymbol className="w-3 h-3 mr-1" /> {(product.salesAmount || 0).toLocaleString()}
                         </td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -310,9 +310,9 @@ export default function ProductsPage() {
                                       <td className="py-2 px-4 text-center font-semibold text-[#1A1210]">
                                         {b.quantity} {product.unit || "Pcs"}
                                       </td>
-                                      <td className="py-2 px-4 text-right">₹ {(b.salePrice || product.salesAmount || 0).toLocaleString()}</td>
+                                      <td className="py-2 px-4 text-right"><CurrencySymbol className="w-3 h-3 mr-1" /> {(b.salePrice || product.salesAmount || 0).toLocaleString()}</td>
                                       <td className="py-2 px-4 text-right font-bold text-[#1B3A2D]">
-                                        ₹ {(b.quantity * (b.salePrice || product.salesAmount || 0)).toLocaleString()}
+                                        <CurrencySymbol className="w-3 h-3 mr-1" /> {(b.quantity * (b.salePrice || product.salesAmount || 0)).toLocaleString()}
                                       </td>
                                     </tr>
                                   ))}
@@ -321,8 +321,8 @@ export default function ProductsPage() {
                                   <tr>
                                     <td className="py-2 px-4">Total across batches</td>
                                     <td className="py-2 px-4 text-center">{product.quantity} {product.unit || "Pcs"}</td>
-                                    <td className="py-2 px-4 text-right">Avg: ₹ {Math.round(product.salesAmount || 0)}</td>
-                                    <td className="py-2 px-4 text-right text-[#1B3A2D]">₹ {(product.quantity * (product.salesAmount || 0)).toLocaleString()}</td>
+                                    <td className="py-2 px-4 text-right">Avg: <CurrencySymbol className="w-3 h-3 mr-1" /> {Math.round(product.salesAmount || 0)}</td>
+                                    <td className="py-2 px-4 text-right text-[#1B3A2D]"><CurrencySymbol className="w-3 h-3 mr-1" /> {(product.quantity * (product.salesAmount || 0)).toLocaleString()}</td>
                                   </tr>
                                 </tfoot>
                               </table>

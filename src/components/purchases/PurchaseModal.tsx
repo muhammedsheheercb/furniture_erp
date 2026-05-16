@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import { Plus, Trash2, Package, Layers } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
+import CurrencySymbol from "@/components/ui/CurrencySymbol";
 
 // ── types ─────────────────────────────────────────────────────────────────────
 interface LineItem {
@@ -157,11 +158,11 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
     if (missing) { setFormError("Please select an item for every row."); return; }
     const belowCost = lineItems.find(i => i.type === "product" && i.sellingPrice < i.price);
     if (belowCost) {
-      setFormError(`Sales price for "${belowCost.name}" cannot be less than its purchase price (₹${belowCost.price.toLocaleString("en-IN")}).`);
+      setFormError(`Sales price for "${belowCost.name}" cannot be less than its purchase price (${belowCost.price.toLocaleString("en-IN")}).`);
       return;
     }
     if (paidAmount > grandTotal) {
-      setFormError(`Paid amount (₹${paidAmount.toLocaleString("en-IN")}) cannot exceed Grand Total (₹${grandTotal.toLocaleString("en-IN")}).`);
+      setFormError(`Paid amount (${paidAmount.toLocaleString("en-IN")}) cannot exceed Grand Total (${grandTotal.toLocaleString("en-IN")}).`);
       return;
     }
 
@@ -288,10 +289,10 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
                   <th className="py-2.5 px-3 text-left text-xs font-bold text-[#7A6055] uppercase w-28">Code</th>
                   <th className="py-2.5 px-3 text-left text-xs font-bold text-[#7A6055] uppercase w-20">Unit</th>
                   <th className="py-2.5 px-3 text-center text-xs font-bold text-[#7A6055] uppercase w-20">Qty</th>
-                  <th className="py-2.5 px-3 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Purchase ₹</th>
-                  <th className="py-2.5 px-3 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Sales ₹</th>
+                  <th className="py-2.5 px-3 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Purchase <CurrencySymbol className="w-3 h-3" /></th>
+                  <th className="py-2.5 px-3 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Sales <CurrencySymbol className="w-3 h-3" /></th>
                   <th className="py-2.5 px-3 text-left text-xs font-bold text-[#7A6055] uppercase w-28">Batch No.</th>
-                  <th className="py-2.5 px-3 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Total (₹)</th>
+                  <th className="py-2.5 px-3 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Total (<CurrencySymbol className="w-3 h-3" />)</th>
                   <th className="w-10"></th>
                 </tr>
               </thead>
@@ -395,6 +396,7 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
 
                     {/* Total */}
                     <td className="px-3 py-2 text-right font-semibold text-[#1A1210]">
+                      <CurrencySymbol className="w-3 h-3 mr-1" />
                       {item.total.toLocaleString("en-IN")}
                     </td>
 
@@ -440,7 +442,7 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
             <div className="flex items-center justify-end gap-4">
               <span className="text-sm text-[#7A6055]">Grand Total</span>
               <span className="text-2xl font-black text-[#1A1210]">
-                ₹ {grandTotal.toLocaleString("en-IN")}
+                <CurrencySymbol className="w-5 h-5 mr-1" /> {grandTotal.toLocaleString("en-IN")}
               </span>
             </div>
             <div className="flex items-center justify-end gap-3">
@@ -456,7 +458,7 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
               />
             </div>
             {paidAmount > grandTotal && (
-              <p className="text-xs text-rose-500 text-right">Paid amount cannot exceed Grand Total (₹{grandTotal.toLocaleString("en-IN")})</p>
+              <p className="text-xs text-rose-500 text-right">Paid amount cannot exceed Grand Total ({grandTotal.toLocaleString("en-IN")})</p>
             )}
           </div>
         </div>

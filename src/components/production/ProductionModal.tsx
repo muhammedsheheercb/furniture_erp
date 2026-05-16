@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
+import CurrencySymbol from "@/components/ui/CurrencySymbol";
+import { generateProductionJobCardPDF } from "@/lib/pdf-utils";
 
 interface ProductionModalProps {
   open: boolean;
@@ -169,6 +171,25 @@ export default function ProductionModal({
         }
     }
 
+    // Download PDF Job Card
+    try {
+        generateProductionJobCardPDF({
+            saleNumber: production.saleNumber,
+            customerName: production.customerName,
+            deliveryDate: deliveryDate,
+            items: itemStates.map(it => ({
+                itemName: it.productName,
+                quantity: it.quantity,
+                material: it.material,
+                color: it.color,
+                size: it.dimensions.width + "x" + it.dimensions.height + "x" + it.dimensions.depth
+            })),
+            remarks: remarks
+        });
+    } catch (err) {
+        console.error("PDF Generation failed:", err);
+    }
+
     await onSubmit(production._id, {
       remarks,
       deliveryDate,
@@ -178,6 +199,9 @@ export default function ProductionModal({
 
   if (!production || itemStates.length === 0) return null;
 
+  const hasStockError = itemStates.some(item => 
+    item.bom.some((b: any) => b.batchNumber && b.quantity > b.availableQty)
+  );
   const currentItem = itemStates[activeItemIdx];
   const lbl = "block text-xs font-semibold text-[#7A6055] mb-1";
   const inp = "w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40";
@@ -192,9 +216,16 @@ export default function ProductionModal({
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
-          <Button onClick={handleFinalSubmit} loading={loading}>
-            Start Work & Create Products
-          </Button>
+          {!hasStockError ? (
+            <Button onClick={handleFinalSubmit} loading={loading}>
+              Start Work & Download Job Card
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2 text-rose-500 bg-rose-50 px-4 py-2 rounded-lg border border-rose-100 animate-pulse">
+              <AlertCircle size={16} />
+              <span className="text-xs font-bold uppercase tracking-tight">Insufficient Stock Detected</span>
+            </div>
+          )}
         </>
       }
     >
@@ -207,11 +238,12 @@ export default function ProductionModal({
           </div>
           <div className="flex-[2]">
             <label className={lbl}>Special Remarks</label>
-            <input 
+            <textarea 
               value={remarks} 
               onChange={e => setRemarks(e.target.value)} 
-              className={inp} 
-              placeholder="Add production notes..."
+              className={inp + " h-20 resize-none"} 
+              placeholder="Add production notes, special instructions, or customization details..."
+              rows={3}
             />
           </div>
         </div>
@@ -355,15 +387,15 @@ export default function ProductionModal({
                   <p className="text-xs font-bold text-[#7A6055] uppercase tracking-wide mb-3">Cost Breakdown</p>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className={lbl}>Material Cost (₹)</label>
+                      <label className={lbl}>Material Cost (<CurrencySymbol className="w-3 h-3" />)</label>
                       <input readOnly value={currentItem.pricing.materialCost} className={roInp} />
                     </div>
                     <div>
-                      <label className={lbl}>Labour Cost (₹)</label>
+                      <label className={lbl}>Labour Cost (<CurrencySymbol className="w-3 h-3" />)</label>
                       <input type="number" value={currentItem.pricing.laborCost} onChange={e => updatePricing(activeItemIdx, "laborCost", Number(e.target.value))} className={inp} />
                     </div>
                     <div>
-                      <label className={lbl}>Overhead Cost (₹)</label>
+                      <label className={lbl}>Overhead Cost (<CurrencySymbol className="w-3 h-3" />)</label>
                       <input type="number" value={currentItem.pricing.extraCost} onChange={e => updatePricing(activeItemIdx, "extraCost", Number(e.target.value))} className={inp} />
                     </div>
                   </div>
@@ -372,7 +404,7 @@ export default function ProductionModal({
                 <div className="rounded-xl bg-[#1B3A2D] px-5 py-4 flex items-center justify-between">
                   <div>
                     <p className="text-xs font-bold text-white/60 uppercase tracking-wide">Total Manufacturing Cost</p>
-                    <p className="text-2xl font-black text-white">₹ {currentItem.pricing.totalCost.toLocaleString()}</p>
+                    <p className="text-2xl font-black text-white"><CurrencySymbol className="w-5 h-5 mr-1" /> {currentItem.pricing.totalCost.toLocaleString()}</p>
                   </div>
                   <p className="text-xs text-white/40">{currentItem.pricing.materialCost} + {currentItem.pricing.laborCost} + {currentItem.pricing.extraCost}</p>
                 </div>
@@ -390,12 +422,17 @@ export default function ProductionModal({
                       />
                     </div>
                     <div>
-                      <label className={lbl}>Final Selling Price (₹)</label>
+                      <label className={lbl}>Final Selling Price (<CurrencySymbol className="w-3 h-3" />)</label>
                       <input 
                         readOnly
-                        value={currentItem.pricing.sellingPrice / (currentItem.quantity || 1)} 
-                        className={roInp + " font-bold text-lg"} 
+                        value={currentItem.pricing.sellingPrice.toLocaleString()} 
+                        className={roInp + " font-bold text-lg text-[#1B3A2D]"} 
                       />
+                      {currentItem.quantity > 1 && (
+                        <p className="text-[10px] text-[#A89080] mt-1 text-right italic">
+                          Per Unit: <CurrencySymbol className="w-2 h-2" /> {(currentItem.pricing.sellingPrice / currentItem.quantity).toFixed(3)}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -473,7 +510,11 @@ export default function ProductionModal({
                                   step={0.01}
                                   value={row.quantity}
                                   onChange={e => {
-                                      const qty = parseFloat(e.target.value) || 1;
+                                      let qty = parseFloat(e.target.value) || 0;
+                                      if (row.batchNumber && qty > row.availableQty) {
+                                          toast.error(`Insufficient stock! Max available: ${row.availableQty} ${row.unit}`);
+                                          qty = row.availableQty;
+                                      }
                                       setItemStates(prev => prev.map((it, i) => {
                                           if (i !== activeItemIdx) return it;
                                           const updatedBom = it.bom.map((r: any, ri: number) => 
@@ -486,11 +527,18 @@ export default function ProductionModal({
                                           return { ...it, bom: updatedBom, pricing: { ...p, totalCost: total, sellingPrice: sell } };
                                       }));
                                   }}
-                                  className="w-full border rounded px-1 py-1 text-center text-xs"
+                                  className={`w-full border rounded px-1 py-1 text-center text-xs focus:ring-1 focus:ring-[#C9A84C]/40 outline-none ${
+                                    row.batchNumber && row.quantity >= row.availableQty ? "border-amber-500 bg-amber-50" : "border-[#E5DDD5]"
+                                  }`}
                                 />
+                                {row.batchNumber && (
+                                  <p className="text-[9px] text-[#A89080] mt-0.5 text-center">
+                                    Limit: <span className="font-bold">{row.availableQty} {row.unit}</span>
+                                  </p>
+                                )}
                             </td>
                             <td className="px-3 py-2 text-right font-semibold text-[#1B3A2D] text-xs">
-                              ₹ {row.subtotal.toLocaleString()}
+                              <CurrencySymbol className="w-3 h-3 mr-1" /> {row.subtotal.toLocaleString()}
                             </td>
                             <td className="px-2 py-2 text-center">
                               <button 
@@ -508,7 +556,7 @@ export default function ProductionModal({
                       <tfoot className="bg-[#FAF8F6] border-t border-[#E5DDD5]">
                         <tr>
                           <td colSpan={3} className="px-3 py-2 text-right font-bold text-[#7A6055] text-[10px] uppercase">Total Material Cost</td>
-                          <td className="px-3 py-2 text-right font-black text-[#1B3A2D] text-sm">₹ {currentItem.pricing.materialCost.toLocaleString()}</td>
+                          <td className="px-3 py-2 text-right font-black text-[#1B3A2D] text-sm"><CurrencySymbol className="w-3 h-3 mr-1" /> {currentItem.pricing.materialCost.toLocaleString()}</td>
                           <td></td>
                         </tr>
                       </tfoot>

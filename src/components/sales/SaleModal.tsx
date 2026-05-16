@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import CustomerModal from "@/components/customers/CustomerModal";
-import { Plus, Trash2, UserPlus } from "lucide-react";
+import { Plus, Trash2, UserPlus, AlertCircle } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
+import CurrencySymbol from "@/components/ui/CurrencySymbol";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 interface LineItem {
@@ -58,7 +59,6 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
   const [date,            setDate]            = useState(new Date().toISOString().slice(0, 10));
   const [paymentType,     setPaymentType]     = useState<"cash" | "bank" | "credit">("cash");
   const [advancePaid,     setAdvancePaid]     = useState(0);
-  const [previousPaid,    setPreviousPaid]    = useState(0);
 
   const [deliveryDate,    setDeliveryDate]    = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -76,7 +76,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
   const taxAmount = subtotalAfterItemDiscount * (taxPct / 100);
   const extraDiscountAmount = subtotalAfterItemDiscount * (discPct / 100);
   const grandTotal = Math.max(0, subtotalAfterItemDiscount + taxAmount - extraDiscountAmount);
-  const balance = grandTotal - advancePaid - previousPaid;
+  const balance = grandTotal - advancePaid;
 
   
   const isConversion = sale?.isConversion === true;
@@ -107,8 +107,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
       setCustomerAddress(sale.customerAddress || "");
       setDate           (new Date(sale.date || new Date()).toISOString().slice(0, 10));
       setPaymentType    (sale.paymentType     || "cash");
-      setAdvancePaid    (sale.advancePaid     || 0);
-      setPreviousPaid   (sale.previousPaid    || 0);
+      setAdvancePaid    ((sale.advancePaid || 0) + (sale.previousPaid || 0));
 
       setDeliveryDate   (sale.deliveryDate ? new Date(sale.deliveryDate).toISOString().slice(0, 10) : "");
       setDeliveryAddress(sale.deliveryAddress || "");
@@ -222,6 +221,15 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
     }));
   }
 
+  function updateAdvancePaid(val: number) {
+    if (val > grandTotal) {
+      toast.error("Limit Exceeded: You cannot add more than the grand total.");
+      setAdvancePaid(grandTotal);
+    } else {
+      setAdvancePaid(val);
+    }
+  }
+
   function removeRow(lineId: string) {
     setLineItems(prev => prev.filter(i => i.id !== lineId));
   }
@@ -238,7 +246,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
     
     await onSubmit({
       customerId, customerName, customerNumber, customerMobile, customerAddress,
-      date, paymentType, advancePaid, previousPaid,
+      date, paymentType, advancePaid, previousPaid: 0,
       subtotal: subtotalAfterItemDiscount, 
       tax: taxPct,
       discount: discPct,
@@ -340,7 +348,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
           </div>
         )}
 
-        {/* ── Payment Type + Advance ───────────────────────────────── */}
+        {/* ── Payment Type ─────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Payment Type</label>
@@ -350,16 +358,6 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
               <option value="credit">Credit</option>
             </select>
           </div>
-          <div>
-            <label className={lbl}>Advance Paid (₹)</label>
-            <input type="number" min={0} value={advancePaid} onChange={e => setAdvancePaid(Number(e.target.value))} className={inp} />
-          </div>
-          {isConversion && (
-            <div>
-              <label className={lbl}>Previously Paid (₹)</label>
-              <input type="number" min={0} value={previousPaid} onChange={e => setPreviousPaid(Number(e.target.value))} className={inp} />
-            </div>
-          )}
         </div>
 
         {/* ── Products table ───────────────────────────────────────── */}
@@ -383,9 +381,9 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
                   <th className="py-2.5 px-3 text-left text-xs font-bold text-[#7A6055] uppercase">Product</th>
                   <th className="py-2.5 px-2 text-left text-xs font-bold text-[#7A6055] uppercase w-24">Color</th>
                   <th className="py-2.5 px-2 text-center text-xs font-bold text-[#7A6055] uppercase w-16">Qty</th>
-                  <th className="py-2.5 px-2 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Price (₹)</th>
+                  <th className="py-2.5 px-2 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Price (<CurrencySymbol className="w-3 h-3" />)</th>
                   <th className="py-2.5 px-2 text-right text-xs font-bold text-[#7A6055] uppercase w-20">Disc %</th>
-                  <th className="py-2.5 px-2 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Total (₹)</th>
+                  <th className="py-2.5 px-2 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Total (<CurrencySymbol className="w-3 h-3" />)</th>
                   <th className="w-10" />
                 </tr>
               </thead>
@@ -419,6 +417,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
                       <input type="number" value={item.discount} onChange={e => updateField(item.id, "discount", Number(e.target.value))} className={inp + " text-right"} placeholder="0" />
                     </td>
                     <td className="px-3 py-2 text-right font-semibold">
+                      <CurrencySymbol className="w-3 h-3 mr-1" />
                       {item.total.toLocaleString("en-IN")}
                     </td>
                     <td className="px-2 py-2 text-center">
@@ -456,7 +455,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
           <div className="p-4 rounded-xl bg-[#FAF8F6] border border-[#E5DDD5] space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-[#7A6055]">Subtotal</span>
-              <span className="font-semibold">₹ {subtotalAfterItemDiscount.toLocaleString("en-IN")}</span>
+              <span className="font-semibold"><CurrencySymbol className="w-3 h-3 mr-1" /> {subtotalAfterItemDiscount.toLocaleString("en-IN")}</span>
             </div>
             <div className="flex justify-between text-sm items-center">
               <span className="text-[#7A6055]">Discount (%)</span>
@@ -468,13 +467,22 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
             </div>
             <div className="flex justify-between pt-2 border-t border-[#E5DDD5] font-black text-xl">
               <span>Grand Total</span>
-              <span>₹ {grandTotal.toLocaleString("en-IN")}</span>
+              <span><CurrencySymbol className="w-5 h-5 mr-1" /> {grandTotal.toLocaleString("en-IN")}</span>
+            </div>
+            <div className="flex justify-between text-sm items-center py-1">
+              <span className="text-[#7A6055] font-semibold">Advance Paid (<CurrencySymbol className="w-3 h-3" />)</span>
+              <input 
+                type="number" 
+                min={0} 
+                value={advancePaid} 
+                onChange={e => updateAdvancePaid(Number(e.target.value))} 
+                className="w-24 text-right border rounded px-2 py-1 font-bold text-[#1B3A2D] focus:ring-2 focus:ring-[#C9A84C]/40 outline-none" 
+              />
             </div>
             <div className={`flex justify-between text-sm ${balance < 0 ? "text-emerald-600" : "text-rose-500"} font-bold`}>
               <span>{balance < 0 ? "Credit Balance" : "Balance Due"}</span>
-              <span>₹ {Math.abs(balance).toLocaleString("en-IN")}</span>
+              <span><CurrencySymbol className="w-3 h-3 mr-1" /> {Math.abs(balance).toLocaleString("en-IN")}</span>
             </div>
-
           </div>
         </div>
 
@@ -494,6 +502,8 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
       </form>
 
       <CustomerModal open={custModalOpen} onClose={() => setCustModalOpen(false)} onSubmit={handleCreateCustomer} loading={savingCust} />
+
+      {/* Removed Error Modal in favor of Toast notifications */}
     </Modal>
   );
 }

@@ -1,15 +1,16 @@
-"use client";
-import Image from "next/image";
+import React from "react";
 
-export default function CurrencySymbol() {
+interface CurrencySymbolProps {
+  className?: string;
+}
+
+export default function CurrencySymbol({ className = "w-4 h-4 inline-block align-middle" }: CurrencySymbolProps) {
   return (
-    <span className="inline-flex items-center self-center mr-1">
-      <img 
-        src="/images/money.webp" 
-        alt="Currency" 
-        className="h-3.5 w-auto object-contain" 
-        style={{ display: 'inline-block', verticalAlign: 'middle' }}
-      />
-    </span>
+    <img 
+      src="/images/money.webp" 
+      alt="OMR" 
+      className={className} 
+      style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '2px' }}
+    />
   );
 }

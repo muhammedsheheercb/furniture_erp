@@ -185,7 +185,7 @@ function MaterialModal({
               <Input type="number" min={0} value={form.reorderLevel} onChange={e => set("reorderLevel", Number(e.target.value))} className="border-[#E5DDD5]" />
             </div>
             <div>
-              <label className={labelCls}>Last Price (₹)</label>
+              <label className={labelCls}>Last Price (<CurrencySymbol className="w-3 h-3" />)</label>
               <Input type="number" min={0} step="0.01" value={form.lastPurchasePrice} onChange={e => set("lastPurchasePrice", Number(e.target.value))} className="border-[#E5DDD5]" />
             </div>
           </div>
@@ -293,10 +293,10 @@ function BatchRows({ batches, unit }: { batches: Batch[]; unit: string }) {
                     <td className="py-2.5 px-4 text-[#7A6055]">{fmtDate(b.purchaseDate || b.createdAt)}</td>
                     <td className="py-2.5 px-4 text-right font-semibold text-[#1A1210]">{b.quantity} {unit}</td>
                     <td className="py-2.5 px-4 text-right font-bold text-[#1A1210]">
-                      ₹ {b.purchasePrice.toLocaleString("en-IN")}
+                      <CurrencySymbol className="w-3 h-3 mr-1" /> {b.purchasePrice.toLocaleString("en-IN")}
                     </td>
                     <td className="py-2.5 px-4 text-right text-[#7A6055]">
-                      ₹ {(b.purchasePrice * b.quantity).toLocaleString("en-IN")}
+                      <CurrencySymbol className="w-3 h-3 mr-1" /> {(b.purchasePrice * b.quantity).toLocaleString("en-IN")}
                     </td>
                     <td className="py-2.5 px-4 text-center">
                       {prices.length === 1 ? (
@@ -327,10 +327,10 @@ function BatchRows({ batches, unit }: { batches: Batch[]; unit: string }) {
                     {batches.reduce((s, b) => s + b.quantity, 0)} {unit}
                   </td>
                   <td className="py-2 px-4 text-right text-xs text-[#7A6055]">
-                    avg ₹ {Math.round(batches.reduce((s, b) => s + b.purchasePrice, 0) / batches.length).toLocaleString("en-IN")}
+                    avg <CurrencySymbol className="w-3 h-3 mr-1" /> {Math.round(batches.reduce((s, b) => s + b.purchasePrice, 0) / batches.length).toLocaleString("en-IN")}
                   </td>
                   <td className="py-2 px-4 text-right text-xs font-bold text-[#1A1210]">
-                    ₹ {batches.reduce((s, b) => s + b.purchasePrice * b.quantity, 0).toLocaleString("en-IN")}
+                    <CurrencySymbol className="w-3 h-3 mr-1" /> {batches.reduce((s, b) => s + b.purchasePrice * b.quantity, 0).toLocaleString("en-IN")}
                   </td>
                   <td />
                 </tr>
@@ -526,7 +526,7 @@ export default function MaterialsPage() {
                           </div>
                         </td>
                         <td className="py-3 px-4 text-[#7A6055] whitespace-nowrap">
-                          ₹ {mat.lastPurchasePrice.toLocaleString("en-IN")}/{mat.unit}
+                          <CurrencySymbol className="w-3 h-3 mr-1" /> {mat.lastPurchasePrice.toLocaleString("en-IN")}/{mat.unit}
                         </td>
 
                         {/* batch count badge */}

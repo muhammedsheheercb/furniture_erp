@@ -82,7 +82,7 @@ export default function ProductionPage() {
   const inProgress = productions.filter(p => p.status === "pending" || p.status === "processing");
   const finished   = productions.filter(p => p.status === "finished");
 
-  const [activeTab, setActiveTab] = useState<"pending" | "finished">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "processing" | "finished">("pending");
 
   const stages = [
     { name: "Pending",    icon: Clock,        color: "bg-gray-400",    key: "pending" },
@@ -140,10 +140,7 @@ export default function ProductionPage() {
     );
   }
 
-  const filteredProductions = productions.filter(p => {
-    if (activeTab === "pending") return p.status === "pending" || p.status === "processing";
-    return p.status === "finished";
-  });
+  const filteredProductions = productions.filter(p => p.status === activeTab);
 
   return (
     <div className="space-y-6">
@@ -153,26 +150,36 @@ export default function ProductionPage() {
           <p className="text-[#7A6055]">Monitor manufacturing stages for furniture orders.</p>
         </div>
         
-        <div className="flex bg-[#F5F2EA] p-1 rounded-xl gap-1">
+        <div className="flex bg-[#F5F2EA] p-1 rounded-xl gap-1 overflow-x-auto">
           <button
             onClick={() => setActiveTab("pending")}
-            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
+            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
               activeTab === "pending" 
                 ? "bg-[#2C1810] text-white shadow-md" 
                 : "text-[#7A6055] hover:text-[#1A1210]"
             }`}
           >
-            Pending Production ({productions.filter(p => p.status === "pending" || p.status === "processing").length})
+            Pending ({productions.filter(p => p.status === "pending").length})
+          </button>
+          <button
+            onClick={() => setActiveTab("processing")}
+            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+              activeTab === "processing" 
+                ? "bg-[#C9A84C] text-white shadow-md" 
+                : "text-[#7A6055] hover:text-[#1A1210]"
+            }`}
+          >
+            Started ({productions.filter(p => p.status === "processing").length})
           </button>
           <button
             onClick={() => setActiveTab("finished")}
-            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
+            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
               activeTab === "finished" 
                 ? "bg-[#1E8449] text-white shadow-md" 
                 : "text-[#7A6055] hover:text-[#1A1210]"
             }`}
           >
-            Finished Production ({productions.filter(p => p.status === "finished").length})
+            Finished ({productions.filter(p => p.status === "finished").length})
           </button>
         </div>
       </div>
