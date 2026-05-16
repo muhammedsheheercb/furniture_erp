@@ -241,9 +241,6 @@ export default function SuppliersPage() {
                             <div className="flex items-center gap-1.5 text-sm text-[#7A6055]">
                               <Phone size={12} /> {supplier.mobile || "N/A"}
                             </div>
-                            <div className="flex items-center gap-1.5 text-sm text-[#7A6055]">
-                              <Mail size={12} /> {supplier.email || "N/A"}
-                            </div>
                           </div>
                         </td>
                         <td className="py-4 px-6">

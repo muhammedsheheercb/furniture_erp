@@ -229,9 +229,6 @@ export default function CustomersPage() {
                             <div className="flex items-center gap-1.5 text-sm text-[#7A6055]">
                               <Phone size={12} /> {customer.mobile || customer.phone || "N/A"}
                             </div>
-                            <div className="flex items-center gap-1.5 text-sm text-[#7A6055]">
-                              <Mail size={12} /> {customer.email || "N/A"}
-                            </div>
                             {customer.address && (
                               <div className="flex items-start gap-1.5 text-sm text-[#7A6055] mt-0.5">
                                 <MapPin size={12} className="mt-1 shrink-0" /> 
