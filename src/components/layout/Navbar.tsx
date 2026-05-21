@@ -101,10 +101,10 @@ export default function Navbar() {
                 position: "fixed",
                 top: dropdownPos.top,
                 left: dropdownPos.left,
-                background: "#1B3A2D",
-                border: "1px solid rgba(201,168,76,0.2)",
+                background: "#FFFFFF",
+                border: "1px solid var(--border)",
                 borderRadius: 10,
-                boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
+                boxShadow: "0 10px 30px rgba(46, 37, 32, 0.08)",
                 minWidth: 190,
                 zIndex: 9999,
                 overflow: "hidden",
@@ -123,24 +123,24 @@ export default function Navbar() {
                             fontSize: 13, fontWeight: 500,
                             textDecoration: "none",
                             transition: "background 0.15s",
-                            background: active ? "rgba(201,168,76,0.1)" : "transparent",
-                            color: active ? "#E8C97A" : "rgba(255,255,255,0.75)",
-                            borderLeft: active ? "3px solid #E8C97A" : "3px solid transparent",
+                            background: active ? "rgba(197, 168, 128, 0.12)" : "transparent",
+                            color: active ? "var(--primary)" : "var(--text-secondary)",
+                            borderLeft: active ? "3px solid var(--gold)" : "3px solid transparent",
                         }}
                         onMouseEnter={e => {
                             if (!active) {
-                                (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
-                                (e.currentTarget as HTMLElement).style.color = "#E8C97A";
+                                (e.currentTarget as HTMLElement).style.background = "rgba(0,0,0,0.03)";
+                                (e.currentTarget as HTMLElement).style.color = "var(--primary)";
                             }
                         }}
                         onMouseLeave={e => {
                             if (!active) {
                                 (e.currentTarget as HTMLElement).style.background = "transparent";
-                                (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.75)";
+                                (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
                             }
                         }}
                     >
-                        <Icon size={15} color={active ? "#E8C97A" : "rgba(255,255,255,0.4)"} />
+                        <Icon size={15} color={active ? "var(--primary)" : "var(--text-muted)"} />
                         <span>{label}</span>
                     </Link>
                 );
@@ -150,12 +150,12 @@ export default function Navbar() {
     ) : null;
 
     return (
-        <header style={{ background: "#1B3A2D", color: "#E8F0EC", position: "sticky", top: 0, zIndex: 50, boxShadow: "0 2px 20px rgba(0,0,0,0.25)" }}>
+        <header style={{ background: "#FFFFFF", color: "var(--text)", position: "sticky", top: 0, zIndex: 50, boxShadow: "0 2px 16px rgba(46, 37, 32, 0.04)", borderBottom: "1px solid var(--border)" }}>
             {/* Top row: Logo + Profile */}
             <div style={{
                 maxWidth: 1600, margin: "0 auto", padding: "0 20px",
                 height: 64, display: "flex", alignItems: "center", justifyContent: "space-between",
-                borderBottom: "1px solid rgba(255,255,255,0.07)"
+                borderBottom: "1px solid var(--border)"
             }}>
                 {/* Brand */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -166,10 +166,10 @@ export default function Navbar() {
                         style={{ width: 40, height: 40, objectFit: "contain", borderRadius: 8 }}
                     />
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: 800, fontSize: 17, color: "#E8C97A", lineHeight: 1, letterSpacing: "-0.01em" }}>
+                        <span style={{ fontWeight: 800, fontSize: 17, color: "var(--primary)", lineHeight: 1, letterSpacing: "-0.01em" }}>
                             DIAMOND HOME
                         </span>
-                        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.38)", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 3 }}>
+                        <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 3 }}>
                             Furniture ERP
                         </span>
                     </div>
@@ -179,35 +179,35 @@ export default function Navbar() {
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <button
                         style={{
-                            padding: 8, color: "rgba(255,255,255,0.4)", background: "none",
+                            padding: 8, color: "var(--text-secondary)", background: "none",
                             border: "none", cursor: "pointer", borderRadius: "50%",
                             display: "flex", alignItems: "center", justifyContent: "center",
                             transition: "background 0.15s",
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.04)"}
                         onMouseLeave={e => e.currentTarget.style.background = "none"}
                     >
                         <Bell size={20} />
                     </button>
-
-                    <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.1)" }} />
+ 
+                    <div style={{ width: 1, height: 28, background: "var(--border)" }} />
 
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{ textAlign: "right" }} className="hidden sm:block">
-                            <p style={{ fontSize: 13, fontWeight: 600, color: "#E8C97A", lineHeight: 1, margin: 0 }}>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)", lineHeight: 1, margin: 0 }}>
                                 {session?.user?.name}
                             </p>
-                            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", margin: "3px 0 0", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                            <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "3px 0 0", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                                 {session?.user?.role || "Owner"}
                             </p>
                         </div>
 
                         <div style={{
                             width: 38, height: 38, borderRadius: "50%",
-                            background: "linear-gradient(135deg, #2E5E45, #1B3A2D)",
-                            border: "2px solid rgba(201,168,76,0.4)",
+                            background: "linear-gradient(135deg, var(--bg), var(--border))",
+                            border: "2px solid var(--gold)",
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            color: "#E8C97A", fontWeight: 700, fontSize: 15, flexShrink: 0,
+                            color: "var(--primary)", fontWeight: 700, fontSize: 15, flexShrink: 0,
                         }}>
                             {session?.user?.name?.[0] || <User size={18} />}
                         </div>
@@ -216,12 +216,12 @@ export default function Navbar() {
                             onClick={() => signOut({ callbackUrl: "/login" })}
                             title="Logout"
                             style={{
-                                padding: 8, color: "#f87171", background: "none",
+                                padding: 8, color: "#ef4444", background: "none",
                                 border: "none", cursor: "pointer", borderRadius: "50%",
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 transition: "background 0.15s",
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = "rgba(248,113,113,0.1)"}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.06)"}
                             onMouseLeave={e => e.currentTarget.style.background = "none"}
                         >
                             <LogOut size={20} />
@@ -231,7 +231,7 @@ export default function Navbar() {
             </div>
 
             {/* Bottom row: Nav links */}
-            <div style={{ background: "#163222", overflowX: "auto", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+            <div style={{ background: "#FAF9F6", overflowX: "auto", borderBottom: "1px solid var(--border)" }}
                 className="scrollbar-hide">
                 <nav style={{ maxWidth: 1600, margin: "0 auto", display: "flex", alignItems: "center", padding: "0 8px" }}>
 
@@ -247,24 +247,24 @@ export default function Navbar() {
                                 whiteSpace: "nowrap", cursor: "pointer",
                                 transition: "all 0.15s",
                                 margin: "4px 1px",
-                                background: isSalesActive || salesOpen ? "rgba(201,168,76,0.12)" : "transparent",
-                                color: isSalesActive || salesOpen ? "#E8C97A" : "rgba(255,255,255,0.55)",
-                                border: isSalesActive || salesOpen ? "1px solid rgba(201,168,76,0.25)" : "1px solid transparent",
+                                background: isSalesActive || salesOpen ? "rgba(197, 168, 128, 0.12)" : "transparent",
+                                color: isSalesActive || salesOpen ? "var(--primary)" : "var(--text-secondary)",
+                                border: isSalesActive || salesOpen ? "1px solid rgba(197, 168, 128, 0.25)" : "1px solid transparent",
                             }}
                             onMouseEnter={e => {
                                 if (!isSalesActive && !salesOpen) {
-                                    e.currentTarget.style.color = "#E8C97A";
-                                    e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+                                    e.currentTarget.style.color = "var(--primary)";
+                                    e.currentTarget.style.background = "rgba(0,0,0,0.03)";
                                 }
                             }}
                             onMouseLeave={e => {
                                 if (!isSalesActive && !salesOpen) {
-                                    e.currentTarget.style.color = "rgba(255,255,255,0.55)";
+                                    e.currentTarget.style.color = "var(--text-secondary)";
                                     e.currentTarget.style.background = "transparent";
                                 }
                             }}
                         >
-                            <ReceiptText size={16} color={isSalesActive || salesOpen ? "#E8C97A" : "rgba(255,255,255,0.35)"} />
+                            <ReceiptText size={16} color={isSalesActive || salesOpen ? "var(--primary)" : "var(--text-muted)"} />
                             <span>Sales</span>
                             <ChevronDown
                                 size={14}
@@ -272,7 +272,7 @@ export default function Navbar() {
                                     transition: "transform 0.2s",
                                     transform: salesOpen ? "rotate(180deg)" : "rotate(0deg)",
                                     marginLeft: 2,
-                                    color: isSalesActive || salesOpen ? "#E8C97A" : "rgba(255,255,255,0.35)",
+                                    color: isSalesActive || salesOpen ? "var(--primary)" : "var(--text-muted)",
                                 }}
                             />
                         </button>
@@ -292,24 +292,24 @@ export default function Navbar() {
                                     whiteSpace: "nowrap", textDecoration: "none",
                                     transition: "all 0.15s",
                                     margin: "4px 1px",
-                                    background: active ? "rgba(201,168,76,0.12)" : "transparent",
-                                    color: active ? "#E8C97A" : "rgba(255,255,255,0.55)",
-                                    border: active ? "1px solid rgba(201,168,76,0.25)" : "1px solid transparent",
+                                    background: active ? "rgba(197, 168, 128, 0.12)" : "transparent",
+                                    color: active ? "var(--primary)" : "var(--text-secondary)",
+                                    border: active ? "1px solid rgba(197, 168, 128, 0.25)" : "1px solid transparent",
                                 }}
                                 onMouseEnter={e => {
                                     if (!active) {
-                                        (e.currentTarget as HTMLElement).style.color = "#E8C97A";
-                                        (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
+                                        (e.currentTarget as HTMLElement).style.color = "var(--primary)";
+                                        (e.currentTarget as HTMLElement).style.background = "rgba(0,0,0,0.03)";
                                     }
                                 }}
                                 onMouseLeave={e => {
                                     if (!active) {
-                                        (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.55)";
+                                        (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
                                         (e.currentTarget as HTMLElement).style.background = "transparent";
                                     }
                                 }}
                             >
-                                <Icon size={16} color={active ? "#E8C97A" : "rgba(255,255,255,0.35)"} />
+                                <Icon size={16} color={active ? "var(--primary)" : "var(--text-muted)"} />
                                 <span>{label}</span>
                             </Link>
                         );

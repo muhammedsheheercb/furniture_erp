@@ -2,25 +2,25 @@
 
 /* ── Design Tokens ─────────────────────────────────── */
 :root {
-  --primary:        #1B3A2D;
-  --primary-light:  #2E5E45;
-  --gold:           #C9A84C;
-  --gold-light:     #E8C97A;
-  --bg:             #F5F2EA;
-  --surface:        #FFFFFF;
-  --border:         #DDD8CE;
-  --text:           #1a1a1a;
-  --text-secondary: #5A6B60;
-  --text-muted:     #8A9E94;
-  --nav-bg:         #1B3A2D;
-  --success:        #27AE60;
-  --success-bg:     #EAFAF1;
-  --danger:         #C0392B;
-  --danger-bg:      #FDEDEC;
-  --warning:        #E67E22;
-  --warning-bg:     #FEF5E7;
-  --info:           #2980B9;
-  --info-bg:        #EBF5FB;
+  --primary:        #2E2520; /* Rich Walnut / Dark Espresso */
+  --primary-light:  #4A3B32; /* Warm Mahogany Wood */
+  --gold:           #C5A880; /* Champagne Bronze / Satin Brass */
+  --gold-light:     #E5D5C0; /* Soft Brass highlight */
+  --bg:             #F7F4EB; /* Warm Travertine / Natural Linen */
+  --surface:        #FFFFFF; /* White */
+  --border:         #E2DDCE; /* Subtle Warm Sand Border */
+  --text:           #27221F; /* Charcoal Espresso */
+  --text-secondary: #5C544E; /* Warm Slate / Earthy Stone */
+  --text-muted:     #A39B92; /* Muted Taupe */
+  --nav-bg:         #2E2520; /* Deep Mahogany header */
+  --success:        #4F6D59; /* Sage Green */
+  --success-bg:     #F2F6F3;
+  --danger:         #A84343; /* Terracotta Red */
+  --danger-bg:      #FAF1F1;
+  --warning:        #D97706; /* Burnt Amber */
+  --warning-bg:     #FFFBEB;
+  --info:           #4A6B82; /* Muted Slate Blue */
+  --info-bg:        #F0F4F7;
 }
 
 /* ── Base ─────────────────────────────────────────── */
@@ -47,7 +47,7 @@ body {
   background-color: var(--surface);
   border-radius: 0.75rem;
   border: 1px solid var(--border);
-  box-shadow: 0 1px 4px rgba(27,58,45,0.07);
+  box-shadow: 0 1px 4px rgba(15,23,42,0.04);
   min-width: 0;
 }
 
@@ -56,7 +56,7 @@ body {
   border-radius: 0.75rem;
   border: 1px solid var(--border);
   background-color: var(--surface);
-  box-shadow: 0 1px 4px rgba(27,58,45,0.07);
+  box-shadow: 0 1px 4px rgba(15,23,42,0.04);
 }
 
 /* ── Table cells ──────────────────────────────────── */
@@ -68,7 +68,7 @@ body {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  background-color: #F0F5F2;
+  background-color: #F1F5F9;
   user-select: none;
   white-space: nowrap;
   border-bottom: 1px solid var(--border);
@@ -82,7 +82,7 @@ body {
 }
 
 .tr-hover:hover {
-  background-color: #F3F8F5;
+  background-color: #F8FAFC;
   transition: background-color 150ms;
 }
 

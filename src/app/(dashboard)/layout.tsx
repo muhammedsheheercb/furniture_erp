@@ -18,8 +18,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (status === "loading") {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#F5F2EA]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1B3A2D]"></div>
+      <div className="h-screen w-full flex items-center justify-center bg-[var(--bg)]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--primary)]"></div>
       </div>
     );
   }
@@ -27,7 +27,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!session) return null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F5F2EA] font-sans">
+    <div className="flex flex-col min-h-screen bg-[var(--bg)] font-sans">
       <Navbar />
       
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
