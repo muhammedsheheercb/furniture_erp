@@ -6,7 +6,7 @@ import {
     LayoutDashboard, Package, Users,
     TruckIcon, LogOut, ReceiptText, Hammer,
     Database, ShoppingBag, Truck, Receipt, Settings,
-    FileText, Bell, User, ChevronDown, Shield
+    FileText, Bell, User, ChevronDown, Shield, Undo2
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
@@ -36,6 +36,7 @@ const navItems: NavItem[] = [
 const salesDropdownItems: NavItem[] = [
     { href: "/quotations", label: "Quotations", icon: FileText, permissionKey: "quotations" },
     { href: "/sales",      label: "Sales",      icon: ReceiptText, permissionKey: "sales" },
+    { href: "/sales/returns", label: "Returns",    icon: Undo2,        permissionKey: "sales" },
     { href: "/production", label: "Production", icon: Hammer, permissionKey: "production" },
     { href: "/deliveries", label: "Delivery",   icon: Truck, permissionKey: "deliveries" },
 ];

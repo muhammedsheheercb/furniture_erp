@@ -10,7 +10,7 @@ export interface ICustomerDocument extends Document {
     date: Date;
     amount: number;
     type: "payment" | "adjustment";
-    paymentMethod?: "cash" | "bank" | "credit";
+    paymentMethod?: "cash" | "bank" | "credit" | "return" | "other";
     note?: string;
   }[];
   address?: string;
@@ -55,7 +55,7 @@ const CustomerSchema = new Schema<ICustomerDocument>(
         date: { type: Date, default: Date.now },
         amount: { type: Number, required: true },
         type: { type: String, enum: ["payment", "adjustment"], default: "payment" },
-        paymentMethod: { type: String, enum: ["cash", "bank", "credit"] },
+        paymentMethod: { type: String, enum: ["cash", "bank", "credit", "return", "other"] },
         note: { type: String },
       },
     ],
