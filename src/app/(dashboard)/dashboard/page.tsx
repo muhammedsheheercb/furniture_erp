@@ -74,6 +74,7 @@ export default function DashboardPage() {
       details: [
         { label: t("cash_sale"), value: data?.kpi?.cashSales || 0, icon: Wallet },
         { label: t("bank_upi_sale"), value: data?.kpi?.bankSales || 0, icon: CreditCard },
+        { label: t("credit_sale"), value: data?.kpi?.creditSales || 0, icon: ArrowUpRight },
       ]
     },
     { 
@@ -85,6 +86,7 @@ export default function DashboardPage() {
       details: [
         { label: t("cash_purchase"), value: data?.kpi?.cashPurchases || 0, icon: Wallet },
         { label: t("bank_upi_purchase"), value: data?.kpi?.bankPurchases || 0, icon: CreditCard },
+        { label: t("credit_purchase"), value: data?.kpi?.creditPurchases || 0, icon: ArrowDownRight },
       ]
     },
     { 

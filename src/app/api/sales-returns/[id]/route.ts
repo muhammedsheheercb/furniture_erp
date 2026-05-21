@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import SaleReturnRaw from "@/models/SaleReturn";
 const SaleReturn = SaleReturnRaw as any;
+import SaleRaw from "@/models/Sale";
+const Sale = SaleRaw as any;
 import ItemRaw from "@/models/Item";
 const Item = ItemRaw as any;
 import CustomerRaw from "@/models/Customer";
@@ -39,24 +41,29 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
       );
     }
 
-    // 3 — Revert customer balance (Add back the refund amount to their debt)
-    const refundAmount = Number(saleReturn.totalAmount || 0);
-    await Customer.findByIdAndUpdate(
-      saleReturn.customerId,
-      { 
-        $inc: { creditBalance: refundAmount },
-        $push: { 
-          balanceHistory: {
-            date: new Date(),
-            amount: refundAmount,
-            type: "adjustment", // Deleting a return is an adjustment (debt restored)
-            paymentMethod: "credit",
-            note: `Reversed Sale Return #${saleReturn.returnNumber}`
+    // 3 — Revert customer balance (Add back the refund amount to their debt only if the sale was a credit sale)
+    const sale = await Sale.findById(saleReturn.saleId).session(dbSession);
+    const isCreditSale = sale && (sale.paymentType === "credit" || (sale.total - (sale.advancePaid || 0) > 0));
+
+    if (isCreditSale) {
+      const refundAmount = Number(saleReturn.totalAmount || 0);
+      await Customer.findByIdAndUpdate(
+        saleReturn.customerId,
+        { 
+          $inc: { creditBalance: refundAmount },
+          $push: { 
+            balanceHistory: {
+              date: new Date(),
+              amount: refundAmount,
+              type: "adjustment", // Deleting a return is an adjustment (debt restored)
+              paymentMethod: "credit",
+              note: `Reversed Sale Return #${saleReturn.returnNumber}`
+            }
           }
-        }
-      },
-      { session: dbSession }
-    );
+        },
+        { session: dbSession }
+      );
+    }
 
     // 4 — Delete the record
     await SaleReturn.findByIdAndDelete(id, { session: dbSession });
@@ -92,27 +99,36 @@ export async function PUT(req: NextRequest, { params }: Params) {
     for (const item of oldReturn.items) {
       await Item.findByIdAndUpdate(item.itemId, { $inc: { quantity: -item.quantity } }, { session: dbSession });
     }
-    // Reverse old customer balance impact
-    await Customer.findByIdAndUpdate(oldReturn.customerId, { $inc: { creditBalance: oldReturn.totalAmount } }, { session: dbSession });
+    // Load original sale to see if it was credit
+    const sale = await Sale.findById(oldReturn.saleId).session(dbSession);
+    const isCreditSale = sale && (sale.paymentType === "credit" || (sale.total - (sale.advancePaid || 0) > 0));
+
+    if (isCreditSale) {
+      // Reverse old customer balance impact
+      await Customer.findByIdAndUpdate(oldReturn.customerId, { $inc: { creditBalance: oldReturn.totalAmount } }, { session: dbSession });
+    }
 
     // 2 — Apply NEW return impact
     // Update inventory for new items
     for (const item of body.items) {
       await Item.findByIdAndUpdate(item.itemId, { $inc: { quantity: item.quantity } }, { session: dbSession });
     }
-    // Update customer balance for new total
-    const newRefundAmount = Number(body.totalAmount || 0);
-    await Customer.findByIdAndUpdate(body.customerId, { 
-      $inc: { creditBalance: -newRefundAmount },
-      $push: { 
-        balanceHistory: {
-          date: new Date(),
-          amount: newRefundAmount,
-          type: "payment",
-          note: `Updated Sales Return #${oldReturn.returnNumber}`
+    
+    if (isCreditSale) {
+      // Update customer balance for new total
+      const newRefundAmount = Number(body.totalAmount || 0);
+      await Customer.findByIdAndUpdate(body.customerId, { 
+        $inc: { creditBalance: -newRefundAmount },
+        $push: { 
+          balanceHistory: {
+            date: new Date(),
+            amount: newRefundAmount,
+            type: "payment",
+            note: `Updated Sales Return #${oldReturn.returnNumber}`
+          }
         }
-      }
-    }, { session: dbSession });
+      }, { session: dbSession });
+    }
 
     // 3 — Update the record
     const updated = await SaleReturn.findByIdAndUpdate(id, {

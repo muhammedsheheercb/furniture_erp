@@ -56,15 +56,48 @@ export default function SalesReturnsPage() {
     }
   };
 
-  const selectSale = (sale: any) => {
+  const selectSale = async (sale: any) => {
     setSelectedSale(sale);
-    setReturnItems(sale.items.map((it: any) => ({
-      itemId: it.itemId,
-      itemName: it.itemName,
-      price: it.price,
-      maxQty: it.quantity,
-      quantity: 0
-    })));
+    try {
+      const res = await axios.get(`/api/sales/returns?saleId=${sale._id}`);
+      const existingReturns = res.data.success ? res.data.data : [];
+      
+      const returnedQtyMap: Record<string, number> = {};
+      existingReturns.forEach((ret: any) => {
+        ret.items.forEach((item: any) => {
+          const key = item.itemId ? item.itemId.toString() : item.itemName;
+          returnedQtyMap[key] = (returnedQtyMap[key] || 0) + item.quantity;
+        });
+      });
+
+      const itemsWithRemaining = sale.items.map((it: any) => {
+        const key = it.itemId ? it.itemId.toString() : it.itemName;
+        const alreadyReturned = returnedQtyMap[key] || 0;
+        const maxQty = Math.max(0, it.quantity - alreadyReturned);
+        return {
+          itemId: it.itemId,
+          itemName: it.itemName,
+          price: it.price,
+          purchasedQty: it.quantity,
+          alreadyReturned: alreadyReturned,
+          maxQty: maxQty,
+          quantity: 0
+        };
+      });
+
+      setReturnItems(itemsWithRemaining);
+    } catch (err) {
+      console.error("Failed to load return history for sale", err);
+      setReturnItems(sale.items.map((it: any) => ({
+        itemId: it.itemId,
+        itemName: it.itemName,
+        price: it.price,
+        purchasedQty: it.quantity,
+        alreadyReturned: 0,
+        maxQty: it.quantity,
+        quantity: 0
+      })));
+    }
   };
 
   const handleReturnQtyChange = (index: number, val: number) => {
@@ -82,6 +115,13 @@ export default function SalesReturnsPage() {
     if (!reason.trim()) {
       alert("Please provide a reason for the return");
       return;
+    }
+
+    for (const it of itemsToReturn) {
+      if (it.quantity > it.maxQty) {
+        alert(`Cannot return more than ${it.maxQty} units of ${it.itemName}`);
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -300,36 +340,54 @@ export default function SalesReturnsPage() {
                           <tr>
                             <th className="px-4 py-3 text-left">Item</th>
                             <th className="px-4 py-3 text-center">Purchased</th>
+                            <th className="px-4 py-3 text-center">Already Returned</th>
+                            <th className="px-4 py-3 text-center">Available</th>
                             <th className="px-4 py-3 text-center">Return Qty</th>
                             <th className="px-4 py-3 text-right">Price</th>
                             <th className="px-4 py-3 text-right">Total</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#E5DDD5]">
-                          {returnItems.map((it, idx) => (
-                            <tr key={idx} className={it.quantity > 0 ? "bg-white" : ""}>
-                              <td className="px-4 py-3 font-medium text-[#1A1210]">{it.itemName}</td>
-                              <td className="px-4 py-3 text-center text-[#7A6055]">{it.maxQty}</td>
-                              <td className="px-4 py-3 text-center">
-                                <input 
-                                  type="number"
-                                  min="0"
-                                  max={it.maxQty}
-                                  value={it.quantity}
-                                  onChange={(e) => handleReturnQtyChange(idx, parseInt(e.target.value) || 0)}
-                                  className="w-16 px-2 py-1 bg-white border border-[#E5DDD5] rounded-md text-center focus:ring-1 focus:ring-[#8B5E3C] outline-none"
-                                />
-                              </td>
-                              <td className="px-4 py-3 text-right text-[#1A1210]">{formatCurrency(it.price)}</td>
-                              <td className="px-4 py-3 text-right font-bold text-[#1A1210]">
-                                {formatCurrency(it.quantity * it.price)}
+                          {returnItems.filter(it => it.maxQty > 0).length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="px-4 py-8 text-center text-[#A89080] font-semibold">
+                                All items in this sale have already been fully returned.
                               </td>
                             </tr>
-                          ))}
+                          ) : (
+                            returnItems
+                              .map((it, idx) => ({ ...it, originalIdx: idx }))
+                              .filter(it => it.maxQty > 0)
+                              .map((it) => {
+                                const idx = it.originalIdx;
+                                return (
+                                  <tr key={idx} className={it.quantity > 0 ? "bg-white" : ""}>
+                                    <td className="px-4 py-3 font-medium text-[#1A1210]">{it.itemName}</td>
+                                    <td className="px-4 py-3 text-center text-[#7A6055]">{it.purchasedQty}</td>
+                                    <td className="px-4 py-3 text-center text-rose-600 font-semibold">{it.alreadyReturned}</td>
+                                    <td className="px-4 py-3 text-center text-indigo-600 font-semibold">{it.maxQty}</td>
+                                    <td className="px-4 py-3 text-center">
+                                      <input 
+                                        type="number"
+                                        min="0"
+                                        max={it.maxQty}
+                                        value={it.quantity}
+                                        onChange={(e) => handleReturnQtyChange(idx, parseInt(e.target.value) || 0)}
+                                        className="w-16 px-2 py-1 bg-white border border-[#E5DDD5] rounded-md text-center focus:ring-1 focus:ring-[#8B5E3C] outline-none"
+                                      />
+                                    </td>
+                                    <td className="px-4 py-3 text-right text-[#1A1210]">{formatCurrency(it.price)}</td>
+                                    <td className="px-4 py-3 text-right font-bold text-[#1A1210]">
+                                      {formatCurrency(it.quantity * it.price)}
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                          )}
                         </tbody>
                         <tfoot className="bg-[#F2EBE5]">
                           <tr>
-                            <td colSpan={4} className="px-4 py-3 font-bold text-[#8B5E3C]">Total Return Amount</td>
+                            <td colSpan={6} className="px-4 py-3 font-bold text-[#8B5E3C]">Total Return Amount</td>
                             <td className="px-4 py-3 text-right font-black text-[#1A1210] text-lg">
                               {formatCurrency(returnItems.reduce((acc, it) => acc + (it.quantity * it.price), 0))}
                             </td>

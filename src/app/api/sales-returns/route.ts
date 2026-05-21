@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import SaleReturn from "@/models/SaleReturn";
+import Sale from "@/models/Sale";
 import Item from "@/models/Item";
 import Customer from "@/models/Customer";
 import User from "@/models/User";
@@ -15,6 +16,16 @@ export async function GET(req: Request) {
 
     await connectDB();
     const { searchParams } = new URL(req.url);
+    const saleId = searchParams.get("saleId");
+
+    if (saleId) {
+      const returns = await SaleReturn.find({ saleId })
+        .populate("createdBy", "name")
+        .populate("updatedBy", "name")
+        .sort({ createdAt: -1 });
+      return NextResponse.json({ data: returns });
+    }
+
     const page  = parseInt(searchParams.get("page")  || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const skip  = (page - 1) * limit;
@@ -90,25 +101,30 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3 — Update customer balance (Sales Return decreases customer's credit balance)
-    const refundAmount = Number(body.totalAmount || body.total || 0);
-    await Customer.findByIdAndUpdate(
-      body.customerId,
-      { 
-        $inc: { 
-          creditBalance: -refundAmount
-        },
-        $push: { 
-          balanceHistory: {
-            date: new Date(),
-            amount: refundAmount,
-            type: "payment", // Returns are like payments (reduce debt)
-            note: `Sales Return #${newReturn.returnNumber}`
+    // 3 — Update customer balance (Sales Return decreases customer's credit balance only if the sale had unpaid balance)
+    const sale = await Sale.findById(body.saleId).session(dbSession);
+    const isCreditSale = sale && (sale.paymentType === "credit" || (sale.total - (sale.advancePaid || 0) > 0));
+
+    if (isCreditSale) {
+      const refundAmount = Number(body.totalAmount || body.total || 0);
+      await Customer.findByIdAndUpdate(
+        body.customerId,
+        { 
+          $inc: { 
+            creditBalance: -refundAmount
+          },
+          $push: { 
+            balanceHistory: {
+              date: new Date(),
+              amount: refundAmount,
+              type: "payment", // Returns are like payments (reduce debt)
+              note: `Sales Return #${newReturn.returnNumber} (Original Sale: ${body.saleNumber})`
+            }
           }
-        }
-      },
-      { session: dbSession }
-    );
+        },
+        { session: dbSession }
+      );
+    }
 
     await dbSession.commitTransaction();
     return NextResponse.json(newReturn, { status: 201 });

@@ -3,7 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import Sale from "@/models/Sale";
 import Purchase from "@/models/Purchase";
 import Expense from "@/models/Expense";
-import SaleReturn from "@/models/SaleReturn";
+import SalesReturn from "@/models/SalesReturn";
 import Customer from "@/models/Customer";
 import Item from "@/models/Item";
 import Supplier from "@/models/Supplier";
@@ -59,9 +59,23 @@ export async function GET(req: NextRequest) {
         { $match: matchRange },
         { $group: { _id: "$paymentType", total: { $sum: "$total" } } },
       ]),
-      SaleReturn.aggregate([
+      SalesReturn.aggregate([
         { $match: matchRange },
-        { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+        {
+          $lookup: {
+            from: "sales",
+            localField: "saleId",
+            foreignField: "_id",
+            as: "saleInfo"
+          }
+        },
+        { $unwind: { path: "$saleInfo", preserveNullAndEmptyArrays: true } },
+        {
+          $group: {
+            _id: "$saleInfo.paymentType",
+            total: { $sum: "$totalAmount" }
+          }
+        }
       ]),
       Purchase.aggregate([
         { $match: matchRange },
@@ -87,18 +101,23 @@ export async function GET(req: NextRequest) {
 
     const stockSum = totalStockAgg[0]?.total ?? 0;
 
-    const totalReturns   = returnsAgg[0]?.total ?? 0;
+    const returnsByPayment = returnsAgg.reduce((acc: any, curr: any) => {
+      const pType = curr._id || "credit";
+      acc[pType] = (acc[pType] || 0) + curr.total;
+      return acc;
+    }, {});
+    const totalReturns = returnsAgg.reduce((sum: number, curr: any) => sum + curr.total, 0);
     
     // Aggregate by payment type
     const salesByPayment = salesAgg.reduce((acc: any, curr: any) => {
       acc[curr._id] = curr.total;
       return acc;
     }, {});
-    const rawSales = Object.values(salesByPayment).reduce((sum: any, val: any) => sum + val, 0) as number;
-    const totalSales = rawSales - totalReturns; // Net Sales
-    const cashSales = salesByPayment["cash"] || 0;
-    const bankSales = salesByPayment["bank"] || 0;
-    const creditSales = salesByPayment["credit"] || 0;
+    
+    const cashSales = Math.max(0, (salesByPayment["cash"] || 0) - (returnsByPayment["cash"] || 0));
+    const bankSales = Math.max(0, (salesByPayment["bank"] || 0) - (returnsByPayment["bank"] || 0));
+    const creditSales = Math.max(0, (salesByPayment["credit"] || 0) - (returnsByPayment["credit"] || 0));
+    const totalSales = cashSales + bankSales + creditSales;
     
     const purchasesByPayment = purchasesAgg.reduce((acc: any, curr: any) => {
       acc[curr._id] = curr.total;
@@ -123,7 +142,7 @@ export async function GET(req: NextRequest) {
         }},
         { $sort: { "_id.month": 1 } },
       ]),
-      SaleReturn.aggregate([
+      SalesReturn.aggregate([
         { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
         { $group: {
           _id: { month: { $month: "$date" } },

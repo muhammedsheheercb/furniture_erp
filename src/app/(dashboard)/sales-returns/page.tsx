@@ -70,13 +70,39 @@ export default function SalesReturnsPage() {
         }
     };
 
-    const handleSaleSelect = (sale: ISale) => {
+    const handleSaleSelect = async (sale: ISale) => {
         setSelectedSale(sale);
-        setReturnItems(sale.items.map(item => ({
-            ...item,
-            returnQuantity: 0,
-            originalQuantity: item.quantity
-        })));
+        try {
+            const res = await fetch(`/api/sales-returns?saleId=${sale._id}`);
+            const result = await res.json();
+            const existingReturns = result.data || [];
+            
+            const returnedQtyMap: Record<string, number> = {};
+            existingReturns.forEach((ret: any) => {
+                if (editMode && ret._id === editId) return;
+                ret.items.forEach((item: any) => {
+                    returnedQtyMap[item.itemId] = (returnedQtyMap[item.itemId] || 0) + item.quantity;
+                });
+            });
+
+            setReturnItems(sale.items.map(item => {
+                const alreadyReturned = returnedQtyMap[item.itemId] || 0;
+                return {
+                    ...item,
+                    returnQuantity: 0,
+                    alreadyReturned,
+                    originalQuantity: item.quantity
+                };
+            }));
+        } catch (error) {
+            toast.error("Failed to load return history for this sale");
+            setReturnItems(sale.items.map(item => ({
+                ...item,
+                returnQuantity: 0,
+                alreadyReturned: 0,
+                originalQuantity: item.quantity
+            })));
+        }
     };
 
     const handleDeleteRequest = (id: string) => {
@@ -102,7 +128,7 @@ export default function SalesReturnsPage() {
         }
     };
 
-    const handleEditReturn = (ret: any) => {
+    const handleEditReturn = async (ret: any) => {
         // Find the sale this return belongs to
         const sale = sales.find(s => s._id === ret.saleId);
         if (!sale) {
@@ -114,15 +140,41 @@ export default function SalesReturnsPage() {
         setEditMode(true);
         setSelectedSale(sale);
         
-        // Map original sale items, but show returned quantities for this return
-        setReturnItems(sale.items.map(sItem => {
-            const rItem = ret.items.find((ri: any) => ri.itemId === sItem.itemId);
-            return {
-                ...sItem,
-                originalQuantity: sItem.quantity,
-                returnQuantity: rItem ? rItem.quantity : 0
-            };
-        }));
+        try {
+            const res = await fetch(`/api/sales-returns?saleId=${ret.saleId}`);
+            const result = await res.json();
+            const existingReturns = result.data || [];
+            
+            const returnedQtyMap: Record<string, number> = {};
+            existingReturns.forEach((r: any) => {
+                if (r._id === ret._id) return;
+                r.items.forEach((item: any) => {
+                    returnedQtyMap[item.itemId] = (returnedQtyMap[item.itemId] || 0) + item.quantity;
+                });
+            });
+
+            setReturnItems(sale.items.map(sItem => {
+                const rItem = ret.items.find((ri: any) => ri.itemId === sItem.itemId);
+                const alreadyReturned = returnedQtyMap[sItem.itemId] || 0;
+                return {
+                    ...sItem,
+                    originalQuantity: sItem.quantity,
+                    returnQuantity: rItem ? rItem.quantity : 0,
+                    alreadyReturned
+                };
+            }));
+        } catch (error) {
+            toast.error("Failed to load return history for this sale");
+            setReturnItems(sale.items.map(sItem => {
+                const rItem = ret.items.find((ri: any) => ri.itemId === sItem.itemId);
+                return {
+                    ...sItem,
+                    originalQuantity: sItem.quantity,
+                    returnQuantity: rItem ? rItem.quantity : 0,
+                    alreadyReturned: 0
+                };
+            }));
+        }
         setModalOpen(true);
     };
 
@@ -134,6 +186,15 @@ export default function SalesReturnsPage() {
         if (itemsToReturn.length === 0) {
             toast.error("Please select at least one item to return");
             return;
+        }
+
+        for (const item of itemsToReturn) {
+            const alreadyReturned = item.alreadyReturned || 0;
+            const maxAllowed = item.originalQuantity - alreadyReturned;
+            if (item.returnQuantity > maxAllowed) {
+                toast.error(`Cannot return more than ${maxAllowed} of ${item.itemName}`);
+                return;
+            }
         }
 
         const total = itemsToReturn.reduce((sum, item) => sum + (item.price * item.returnQuantity), 0);
@@ -313,42 +374,72 @@ export default function SalesReturnsPage() {
                                         <tr>
                                             <th className="py-2 font-medium text-left">Item</th>
                                             <th className="py-2 font-medium text-center">Qty Bought</th>
+                                            <th className="py-2 font-medium text-center">Already Returned</th>
                                             <th className="py-2 font-medium text-center">Return Qty</th>
                                             <th className="py-2 font-medium text-right">Price</th>
                                             <th className="py-2 font-medium text-right">Return Total</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
-                                        {returnItems.map((item, idx) => (
-                                            <tr key={idx}>
-                                                <td className="py-3 text-left">
-                                                    <div className="font-medium text-gray-900">{item.itemName}</div>
-                                                    <div className="text-xs text-gray-500">{item.itemNumber} {item.batch ? `(Batch: ${item.batch})` : ''}</div>
-                                                </td>
-                                                <td className="py-3 text-center">{item.originalQuantity}</td>
-                                                <td className="py-3 text-center">
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        max={item.originalQuantity}
-                                                        value={item.returnQuantity}
-                                                        onChange={(e) => {
-                                                            const raw = e.target.value;
-                                                            const val = raw === "" ? 0 : parseInt(raw);
-                                                            const finalVal = Math.max(0, Math.min(val || 0, item.originalQuantity));
-                                                            const newItems = [...returnItems];
-                                                            newItems[idx].returnQuantity = raw === "" ? "" : finalVal;
-                                                            setReturnItems(newItems);
-                                                        }}
-                                                        className="w-16 px-2 py-1 border rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none"
-                                                    />
-                                                </td>
-                                                <td className="py-3 text-right">{formatCurrency(item.price)}</td>
-                                                <td className="py-3 text-right font-medium">
-                                                    {formatCurrency(item.price * (item.returnQuantity || 0))}
+                                        {returnItems
+                                            .map((item, originalIdx) => ({ ...item, originalIdx }))
+                                            .filter(item => {
+                                                const maxAllowed = item.originalQuantity - (item.alreadyReturned || 0);
+                                                return maxAllowed > 0 || (editMode && item.returnQuantity > 0);
+                                            })
+                                            .map((item) => {
+                                                const idx = item.originalIdx;
+                                                const maxAllowed = item.originalQuantity - (item.alreadyReturned || 0);
+                                                return (
+                                                    <tr key={idx}>
+                                                        <td className="py-3 text-left">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium text-gray-900">{item.itemName}</span>
+                                                                {(item.alreadyReturned || 0) >= item.originalQuantity && (
+                                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-800">
+                                                                        Fully Returned
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500">{item.itemNumber} {item.batch ? `(Batch: ${item.batch})` : ''}</div>
+                                                        </td>
+                                                        <td className="py-3 text-center">{item.originalQuantity}</td>
+                                                        <td className="py-3 text-center text-red-500 font-semibold">{item.alreadyReturned || 0}</td>
+                                                        <td className="py-3 text-center">
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max={maxAllowed}
+                                                                value={item.returnQuantity}
+                                                                onChange={(e) => {
+                                                                    const raw = e.target.value;
+                                                                    const val = raw === "" ? 0 : parseInt(raw);
+                                                                    const finalVal = Math.max(0, Math.min(val || 0, maxAllowed));
+                                                                    const newItems = [...returnItems];
+                                                                    newItems[idx].returnQuantity = raw === "" ? "" : finalVal;
+                                                                    setReturnItems(newItems);
+                                                                }}
+                                                                disabled={maxAllowed <= 0}
+                                                                className="w-16 px-2 py-1 border rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                                                            />
+                                                        </td>
+                                                        <td className="py-3 text-right">{formatCurrency(item.price)}</td>
+                                                        <td className="py-3 text-right font-medium">
+                                                            {formatCurrency(item.price * (item.returnQuantity || 0))}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        {returnItems.filter(item => {
+                                            const maxAllowed = item.originalQuantity - (item.alreadyReturned || 0);
+                                            return maxAllowed > 0 || (editMode && item.returnQuantity > 0);
+                                        }).length === 0 && (
+                                            <tr>
+                                                <td colSpan={6} className="py-8 text-center text-gray-500 font-semibold">
+                                                    All items in this sale have already been returned.
                                                 </td>
                                             </tr>
-                                        ))}
+                                        )}
                                     </tbody>
                                 </table>
                             </div>

@@ -45,8 +45,10 @@ const translations: Record<Language, Record<string, string>> = {
     total_revenue: "Total Revenue",
     cash_sale: "Cash Sale",
     bank_upi_sale: "Bank/UPI Sale",
+    credit_sale: "Credit Sale",
     cash_purchase: "Cash Purchase",
     bank_upi_purchase: "Bank/UPI Purchase",
+    credit_purchase: "Credit Purchase",
   },
   ar: {
     dashboard: "لوحة القيادة",
@@ -83,8 +85,10 @@ const translations: Record<Language, Record<string, string>> = {
     total_revenue: "إجمالي الإيرادات",
     cash_sale: "بيع نقدي",
     bank_upi_sale: "بيع عبر البنك/UPI",
+    credit_sale: "بيع بالآجل",
     cash_purchase: "شراء نقدي",
     bank_upi_purchase: "شراء عبر البنك/UPI",
+    credit_purchase: "شراء بالآجل",
   }
 };
 

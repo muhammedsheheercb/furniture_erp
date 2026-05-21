@@ -16,9 +16,12 @@ export async function GET(req: NextRequest) {
     await connectDB();
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
+    const saleId = searchParams.get("saleId");
     
     const query: any = {};
-    if (search) {
+    if (saleId) {
+      query.saleId = new mongoose.Types.ObjectId(saleId);
+    } else if (search) {
       query.$or = [
         { customerName: { $regex: search, $options: "i" } },
         { saleNumber: { $regex: search, $options: "i" } },
@@ -51,6 +54,34 @@ export async function POST(req: NextRequest) {
     const sale = await Sale.findById(saleId).session(dbSession);
     if (!sale) return NextResponse.json({ success: false, error: "Sale not found" }, { status: 404 });
 
+    // Validate quantities against existing returns
+    const existingReturns = await SalesReturn.find({ saleId: sale._id }).session(dbSession);
+    const returnedQtyMap: Record<string, number> = {};
+    existingReturns.forEach((ret: any) => {
+      ret.items.forEach((item: any) => {
+        const key = item.itemId ? item.itemId.toString() : item.itemName;
+        returnedQtyMap[key] = (returnedQtyMap[key] || 0) + item.quantity;
+      });
+    });
+
+    for (const retItem of items) {
+      const saleItem = sale.items.find((it: any) => {
+        if (retItem.itemId && it.itemId) {
+          return it.itemId.toString() === retItem.itemId.toString();
+        }
+        return it.itemName === retItem.itemName;
+      });
+      if (!saleItem) {
+        return NextResponse.json({ success: false, error: `Item ${retItem.itemName} was not purchased in this sale` }, { status: 400 });
+      }
+      const key = retItem.itemId ? retItem.itemId.toString() : retItem.itemName;
+      const alreadyReturned = returnedQtyMap[key] || 0;
+      const maxAllowed = saleItem.quantity - alreadyReturned;
+      if (retItem.quantity > maxAllowed) {
+        return NextResponse.json({ success: false, error: `Cannot return more than ${maxAllowed} units of ${retItem.itemName}. ${alreadyReturned} units already returned.` }, { status: 400 });
+      }
+    }
+
     // Generate return number
     const count = await SalesReturn.countDocuments().session(dbSession);
     const returnNumber = `RET-${String(count + 1).padStart(5, "0")}`;
@@ -80,9 +111,9 @@ export async function POST(req: NextRequest) {
           item.quantity = (item.quantity || 0) + retItem.quantity;
           
           // Add back to batch if possible
-          if (item.batches && item.batches.length > 0) {
+          if (item.batches && item.batches.length > 0 && item.batches[0]) {
             // Find the oldest batch or create a "Returns" batch
-            item.batches[0].quantity += retItem.quantity;
+            item.batches[0].quantity = (item.batches[0].quantity || 0) + retItem.quantity;
           }
           
           await item.save({ session: dbSession });
