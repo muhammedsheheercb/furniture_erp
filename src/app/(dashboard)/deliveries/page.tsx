@@ -17,6 +17,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
+import Modal from "@/components/ui/Modal";
 
 export default function DeliveriesPage() {
   const { data: session } = useSession();
@@ -27,6 +28,11 @@ export default function DeliveriesPage() {
   const [deliveries, setDeliveries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"pending" | "delivered">("pending");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null);
+  const [driverName, setDriverName] = useState("");
+  const [driverContact, setDriverContact] = useState("");
+  const [finishing, setFinishing] = useState(false);
 
   const fetchDeliveries = async () => {
     setLoading(true);
@@ -46,15 +52,39 @@ export default function DeliveriesPage() {
     fetchDeliveries();
   }, []);
 
-  const handleMarkDone = async (id: string) => {
+  const handleMarkDone = (delivery: any) => {
+    setSelectedDeliveryId(delivery._id);
+    setDriverName(delivery.driverName || "");
+    setDriverContact(delivery.driverContact || "");
+    setModalOpen(true);
+  };
+
+  const handleConfirmDelivery = async () => {
+    if (!driverName.trim()) {
+      toast.error("Driver Name is required");
+      return;
+    }
+    if (!driverContact.trim()) {
+      toast.error("Driver Contact/Mobile is required");
+      return;
+    }
+
+    setFinishing(true);
     try {
-      const res = await axios.put(`/api/deliveries/${id}`, { status: "delivered" });
+      const res = await axios.put(`/api/deliveries/${selectedDeliveryId}`, {
+        status: "delivered",
+        driverName: driverName.trim(),
+        driverContact: driverContact.trim()
+      });
       if (res.data.success) {
         toast.success("Delivery marked as completed!");
+        setModalOpen(false);
         fetchDeliveries();
       }
     } catch (err) {
-      toast.error("Failed to update status");
+      toast.error("Failed to complete delivery");
+    } finally {
+      setFinishing(false);
     }
   };
 
@@ -156,6 +186,22 @@ export default function DeliveriesPage() {
                           <p key={i} className="text-xs text-[#A89080]">{it.itemName} (x{it.quantity})</p>
                         ))}
                       </div>
+                      {(delivery.driverName || delivery.driverContact) && (
+                        <div className="mt-3 pt-3 border-t border-[#E5DDD5]/40 space-y-1 max-w-xs">
+                          {delivery.driverName && (
+                            <p className="text-xs text-[#7A6055] flex justify-between gap-4">
+                              <span className="font-semibold text-[#8B5E3C]">Driver Name:</span>
+                              <span className="font-bold text-[#1A1210]">{delivery.driverName}</span>
+                            </p>
+                          )}
+                          {delivery.driverContact && (
+                            <p className="text-xs text-[#7A6055] flex justify-between gap-4">
+                              <span className="font-semibold text-[#8B5E3C]">Driver Mobile:</span>
+                              <span className="font-bold text-indigo-600 font-mono">{delivery.driverContact}</span>
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -171,7 +217,7 @@ export default function DeliveriesPage() {
                     )}
                     {canEdit && delivery.status !== "delivered" && (
                       <Button
-                        onClick={() => handleMarkDone(delivery._id)}
+                        onClick={() => handleMarkDone(delivery)}
                         className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
                         size="sm"
                       >
@@ -190,6 +236,55 @@ export default function DeliveriesPage() {
           ))
         )}
       </div>
+
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Complete Delivery Assignment"
+        size="md"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setModalOpen(false)} disabled={finishing}>Cancel</Button>
+            <Button onClick={handleConfirmDelivery} loading={finishing} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              Confirm Delivery Completed
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4 py-2">
+          <p className="text-sm text-[#7A6055]">
+            Please enter or verify the delivery details below to finalize the shipment dispatch.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#7A6055] mb-1">
+                Driver Name *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. John Doe, Salim Al-Farsi..."
+                value={driverName}
+                onChange={e => setDriverName(e.target.value)}
+                className="w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 font-medium"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#7A6055] mb-1">
+                Driver Contact / Mobile Number *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. +968 9123 4567..."
+                value={driverContact}
+                onChange={e => setDriverContact(e.target.value)}
+                className="w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 font-medium"
+                required
+              />
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

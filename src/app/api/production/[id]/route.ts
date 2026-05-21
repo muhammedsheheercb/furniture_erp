@@ -21,7 +21,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
     await connectDB();
     const { id } = await params;
-    const { status, remarks, deliveryDate, items } = await req.json();
+    const { status, remarks, deliveryDate, items, deliveryPartner, driverName, driverContact } = await req.json();
 
     const production = await Production.findById(id).session(dbSession);
     if (!production) return NextResponse.json({ success: false, error: "Production not found" }, { status: 404 });
@@ -33,7 +33,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
             for (const bomItem of config.bom) {
                 if (!bomItem.materialId || !bomItem.batchNumber) continue;
                 
-                const material = await Material.findById(bomItem.materialId).session(dbSession);
+                const material = await (Material as any).findById(bomItem.materialId).session(dbSession);
                 if (!material) throw new Error(`Material not found: ${bomItem.materialName}`);
                 
                 const batch = material.batches.find((b: any) => b.batchNumber === bomItem.batchNumber);
@@ -131,10 +131,21 @@ export async function PUT(req: NextRequest, { params }: Params) {
                     quantity: it.quantity,
                     status: "pending"
                 })),
-                status: "pending"
+                status: "pending",
+                deliveryPartner,
+                driverName,
+                driverContact
             }], { session: dbSession });
+        } else {
+            existingDelivery.driverName = driverName;
+            existingDelivery.driverContact = driverContact;
+            if (deliveryPartner) {
+                existingDelivery.deliveryPartner = deliveryPartner;
+            }
+            await existingDelivery.save({ session: dbSession });
         }
     }
+
 
     await production.save({ session: dbSession });
     await dbSession.commitTransaction();

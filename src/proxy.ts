@@ -37,6 +37,8 @@ export default async function proxy(req: NextRequest) {
     const segments = pathname.split("/");
     const module = segments[2]; 
 
+    if (!module) return NextResponse.next();
+
     // Mapping of API segments to permission keys
     const moduleMap: Record<string, string> = {
       "items": "items",

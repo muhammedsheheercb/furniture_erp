@@ -14,7 +14,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
     await connectDB();
     const { id } = await params;
-    const { status, remarks } = await req.json();
+    const { status, remarks, deliveryPartner, driverName, driverContact } = await req.json();
 
     const delivery = await Delivery.findById(id);
     if (!delivery) return NextResponse.json({ success: false, error: "Delivery not found" }, { status: 404 });
@@ -28,6 +28,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
         await Sale.findByIdAndUpdate(delivery.saleId, { status: "invoiced" });
     }
     if (remarks) delivery.remarks = remarks;
+    if (deliveryPartner) delivery.deliveryPartner = deliveryPartner;
+    if (driverName) delivery.driverName = driverName;
+    if (driverContact) delivery.driverContact = driverContact;
 
     await delivery.save();
     return NextResponse.json({ success: true, data: delivery });

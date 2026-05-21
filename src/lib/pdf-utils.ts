@@ -23,6 +23,7 @@ export interface InvoiceData {
     items: InvoiceItem[];
     subtotal: number;
     tax: number;
+    discount?: number;
     total: number;
     type: "Sale" | "Purchase";
     isTaxInvoice?: boolean;
@@ -33,6 +34,7 @@ export interface InvoiceData {
     customerMobile?: string;
     createdBy?: string;
 }
+
 
 const containsArabic = (text: string) => {
     const arabicPattern = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;

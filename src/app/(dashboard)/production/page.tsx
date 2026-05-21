@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import ProductionModal from "@/components/production/ProductionModal";
+import Modal from "@/components/ui/Modal";
 import {
   Card,
   CardContent,
@@ -31,6 +32,11 @@ export default function ProductionPage() {
   const [selectedProd, setSelectedProd] = useState<any | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [finishModalOpen, setFinishModalOpen] = useState(false);
+  const [finishProdId, setFinishProdId] = useState<string | null>(null);
+  const [driverName, setDriverName] = useState("");
+  const [driverContact, setDriverContact] = useState("");
+  const [finishing, setFinishing] = useState(false);
 
   const fetchProductions = async () => {
     setLoading(true);
@@ -53,14 +59,39 @@ export default function ProductionPage() {
       setModalOpen(true);
       return;
     }
+    // Open modal to enter delivery partner details when marking as finished
+    setFinishProdId(id);
+    setDriverName("");
+    setDriverContact("");
+    setFinishModalOpen(true);
+  };
+
+  const handleConfirmFinish = async () => {
+    if (!driverName.trim()) {
+      toast.error("Driver Name is required");
+      return;
+    }
+    if (!driverContact.trim()) {
+      toast.error("Driver Contact/Mobile Number is required");
+      return;
+    }
+
+    setFinishing(true);
     try {
-      const res = await axios.put(`/api/production/${id}`, { status: "finished" });
+      const res = await axios.put(`/api/production/${finishProdId}`, {
+        status: "finished",
+        driverName: driverName.trim(),
+        driverContact: driverContact.trim(),
+      });
       if (res.data.success) {
-        toast.success("Marked as finished");
+        toast.success("Production marked as finished and delivery created!");
+        setFinishModalOpen(false);
         fetchProductions();
       }
     } catch {
-      toast.error("Failed to update status");
+      toast.error("Failed to mark production as finished");
+    } finally {
+      setFinishing(false);
     }
   };
 
@@ -217,6 +248,55 @@ export default function ProductionPage() {
         production={selectedProd}
         loading={updating}
       />
+
+      <Modal
+        open={finishModalOpen}
+        onClose={() => setFinishModalOpen(false)}
+        title="Mark Production as Finished"
+        size="md"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setFinishModalOpen(false)} disabled={finishing}>Cancel</Button>
+            <Button onClick={handleConfirmFinish} loading={finishing} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              Confirm & Create Delivery
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4 py-2">
+          <p className="text-sm text-[#7A6055]">
+            Please enter the delivery assignment details to finalize the production and dispatch the order.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#7A6055] mb-1">
+                Driver Name *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. John Doe, Salim Al-Farsi..."
+                value={driverName}
+                onChange={e => setDriverName(e.target.value)}
+                className="w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 font-medium"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#7A6055] mb-1">
+                Driver Contact / Mobile Number *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. +968 9123 4567..."
+                value={driverContact}
+                onChange={e => setDriverContact(e.target.value)}
+                className="w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 font-medium"
+                required
+              />
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

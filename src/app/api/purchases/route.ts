@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
               amount:        unpaidBalance,
               type:          "adjustment",
               paymentMethod: body.paymentType,
-              note:          `Purchase #${purchaseNumber} — Balance due (Bill: ${body.total}, Paid: ${body.paidAmount || 0})` (OMR),
+              note:          `Purchase #${purchaseNumber} — Balance due (Bill: ${body.total}, Paid: ${body.paidAmount || 0}) OMR`,
             },
           },
         },
