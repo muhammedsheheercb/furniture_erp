@@ -21,10 +21,17 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
     await connectDB();
     const { id } = await params;
-    const { status, remarks, deliveryDate, items, deliveryPartner, driverName, driverContact } = await req.json();
+    const { status, remarks, deliveryDate, items, deliveryPartner, driverName, driverContact, workerId, workerName, workerContact } = await req.json();
 
     const production = await Production.findById(id).session(dbSession);
     if (!production) return NextResponse.json({ success: false, error: "Production not found" }, { status: 404 });
+
+    console.log("[PUT /api/production/[id]] Incoming payload:", { workerId, workerName, workerContact });
+    if (workerId) {
+      production.workerId = new mongoose.Types.ObjectId(workerId);
+    }
+    if (workerName) production.workerName = workerName;
+    if (workerContact) production.workerContact = workerContact;
 
     // Handle "processing" start (Material deduction & Configuration saving)
     if (status === "processing" && production.status === "pending" && items) {

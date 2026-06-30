@@ -18,7 +18,10 @@ import { ISale, ISaleItem, ICustomer } from "@/types";
 
 import Pagination from "@/components/ui/Pagination";
 
+import { useDateFilter } from "@/context/DateFilterContext";
+
 export default function SalesReturnsPage() {
+    const { startDate, endDate } = useDateFilter();
     const [returns, setReturns] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -43,12 +46,18 @@ export default function SalesReturnsPage() {
     useEffect(() => {
         fetchReturns();
         fetchSales();
-    }, [page]);
+    }, [page, startDate, endDate]);
 
     const fetchReturns = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/sales-returns?page=${page}&limit=10`);
+            const params = new URLSearchParams({
+                page: String(page),
+                limit: "10",
+                ...(startDate && { startDate }),
+                ...(endDate && { endDate }),
+            });
+            const res = await fetch(`/api/sales-returns?${params}`);
             const data = await res.json();
             setReturns(data.data || []);
             setTotal(data.total || 0);

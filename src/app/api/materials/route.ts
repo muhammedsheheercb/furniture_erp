@@ -17,7 +17,7 @@ const CATEGORY_PREFIX: Record<string, string> = {
 async function generateCode(category: string): Promise<string> {
   const prefix = CATEGORY_PREFIX[category] || "MAT";
   // Count how many materials already have this prefix
-  const count = await Material.countDocuments({ code: { $regex: `^${prefix}-` } });
+  const count = await Material.countDocuments({ code: { $regex: `^${prefix}-` } } as any);
   return `${prefix}-${String(count + 1).padStart(3, "0")}`;
 }
 
@@ -30,18 +30,28 @@ export async function GET(req: NextRequest) {
     await connectDB();
 
     const { searchParams } = new URL(req.url);
-    const search = searchParams.get("search") || "";
+    const search    = searchParams.get("search") || "";
+    const startDate = searchParams.get("startDate");
+    const endDate   = searchParams.get("endDate");
 
-    const query = search
-      ? {
-          $or: [
-            { name:     { $regex: search, $options: "i" } },
-            { code:     { $regex: search, $options: "i" } },
-            { category: { $regex: search, $options: "i" } },
-            { brand:    { $regex: search, $options: "i" } },
-          ],
-        }
-      : {};
+    const query: any = {};
+    if (search) {
+      query.$or = [
+        { name:     { $regex: search, $options: "i" } },
+        { code:     { $regex: search, $options: "i" } },
+        { category: { $regex: search, $options: "i" } },
+        { brand:    { $regex: search, $options: "i" } },
+      ];
+    }
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
 
     const materials = await Material.find(query).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ success: true, data: materials });

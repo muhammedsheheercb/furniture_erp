@@ -11,9 +11,9 @@ import { ISupplier } from "@/types";
 import { generateSupplierID } from "@/lib/utils";
 
 const schema = z.object({
-    supplierNumber: z.string().min(1, "Supplier number is required"),
-    name: z.string().min(1, "Name is required"),
-    mobile: z.string().optional(),
+    supplierNumber: z.string().trim().min(1, "Supplier number is required"),
+    name: z.string().trim().min(1, "Supplier name is required"),
+    mobile: z.string().trim().optional().refine(val => !val || /^\d{8,12}$/.test(val), { message: "Mobile must be between 8 and 12 digits" }),
     balance: z.coerce.number().min(0, "Balance cannot be negative").default(0),
 });
 type FormData = z.infer<typeof schema>;

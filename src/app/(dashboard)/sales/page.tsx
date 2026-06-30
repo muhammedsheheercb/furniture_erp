@@ -14,6 +14,7 @@ import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useDateFilter } from "@/context/DateFilterContext";
 
 import SaleModal          from "@/components/sales/SaleModal";
 import UpdateBalanceModal from "@/components/sales/UpdateBalanceModal";
@@ -48,6 +49,7 @@ function printSale(item: any) {
 // ── page ──────────────────────────────────────────────────────────────────────
 export default function SalesPage() {
   const { data: session } = useSession();
+  const { startDate, endDate } = useDateFilter();
   const isAdmin = session?.user?.role === "admin";
   const perms = (session?.user?.permissions as any)?.sales;
   const canCreate = isAdmin || perms?.create;
@@ -72,7 +74,7 @@ export default function SalesPage() {
   const fetchSales = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/sales?search=${search}`);
+      const res = await axios.get(`/api/sales?search=${search}&startDate=${startDate}&endDate=${endDate}`);
       if (res.data.success) setSales(res.data.data);
     } catch {
       toast.error("Failed to load sales");
@@ -93,7 +95,7 @@ export default function SalesPage() {
     }
   };
 
-  useEffect(() => { fetchSales(); fetchQuotes(); }, [search]);
+  useEffect(() => { fetchSales(); fetchQuotes(); }, [search, startDate, endDate]);
 
   // ── submit sale ───────────────────────────────────────────────────────────
   const handleSubmitSale = async (data: any) => {

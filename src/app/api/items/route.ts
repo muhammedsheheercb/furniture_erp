@@ -23,7 +23,9 @@ export async function GET(req: NextRequest) {
     const limit    = parseInt(searchParams.get("limit") || "10");
     const sortBy   = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") === "asc" ? 1 : -1;
-    const category = searchParams.get("category") || "";
+    const startDate = searchParams.get("startDate");
+    const endDate   = searchParams.get("endDate");
+    const category  = searchParams.get("category");
     const skip     = (page - 1) * limit;
 
     const query: any = {};
@@ -35,6 +37,15 @@ export async function GET(req: NextRequest) {
     }
     if (category) {
       query.category = category;
+    }
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
     }
 
     const [items, total, summary] = await Promise.all([
@@ -118,7 +129,7 @@ export async function POST(req: NextRequest) {
       await Promise.all(
         bomRows.map((r: any) =>
           Material.updateOne(
-            { _id: r.materialId, "batches.batchNumber": r.batchNumber },
+            { _id: r.materialId, "batches.batchNumber": r.batchNumber } as any,
             {
               $inc: {
                 currentStock: -Number(r.quantity),

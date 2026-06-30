@@ -22,8 +22,10 @@ import { Input } from "@/components/ui/Input";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import UpdateBalanceModal from "@/components/sales/UpdateBalanceModal";
+import { useDateFilter } from "@/context/DateFilterContext";
 
 export default function InvoicesPage() {
+  const { startDate, endDate } = useDateFilter();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -34,7 +36,13 @@ export default function InvoicesPage() {
     setLoading(true);
     try {
       // Invoices are delivered sales
-      const res = await axios.get(`/api/sales?status=invoiced&search=${search}`);
+      const params = new URLSearchParams({
+        status: "invoiced",
+        search,
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+      });
+      const res = await axios.get(`/api/sales?${params}`);
       if (res.data.success) {
         setInvoices(res.data.data);
       }
@@ -47,7 +55,7 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     fetchInvoices();
-  }, [search]);
+  }, [search, startDate, endDate]);
 
   return (
     <div className="space-y-6">

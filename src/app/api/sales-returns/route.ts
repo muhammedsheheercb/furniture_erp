@@ -17,9 +17,25 @@ export async function GET(req: Request) {
     await connectDB();
     const { searchParams } = new URL(req.url);
     const saleId = searchParams.get("saleId");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
+    const query: any = {};
+    if (saleId) {
+      query.saleId = saleId;
+    }
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) {
+        const ed = new Date(endDate);
+        ed.setHours(23, 59, 59, 999);
+        query.date.$lte = ed;
+      }
+    }
 
     if (saleId) {
-      const returns = await SaleReturn.find({ saleId })
+      const returns = await SaleReturn.find(query)
         .populate("createdBy", "name")
         .populate("updatedBy", "name")
         .sort({ createdAt: -1 });
@@ -31,13 +47,13 @@ export async function GET(req: Request) {
     const skip  = (page - 1) * limit;
 
     const [returns, total] = await Promise.all([
-      SaleReturn.find()
+      SaleReturn.find(query)
         .populate("createdBy", "name")
         .populate("updatedBy", "name")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
-      SaleReturn.countDocuments()
+      SaleReturn.countDocuments(query)
     ]);
 
     return NextResponse.json({
@@ -64,8 +80,18 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     // 1 — Create the return record
+    const enrichedItems = [];
+    for (const it of body.items) {
+      const dbItem = await Item.findById(it.itemId).session(dbSession);
+      enrichedItems.push({
+        ...it,
+        itemNumber: it.itemNumber || dbItem?.itemNumber || "—"
+      });
+    }
+
     const newReturn = new SaleReturn({
       ...body,
+      items: enrichedItems,
       createdBy: session.user.id,
       updatedBy: session.user.id,
     });

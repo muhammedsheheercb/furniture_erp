@@ -18,6 +18,9 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const saleId = searchParams.get("saleId");
     
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
     const query: any = {};
     if (saleId) {
       query.saleId = new mongoose.Types.ObjectId(saleId);
@@ -27,6 +30,15 @@ export async function GET(req: NextRequest) {
         { saleNumber: { $regex: search, $options: "i" } },
         { returnNumber: { $regex: search, $options: "i" } },
       ];
+    }
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) {
+        const ed = new Date(endDate);
+        ed.setHours(23, 59, 59, 999);
+        query.date.$lte = ed;
+      }
     }
 
     const returns = await SalesReturn.find(query).sort({ createdAt: -1 }).lean();

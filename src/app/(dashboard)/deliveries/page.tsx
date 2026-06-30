@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
+import { useDateFilter } from "@/context/DateFilterContext";
 import {
   Truck,
   Calendar as CalendarIcon,
@@ -21,6 +22,7 @@ import Modal from "@/components/ui/Modal";
 
 export default function DeliveriesPage() {
   const { data: session } = useSession();
+  const { startDate, endDate } = useDateFilter();
   const isAdmin = session?.user?.role === "admin";
   const perms = (session?.user?.permissions as any)?.deliveries;
   const canEdit = isAdmin || perms?.edit;
@@ -37,7 +39,10 @@ export default function DeliveriesPage() {
   const fetchDeliveries = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("/api/deliveries");
+      const params = new URLSearchParams();
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
+      const res = await axios.get(`/api/deliveries?${params}`);
       if (res.data.success) {
         setDeliveries(res.data.data);
       }
@@ -50,7 +55,7 @@ export default function DeliveriesPage() {
 
   useEffect(() => {
     fetchDeliveries();
-  }, []);
+  }, [startDate, endDate]);
 
   const handleMarkDone = (delivery: any) => {
     setSelectedDeliveryId(delivery._id);

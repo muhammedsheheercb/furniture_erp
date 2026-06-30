@@ -12,6 +12,8 @@ import { IKpiData, IChartData } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { motion } from "framer-motion";
 
+import { useDateFilter } from "@/context/DateFilterContext";
+
 const YEARS = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
 const kpiConfig = [
@@ -27,11 +29,10 @@ const kpiConfig = [
 ];
 
 export default function DashboardPage() {
+  const { startDate, endDate, setStartDate, setEndDate, clearDates } = useDateFilter();
   const [kpi, setKpi] = useState<IKpiData | null>(null);
   const [chart, setChart] = useState<IChartData[]>([]);
   const [year, setYear] = useState(new Date().getFullYear());
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(true);
   const [popupType, setPopupType] = useState<"sales" | "purchases" | null>(null);
 
@@ -39,7 +40,8 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       let url = `/api/dashboard?year=${year}`;
-      if (startDate && endDate) url += `&startDate=${startDate}&endDate=${endDate}`;
+      if (startDate) url += `&startDate=${startDate}`;
+      if (endDate) url += `&endDate=${endDate}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) { setKpi(data.kpi); setChart(data.chartData); }
@@ -89,9 +91,9 @@ export default function DashboardPage() {
               />
             </div>
           ))}
-          {startDate && endDate && (
+          {(startDate || endDate) && (
             <button
-              onClick={() => { setStartDate(""); setEndDate(""); }}
+              onClick={clearDates}
               style={{
                 background: "none", border: "1.5px solid #E5DDD5", borderRadius: 8,
                 color: "#C9A84C", fontSize: 12, cursor: "pointer", fontWeight: 600,

@@ -20,6 +20,7 @@ import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useDateFilter } from "@/context/DateFilterContext";
 
 import PurchaseModal from "@/components/purchases/PurchaseModal";
 import ConfirmModal from "@/components/ui/ConfirmModal";
@@ -27,6 +28,7 @@ import CurrencySymbol from "@/components/ui/CurrencySymbol";
 
 export default function PurchasesPage() {
   const { data: session } = useSession();
+  const { startDate, endDate } = useDateFilter();
   const isAdmin = session?.user?.role === "admin";
   const perms = (session?.user?.permissions as any)?.purchases;
   const canCreate = isAdmin || perms?.create;
@@ -45,7 +47,7 @@ export default function PurchasesPage() {
   const fetchPurchases = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/purchases?search=${search}`);
+      const res = await axios.get(`/api/purchases?search=${search}&startDate=${startDate}&endDate=${endDate}`);
       if (res.data.success) {
         setPurchases(res.data.data);
       }
@@ -59,7 +61,7 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     fetchPurchases();
-  }, [search]);
+  }, [search, startDate, endDate]);
 
   const handleSubmitPurchase = async (data: any) => {
     setSaving(true);

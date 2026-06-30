@@ -52,6 +52,12 @@ export async function GET(req: NextRequest) {
       ];
     }
 
+    if (startDate || endDate) {
+      matchQuery.createdAt = {};
+      if (startDate) matchQuery.createdAt.$gte = new Date(startDate);
+      if (endDate) matchQuery.createdAt.$lte = new Date(`${endDate}T23:59:59.999Z`);
+    }
+
     // Default sortBy
     let sortQuery: any = { [sortBy]: sortOrder };
     if (purchaseFilter) {

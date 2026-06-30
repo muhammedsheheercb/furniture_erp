@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import CustomerModal from "@/components/customers/CustomerModal";
-import { Plus, Trash2, UserPlus, AlertCircle } from "lucide-react";
+import QuotationItemModal from "@/components/quotations/QuotationItemModal";
+import { Plus, Trash2, UserPlus, AlertCircle, Pencil } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
@@ -55,6 +56,10 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
   const [customerAddress, setCustomerAddress] = useState("");
   const [custModalOpen,   setCustModalOpen]   = useState(false);
   const [savingCust,      setSavingCust]      = useState(false);
+
+  // item edit modal
+  const [itemModalOpen, setItemModalOpen] = useState(false);
+  const [editingLineId, setEditingLineId] = useState<string | null>(null);
 
   // sale fields
   const [date,            setDate]            = useState(new Date().toISOString().slice(0, 10));
@@ -238,6 +243,52 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
     setLineItems(prev => prev.filter(i => i.id !== lineId));
   }
 
+  function openEditItem(line: LineItem) {
+    setEditingLineId(line.id);
+    setItemModalOpen(true);
+  }
+
+  function handleItemModalSubmit(itemData: any) {
+    if (editingLineId) {
+      setLineItems(prev => prev.map(i => i.id !== editingLineId ? i : {
+        ...i,
+        itemName: itemData.itemName,
+        unit: itemData.unit || "Piece",
+        qty: itemData.quantity,
+        price: itemData.price,
+        discount: itemData.discount || 0,
+        color: itemData.color || "",
+        material: itemData.material || "",
+        size: itemData.size || "",
+        total: itemData.total,
+        dimensions: itemData.dimensions,
+        bom: itemData.bom,
+        pricing: itemData.pricing,
+      }));
+    } else {
+      setLineItems(prev => [...prev, {
+        id: uid(),
+        itemId: "",
+        itemNumber: "",
+        itemName: itemData.itemName,
+        unit: itemData.unit || "Piece",
+        qty: itemData.quantity,
+        price: itemData.price,
+        discount: itemData.discount || 0,
+        batchNumber: "",
+        color: itemData.color || "",
+        material: itemData.material || "",
+        size: itemData.size || "",
+        total: itemData.total,
+        dimensions: itemData.dimensions,
+        bom: itemData.bom,
+        pricing: itemData.pricing,
+      }]);
+    }
+    setItemModalOpen(false);
+    setEditingLineId(null);
+  }
+
   // ── submit ────────────────────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -369,15 +420,13 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-[#1A1210]">Products</h3>
-            {!isConversion && (
-              <button
-                type="button"
-                onClick={() => setLineItems(p => [...p, newRow()])}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-[#1B3A2D] text-white hover:bg-[#163222] transition-colors"
-              >
-                <Plus size={14} /> Add Product
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setLineItems(p => [...p, newRow()])}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-[#1B3A2D] text-white hover:bg-[#163222] transition-colors"
+            >
+              <Plus size={14} /> Add Product
+            </button>
           </div>
           <div className="rounded-xl border border-[#E5DDD5] overflow-hidden">
             <table className="w-full text-sm">
@@ -389,7 +438,7 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
                   <th className="py-2.5 px-2 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Price (<CurrencySymbol className="w-3 h-3" />)</th>
                   <th className="py-2.5 px-2 text-right text-xs font-bold text-[#7A6055] uppercase w-20">Disc %</th>
                   <th className="py-2.5 px-2 text-right text-xs font-bold text-[#7A6055] uppercase w-28">Total (<CurrencySymbol className="w-3 h-3" />)</th>
-                  <th className="w-10" />
+                  <th className="w-16 text-center py-2.5 px-2 text-xs font-bold text-[#7A6055] uppercase">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F0EBE5]">
@@ -400,8 +449,19 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
                 ) : lineItems.map(item => (
                   <tr key={item.id} className="hover:bg-[#FAF8F6]">
                     <td className="px-3 py-2">
-                      {isConversion ? (
-                        <span className="font-semibold">{item.itemName}</span>
+                      {item.itemName ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-[#1A1210]">{item.itemName}</span>
+                          {!isConversion && (
+                            <button
+                              type="button"
+                              onClick={() => updateField(item.id, "itemName", "")}
+                              className="text-[10px] text-[#A89080] hover:text-[#1A1210] underline"
+                            >
+                              change
+                            </button>
+                          )}
+                        </div>
                       ) : (
                         <select value={item.itemId} onChange={e => selectProduct(item.id, e.target.value)} className={inp}>
                           <option value="">— Select Product —</option>
@@ -413,10 +473,10 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
                       <input value={item.color} onChange={e => updateField(item.id, "color", e.target.value)} className={inp} placeholder="Color" />
                     </td>
                     <td className="px-2 py-2">
-                      <input type="number" min={1} value={item.qty} onChange={e => updateField(item.id, "qty", Number(e.target.value))} className={inp + " text-center"} disabled={isConversion} />
+                      <input type="number" min={1} value={item.qty} onChange={e => updateField(item.id, "qty", Number(e.target.value))} className={inp + " text-center"} />
                     </td>
                     <td className="px-2 py-2">
-                      <input type="number" value={item.price} onChange={e => updateField(item.id, "price", Number(e.target.value))} className={inp + " text-right"} disabled={isConversion} />
+                      <input type="number" value={item.price} onChange={e => updateField(item.id, "price", Number(e.target.value))} className={inp + " text-right"} />
                     </td>
                     <td className="px-2 py-2">
                       <input type="number" value={item.discount} onChange={e => updateField(item.id, "discount", Number(e.target.value))} className={inp + " text-right"} placeholder="0" />
@@ -426,9 +486,24 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
                       {item.total.toLocaleString("en-IN")}
                     </td>
                     <td className="px-2 py-2 text-center">
-                      {!isConversion && (
-                        <button type="button" onClick={() => removeRow(item.id)} className="text-rose-400 hover:text-rose-600"><Trash2 size={15} /></button>
-                      )}
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditItem(item)}
+                          className="text-amber-600 hover:text-amber-800 p-1 rounded hover:bg-amber-50"
+                          title="Edit product specs & details"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeRow(item.id)}
+                          className="text-rose-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50"
+                          title="Remove item"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -508,7 +583,29 @@ export default function SaleModal({ open, onClose, onSubmit, sale, loading }: Sa
 
       <CustomerModal open={custModalOpen} onClose={() => setCustModalOpen(false)} onSubmit={handleCreateCustomer} loading={savingCust} />
 
-      {/* Removed Error Modal in favor of Toast notifications */}
+      <QuotationItemModal
+        open={itemModalOpen}
+        onClose={() => { setItemModalOpen(false); setEditingLineId(null); }}
+        onSubmit={handleItemModalSubmit}
+        editItem={(() => {
+          const active = lineItems.find(i => i.id === editingLineId);
+          if (!active) return null;
+          return {
+            itemName: active.itemName,
+            color: active.color,
+            material: active.material,
+            size: active.size,
+            unit: active.unit as any,
+            quantity: active.qty,
+            price: active.price,
+            discount: active.discount,
+            total: active.total,
+            dimensions: active.dimensions,
+            bom: active.bom,
+            pricing: active.pricing,
+          };
+        })()}
+      />
     </Modal>
   );
 }

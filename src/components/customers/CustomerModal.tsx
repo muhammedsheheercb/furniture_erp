@@ -11,10 +11,10 @@ import { ICustomer } from "@/types";
 import { generateCustomerID } from "@/lib/utils";
 
 const schema = z.object({
-  customerNumber: z.string().min(1, "Customer number is required"),
-  name: z.string().min(1, "Name is required"),
-  mobile: z.string().regex(/^\d{8,12}$/, "Mobile must be between 8 and 12 digits"),
-  address: z.string().optional(),
+  customerNumber: z.string().trim().min(1, "Customer number is required"),
+  name: z.string().trim().min(1, "Name is required"),
+  mobile: z.string().trim().regex(/^\d{8,12}$/, "Mobile must be between 8 and 12 digits"),
+  address: z.string().trim().optional(),
   balance: z.coerce.number().min(0, "Balance cannot be negative").default(0),
 });
 type FormData = z.infer<typeof schema>;

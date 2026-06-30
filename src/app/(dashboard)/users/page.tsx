@@ -15,6 +15,7 @@ import { toast } from "react-hot-toast";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import Spinner from "@/components/ui/Spinner";
 import { motion, AnimatePresence } from "framer-motion";
+import { useDateFilter } from "@/context/DateFilterContext";
 
 const PAGES = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -50,6 +51,7 @@ export default function UsersPage() {
   const [deleting, setDeleting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [createConfirmOpen, setCreateConfirmOpen] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const initialPermissions = PAGES.reduce((acc, page) => ({
     ...acc,
@@ -64,11 +66,17 @@ export default function UsersPage() {
     permissions: initialPermissions
   });
 
-  useEffect(() => { fetchUsers(); }, []);
+  const { startDate, endDate } = useDateFilter();
+
+  useEffect(() => { fetchUsers(); }, [startDate, endDate]);
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("/api/users");
+      const params = new URLSearchParams({
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+      });
+      const res = await fetch(`/api/users?${params}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) setUsers(data.data);
       else setUsers([]);
@@ -82,12 +90,25 @@ export default function UsersPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) return toast.error("Name is required");
-    if (!formData.email.includes("@")) return toast.error("Valid email is required");
-    if (!editingUser && formData.password.length < 6) return toast.error("Password must be at least 6 characters");
+    const errs: Record<string, string> = {};
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) errs.name = "Full name is required";
+    if (!formData.email.includes("@")) errs.email = "Valid email is required";
+    if (!editingUser && (!formData.password || formData.password.trim().length < 6)) {
+      errs.password = "Password must be at least 6 characters";
+    }
     const hasAnyPermission = Object.values(formData.permissions).some(p => p.view || p.create || p.edit || p.delete);
-    if (!hasAnyPermission) return toast.error("Select at least one module permission");
+    if (!hasAnyPermission) errs.permissions = "Select at least one module permission";
 
+    if (Object.keys(errs).length > 0) {
+      setFormErrors(errs);
+      if (errs.name) toast.error(errs.name);
+      else if (errs.password) toast.error(errs.password);
+      else if (errs.permissions) toast.error(errs.permissions);
+      return;
+    }
+
+    setFormErrors({});
     setCreateConfirmOpen(true);
   };
 
@@ -99,7 +120,7 @@ export default function UsersPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, name: formData.name.trim() }),
       });
       if (res.ok) {
         toast.success(editingUser ? "User updated" : "User created");
@@ -312,16 +333,18 @@ export default function UsersPage() {
             <Input
               label="Full Name"
               value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              required
+              onChange={e => {
+                setFormData({ ...formData, name: e.target.value });
+                if (formErrors.name) setFormErrors({ ...formErrors, name: "" });
+              }}
+              error={formErrors.name}
             />
             <Input
               label="Email Address"
               type="email"
               value={formData.email}
               onChange={e => setFormData({ ...formData, email: e.target.value })}
-              required
-              readOnly
+              readOnly={true}
               style={{ background: "#F5F2EA", opacity: 0.8 }}
             />
             <div style={{ position: "relative" }}>
@@ -329,8 +352,11 @@ export default function UsersPage() {
                 label="Password"
                 type={showPassword ? "text" : "password"}
                 value={formData.password}
-                onChange={e => setFormData({ ...formData, password: e.target.value })}
-                required={!editingUser}
+                onChange={e => {
+                  setFormData({ ...formData, password: e.target.value });
+                  if (formErrors.password) setFormErrors({ ...formErrors, password: "" });
+                }}
+                error={formErrors.password}
                 hint={editingUser ? "Leave blank to keep current password" : ""}
               />
               <button

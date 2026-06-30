@@ -36,8 +36,14 @@ export async function GET(req: NextRequest) {
 
         if (category) query.category = category;
 
-        if (startDate && endDate) {
-            query.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
+        if (startDate || endDate) {
+            query.date = {};
+            if (startDate) query.date.$gte = new Date(startDate);
+            if (endDate) {
+                const ed = new Date(endDate);
+                ed.setHours(23, 59, 59, 999);
+                query.date.$lte = ed;
+            }
         } else if (month && year) {
             const start = new Date(Number(year), Number(month) - 1, 1);
             const end = new Date(Number(year), Number(month), 0, 23, 59, 59);

@@ -18,6 +18,7 @@ export interface ISaleReturn extends Document {
     customerName: string;
     items: ISaleReturnItem[];
     totalAmount: number;
+    reason?: string;
     date: Date;
     createdBy?: mongoose.Types.ObjectId;
     updatedBy?: mongoose.Types.ObjectId;
@@ -25,13 +26,13 @@ export interface ISaleReturn extends Document {
 
 const SaleReturnItemSchema = new Schema<ISaleReturnItem>({
     itemId: { type: String, required: true },
-    itemNumber: { type: String, required: true },
+    itemNumber: { type: String },
     itemName: { type: String, required: true },
     quantity: { type: Number, required: true },
     batch: { type: String },
     price: { type: Number, required: true },
     total: { type: Number, required: true },
-    reason: { type: String, required: true },
+    reason: { type: String },
 });
 
 const SaleReturnSchema = new Schema<ISaleReturn>({
@@ -41,10 +42,11 @@ const SaleReturnSchema = new Schema<ISaleReturn>({
     customerName: { type: String, required: true },
     items: [SaleReturnItemSchema],
     totalAmount: { type: Number, required: true },
+    reason: { type: String },
     date: { type: Date, default: Date.now },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
-}, { timestamps: true });
+}, { timestamps: true, collection: "salesreturns" });
 
 if (process.env.NODE_ENV === "development") {
   delete (mongoose.models as any).SaleReturn;

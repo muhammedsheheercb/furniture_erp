@@ -6,8 +6,10 @@ import {
     LayoutDashboard, Package, Users,
     TruckIcon, LogOut, ReceiptText, Hammer,
     Database, ShoppingBag, Truck, Receipt, Settings,
-    FileText, Bell, User, ChevronDown, Shield, Undo2
+    FileText, Bell, User, ChevronDown, Shield, Undo2,
+    Calendar, X
 } from "lucide-react";
+import { useDateFilter } from "@/context/DateFilterContext";
 import { useSession } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -38,6 +40,7 @@ const salesDropdownItems: NavItem[] = [
     { href: "/sales",      label: "Sales",      icon: ReceiptText, permissionKey: "sales" },
     { href: "/sales/returns", label: "Returns",    icon: Undo2,        permissionKey: "sales" },
     { href: "/production", label: "Production", icon: Hammer, permissionKey: "production" },
+    { href: "/production-workers", label: "Production Workers", icon: Users, permissionKey: "production" },
     { href: "/deliveries", label: "Delivery",   icon: Truck, permissionKey: "deliveries" },
 ];
 
@@ -149,6 +152,8 @@ export default function Navbar() {
         document.body
     ) : null;
 
+    const { startDate, endDate, setStartDate, setEndDate, clearDates } = useDateFilter();
+
     return (
         <header style={{ background: "#FFFFFF", color: "var(--text)", position: "sticky", top: 0, zIndex: 50, boxShadow: "0 2px 16px rgba(46, 37, 32, 0.04)", borderBottom: "1px solid var(--border)" }}>
             {/* Top row: Logo + Profile */}
@@ -231,90 +236,145 @@ export default function Navbar() {
             </div>
 
             {/* Bottom row: Nav links */}
-            <div style={{ background: "#FAF9F6", overflowX: "auto", borderBottom: "1px solid var(--border)" }}
-                className="scrollbar-hide">
-                <nav style={{ maxWidth: 1600, margin: "0 auto", display: "flex", alignItems: "center", padding: "0 8px" }}>
+            <div style={{ background: "#FAF9F6", borderBottom: "1px solid var(--border)" }}>
+                <div style={{ maxWidth: 1600, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", padding: "0 8px" }}>
+                    <nav style={{ display: "flex", alignItems: "center", overflowX: "auto", flex: 1 }}
+                        className="scrollbar-hide">
 
-                    {/* Sales Dropdown Button */}
-                    {filteredSalesItems.length > 0 && (
-                        <button
-                            ref={buttonRef}
-                            onClick={openDropdown}
-                            style={{
-                                display: "flex", alignItems: "center", gap: 7,
-                                padding: "10px 14px", borderRadius: 8,
-                                fontSize: 13, fontWeight: 500,
-                                whiteSpace: "nowrap", cursor: "pointer",
-                                transition: "all 0.15s",
-                                margin: "4px 1px",
-                                background: isSalesActive || salesOpen ? "rgba(197, 168, 128, 0.12)" : "transparent",
-                                color: isSalesActive || salesOpen ? "var(--primary)" : "var(--text-secondary)",
-                                border: isSalesActive || salesOpen ? "1px solid rgba(197, 168, 128, 0.25)" : "1px solid transparent",
-                            }}
-                            onMouseEnter={e => {
-                                if (!isSalesActive && !salesOpen) {
-                                    e.currentTarget.style.color = "var(--primary)";
-                                    e.currentTarget.style.background = "rgba(0,0,0,0.03)";
-                                }
-                            }}
-                            onMouseLeave={e => {
-                                if (!isSalesActive && !salesOpen) {
-                                    e.currentTarget.style.color = "var(--text-secondary)";
-                                    e.currentTarget.style.background = "transparent";
-                                }
-                            }}
-                        >
-                            <ReceiptText size={16} color={isSalesActive || salesOpen ? "var(--primary)" : "var(--text-muted)"} />
-                            <span>Sales</span>
-                            <ChevronDown
-                                size={14}
-                                style={{
-                                    transition: "transform 0.2s",
-                                    transform: salesOpen ? "rotate(180deg)" : "rotate(0deg)",
-                                    marginLeft: 2,
-                                    color: isSalesActive || salesOpen ? "var(--primary)" : "var(--text-muted)",
-                                }}
-                            />
-                        </button>
-                    )}
-
-                    {/* Remaining nav items */}
-                    {filteredNavItems.map(({ href, label, icon: Icon }) => {
-                        const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
-                        return (
-                            <Link
-                                key={href}
-                                href={href}
+                        {/* Sales Dropdown Button */}
+                        {filteredSalesItems.length > 0 && (
+                            <button
+                                ref={buttonRef}
+                                onClick={openDropdown}
                                 style={{
                                     display: "flex", alignItems: "center", gap: 7,
                                     padding: "10px 14px", borderRadius: 8,
                                     fontSize: 13, fontWeight: 500,
-                                    whiteSpace: "nowrap", textDecoration: "none",
+                                    whiteSpace: "nowrap", cursor: "pointer",
                                     transition: "all 0.15s",
                                     margin: "4px 1px",
-                                    background: active ? "rgba(197, 168, 128, 0.12)" : "transparent",
-                                    color: active ? "var(--primary)" : "var(--text-secondary)",
-                                    border: active ? "1px solid rgba(197, 168, 128, 0.25)" : "1px solid transparent",
+                                    background: isSalesActive || salesOpen ? "rgba(197, 168, 128, 0.12)" : "transparent",
+                                    color: isSalesActive || salesOpen ? "var(--primary)" : "var(--text-secondary)",
+                                    border: isSalesActive || salesOpen ? "1px solid rgba(197, 168, 128, 0.25)" : "1px solid transparent",
                                 }}
                                 onMouseEnter={e => {
-                                    if (!active) {
-                                        (e.currentTarget as HTMLElement).style.color = "var(--primary)";
-                                        (e.currentTarget as HTMLElement).style.background = "rgba(0,0,0,0.03)";
+                                    if (!isSalesActive && !salesOpen) {
+                                        e.currentTarget.style.color = "var(--primary)";
+                                        e.currentTarget.style.background = "rgba(0,0,0,0.03)";
                                     }
                                 }}
                                 onMouseLeave={e => {
-                                    if (!active) {
-                                        (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
-                                        (e.currentTarget as HTMLElement).style.background = "transparent";
+                                    if (!isSalesActive && !salesOpen) {
+                                        e.currentTarget.style.color = "var(--text-secondary)";
+                                        e.currentTarget.style.background = "transparent";
                                     }
                                 }}
                             >
-                                <Icon size={16} color={active ? "var(--primary)" : "var(--text-muted)"} />
-                                <span>{label}</span>
-                            </Link>
-                        );
-                    })}
-                </nav>
+                                <ReceiptText size={16} color={isSalesActive || salesOpen ? "var(--primary)" : "var(--text-muted)"} />
+                                <span>Sales</span>
+                                <ChevronDown
+                                    size={14}
+                                    style={{
+                                        transition: "transform 0.2s",
+                                        transform: salesOpen ? "rotate(180deg)" : "rotate(0deg)",
+                                        marginLeft: 2,
+                                        color: isSalesActive || salesOpen ? "var(--primary)" : "var(--text-muted)",
+                                    }}
+                                />
+                            </button>
+                        )}
+
+                        {/* Remaining nav items */}
+                        {filteredNavItems.map(({ href, label, icon: Icon }) => {
+                            const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+                            return (
+                                <Link
+                                    key={href}
+                                    href={href}
+                                    style={{
+                                        display: "flex", alignItems: "center", gap: 7,
+                                        padding: "10px 14px", borderRadius: 8,
+                                        fontSize: 13, fontWeight: 500,
+                                        whiteSpace: "nowrap", textDecoration: "none",
+                                        transition: "all 0.15s",
+                                        margin: "4px 1px",
+                                        background: active ? "rgba(197, 168, 128, 0.12)" : "transparent",
+                                        color: active ? "var(--primary)" : "var(--text-secondary)",
+                                        border: active ? "1px solid rgba(197, 168, 128, 0.25)" : "1px solid transparent",
+                                    }}
+                                    onMouseEnter={e => {
+                                        if (!active) {
+                                            (e.currentTarget as HTMLElement).style.color = "var(--primary)";
+                                            (e.currentTarget as HTMLElement).style.background = "rgba(0,0,0,0.03)";
+                                        }
+                                    }}
+                                    onMouseLeave={e => {
+                                        if (!active) {
+                                            (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+                                            (e.currentTarget as HTMLElement).style.background = "transparent";
+                                        }
+                                    }}
+                                >
+                                    <Icon size={16} color={active ? "var(--primary)" : "var(--text-muted)"} />
+                                    <span>{label}</span>
+                                </Link>
+                            );
+                        })}
+                    </nav>
+
+                    {/* Global Date Filter UI */}
+                    <div style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        padding: "6px 12px", background: "rgba(197, 168, 128, 0.05)",
+                        borderRadius: 8, border: "1px solid rgba(197, 168, 128, 0.15)",
+                        margin: "4px 8px 4px auto", flexWrap: "wrap"
+                    }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <Calendar size={14} color="var(--primary)" />
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Filter Date:</span>
+                        </div>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={e => setStartDate(e.target.value)}
+                            style={{
+                                border: "1px solid var(--border)", borderRadius: 6,
+                                padding: "4px 8px", fontSize: 11, fontWeight: 500,
+                                outline: "none", background: "#ffffff", color: "var(--text)",
+                                height: 26
+                            }}
+                        />
+                        <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>to</span>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={e => setEndDate(e.target.value)}
+                            style={{
+                                border: "1px solid var(--border)", borderRadius: 6,
+                                padding: "4px 8px", fontSize: 11, fontWeight: 500,
+                                outline: "none", background: "#ffffff", color: "var(--text)",
+                                height: 26
+                            }}
+                        />
+                        {(startDate || endDate) && (
+                            <button
+                                onClick={clearDates}
+                                style={{
+                                    display: "flex", alignItems: "center", gap: 3,
+                                    background: "rgba(239, 68, 68, 0.1)", border: "none",
+                                    color: "#ef4444", padding: "4px 8px", borderRadius: 6,
+                                    fontSize: 11, fontWeight: 700, cursor: "pointer",
+                                    transition: "all 0.15s"
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.18)"}
+                                onMouseLeave={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)"}
+                            >
+                                <X size={12} />
+                                <span>Clear</span>
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {dropdown}

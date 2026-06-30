@@ -25,6 +25,7 @@ const navItems: NavItem[] = [
     { href: "/quotations", label: "Quotations", icon: FileText, permissionKey: "quotations" },
     { href: "/sales", label: "Sales Orders", icon: ReceiptText, permissionKey: "sales" },
     { href: "/production", label: "Production", icon: Hammer, permissionKey: "production" },
+    { href: "/production-workers", label: "Production Workers", icon: Users, permissionKey: "production" },
     { href: "/deliveries", label: "Delivery", icon: Truck, permissionKey: "deliveries" },
     { href: "/items", label: "Inventory", icon: Package, permissionKey: "items" },
     { href: "/customers", label: "Customers", icon: Users, permissionKey: "customers" },

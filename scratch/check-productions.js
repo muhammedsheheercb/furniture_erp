@@ -5,15 +5,12 @@ require("dotenv").config({ path: path.join(__dirname, "../.env") });
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
-const ProductionSchema = new mongoose.Schema({}, { strict: false });
-
-const Production = mongoose.models.Production || mongoose.model("Production", ProductionSchema);
-
 async function main() {
   await mongoose.connect(MONGODB_URI);
-  console.log("Connected to MongoDB.");
-  const productions = await Production.find({});
-  console.log("All Productions in DB:", JSON.stringify(productions, null, 2));
+  console.log("Connected.");
+  const db = mongoose.connection.db;
+  const productions = await db.collection("productions").find({}).sort({ updatedAt: -1 }).limit(3).toArray();
+  console.log("Latest Productions:", JSON.stringify(productions, null, 2));
   await mongoose.disconnect();
 }
 

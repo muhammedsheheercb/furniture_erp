@@ -21,6 +21,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import { useLanguage } from "@/context/LanguageContext";
+import { useDateFilter } from "@/context/DateFilterContext";
 import { 
   BarChart, 
   Bar, 
@@ -36,14 +37,24 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function DashboardPage() {
   const { t } = useLanguage();
+  const { startDate, endDate } = useDateFilter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
-        const res = await axios.get("/api/dashboard");
+        let url = "/api/dashboard";
+        const params = new URLSearchParams();
+        if (startDate) params.append("startDate", startDate);
+        if (endDate) params.append("endDate", endDate);
+        const qs = params.toString();
+        if (qs) {
+          url += `?${qs}`;
+        }
+        const res = await axios.get(url);
         if (res.data.success) {
           setData(res.data);
         }
@@ -54,7 +65,7 @@ export default function DashboardPage() {
       }
     };
     fetchData();
-  }, []);
+  }, [startDate, endDate]);
 
   if (loading) {
     return (

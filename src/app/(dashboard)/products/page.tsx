@@ -30,8 +30,10 @@ import { toast } from "sonner";
 import ProductModal from "@/components/products/ProductModal";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
+import { useDateFilter } from "@/context/DateFilterContext";
 
 export default function ProductsPage() {
+  const { startDate, endDate } = useDateFilter();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -42,6 +44,15 @@ export default function ProductsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+
+  // Tabs states
+  const [activeTab, setActiveTab] = useState<"available" | "sold" | "returned">("available");
+  const [soldItems, setSoldItems] = useState<any[]>([]);
+  const [returnedItems, setReturnedItems] = useState<any[]>([]);
+  const [soldPage, setSoldPage] = useState(1);
+  const [returnedPage, setReturnedPage] = useState(1);
+  const [soldTotalPages, setSoldTotalPages] = useState(1);
+  const [returnedTotalPages, setReturnedTotalPages] = useState(1);
 
   function toggleBatches(id: string) {
     setExpandedBatches(prev => {
@@ -54,14 +65,29 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const catParam = category !== "all" ? `&category=${category}` : "";
-      const res = await axios.get(`/api/items?search=${search}${catParam}`);
-      if (res.data.success) {
-        setProducts(res.data.data);
+      const dateParam = `${startDate ? `&startDate=${startDate}` : ""}${endDate ? `&endDate=${endDate}` : ""}`;
+      if (activeTab === "available") {
+        const catParam = category !== "all" ? `&category=${category}` : "";
+        const res = await axios.get(`/api/items?search=${search}${catParam}${dateParam}`);
+        if (res.data.success) {
+          setProducts(res.data.data);
+        }
+      } else if (activeTab === "sold") {
+        const res = await axios.get(`/api/items/sold?search=${search}&page=${soldPage}&limit=10${dateParam}`);
+        if (res.data.success) {
+          setSoldItems(res.data.data);
+          setSoldTotalPages(res.data.pagination.totalPages || 1);
+        }
+      } else if (activeTab === "returned") {
+        const res = await axios.get(`/api/items/returned?search=${search}&page=${returnedPage}&limit=10${dateParam}`);
+        if (res.data.success) {
+          setReturnedItems(res.data.data);
+          setReturnedTotalPages(res.data.pagination.totalPages || 1);
+        }
       }
     } catch (err) {
       console.error("Products fetch error:", err);
-      toast.error("Failed to load products");
+      toast.error("Failed to load products/items");
     } finally {
       setLoading(false);
     }
@@ -69,7 +95,14 @@ export default function ProductsPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, [search, category]);
+  }, [search, category, activeTab, soldPage, returnedPage, startDate, endDate]);
+
+  const handleTabChange = (tab: "available" | "sold" | "returned") => {
+    setActiveTab(tab);
+    setSearch("");
+    setSoldPage(1);
+    setReturnedPage(1);
+  };
 
   const handleSubmitProduct = async (data: any) => {
     setSaving(true);
@@ -160,16 +193,52 @@ export default function ProductsPage() {
           <p className="text-[#7A6055]">Manage your furniture catalog and stock levels.</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
-            onClick={() => {
-              setEditProduct(null);
-              setModalOpen(true);
-            }}
-          >
-            <Plus size={18} className="mr-2" /> Add Product
-          </Button>
+          {activeTab === "available" && (
+            <Button
+              className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
+              onClick={() => {
+                setEditProduct(null);
+                setModalOpen(true);
+              }}
+            >
+              <Plus size={18} className="mr-2" /> Add Product
+            </Button>
+          )}
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex bg-[#F5F2EA] p-1 rounded-xl gap-1 overflow-x-auto">
+        <button
+          onClick={() => handleTabChange("available")}
+          className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap uppercase tracking-wider ${
+            activeTab === "available"
+              ? "bg-[#2C1810] text-white shadow-sm"
+              : "text-[#7A6055] hover:text-[#1A1210]"
+          }`}
+        >
+          Available Products
+        </button>
+        <button
+          onClick={() => handleTabChange("sold")}
+          className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap uppercase tracking-wider ${
+            activeTab === "sold"
+              ? "bg-[#2C1810] text-white shadow-sm"
+              : "text-[#7A6055] hover:text-[#1A1210]"
+          }`}
+        >
+          Sold Products
+        </button>
+        <button
+          onClick={() => handleTabChange("returned")}
+          className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap uppercase tracking-wider ${
+            activeTab === "returned"
+              ? "bg-[#2C1810] text-white shadow-sm"
+              : "text-[#7A6055] hover:text-[#1A1210]"
+          }`}
+        >
+          Returned Products
+        </button>
       </div>
 
       <ProductModal
@@ -198,27 +267,35 @@ export default function ProductsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89080]" size={18} />
               <Input
-                placeholder="Search by SKU or name..."
+                placeholder={
+                  activeTab === "available"
+                    ? "Search by SKU or name..."
+                    : activeTab === "sold"
+                    ? "Search sold products by sale #, customer, or product..."
+                    : "Search returned products by return #, customer, or product..."
+                }
                 className="pl-10 border-[#E5DDD5] bg-[#FAF8F6] focus:bg-white transition-colors"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="flex gap-2">
-              <select
-                className="border-[#E5DDD5] bg-[#FAF8F6] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              >
-                <option value="all">All Categories</option>
-                <option value="sofa">Sofas</option>
-                <option value="chair">Chairs</option>
-                <option value="table">Tables</option>
-                <option value="bed">Beds</option>
-                <option value="office">Office</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
+            {activeTab === "available" && (
+              <div className="flex gap-2">
+                <select
+                  className="border-[#E5DDD5] bg-[#FAF8F6] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
+                  <option value="all">All Categories</option>
+                  <option value="sofa">Sofas</option>
+                  <option value="chair">Chairs</option>
+                  <option value="table">Tables</option>
+                  <option value="bed">Beds</option>
+                  <option value="office">Office</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -228,116 +305,274 @@ export default function ProductsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#FAF8F6] border-b border-[#E5DDD5]">
-                    <th className="w-10"></th>
-                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Product Details</th>
-                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Category</th>
-                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Color</th>
-                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-center">Stock Level</th>
-                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Selling Price</th>
-                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#F0EBE5]">
-                  {products.length > 0 ? products.map((product) => (
-                    <Fragment key={product._id}>
-                      <tr className="hover:bg-[#FAF8F6] transition-colors group border-b border-[#F0EBE5]">
-                        <td className="py-4 px-2 text-center">
-                          {product.batches?.length > 0 && (
-                            <button onClick={() => toggleBatches(product._id)} className="text-[#A89080] hover:text-[#C9A84C]">
-                              {expandedBatches.has(product._id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                            </button>
-                          )}
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="font-semibold text-[#1A1210]">{product.name}</div>
-                          <div className="text-xs text-[#A89080]">{product.itemNumber}</div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className="text-sm font-medium text-[#7A6055]">{product.category}</span>
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className="text-sm text-[#7A6055]">{product.color || "—"}</span>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="flex flex-col items-center gap-1">
-                            <div className={`text-sm font-bold ${(product.quantity || 0) <= (product.reorderLevel || 5) ? 'text-rose-600' : 'text-[#1A1210]'}`}>
-                              {product.quantity || 0} <span className="text-[10px] font-normal text-[#A89080]">{product.unit || "Pcs"}</span>
-                            </div>
-                            {(product.quantity || 0) <= (product.reorderLevel || 5) && (
-                              <AlertTriangle size={12} className="text-rose-500" />
+              {activeTab === "available" ? (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#FAF8F6] border-b border-[#E5DDD5]">
+                      <th className="w-10"></th>
+                      <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Product Details</th>
+                      <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Category</th>
+                      <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Color</th>
+                      <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-center">Stock Level</th>
+                      <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Selling Price</th>
+                      <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F0EBE5]">
+                    {products.length > 0 ? products.map((product) => (
+                      <Fragment key={product._id}>
+                        <tr className="hover:bg-[#FAF8F6] transition-colors group border-b border-[#F0EBE5]">
+                          <td className="py-4 px-2 text-center">
+                            {product.batches?.length > 0 && (
+                              <button onClick={() => toggleBatches(product._id)} className="text-[#A89080] hover:text-[#C9A84C]">
+                                {expandedBatches.has(product._id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                              </button>
                             )}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6 text-sm font-bold text-[#1A1210]">
-                          <CurrencySymbol className="w-3 h-3 mr-1" /> {(product.salesAmount || 0).toLocaleString()}
-                        </td>
-                        <td className="py-4 px-6 text-right">
-                          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-[#7A6055]" onClick={() => handleEdit(product)}>
-                              <Edit size={14} />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-400" onClick={() => handleDelete(product._id)}>
-                              <Trash2 size={14} />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-
-                      {expandedBatches.has(product._id) && product.batches?.length > 0 && (
-                        <tr className="bg-[#FAF9F7]">
-                          <td colSpan={7} className="px-12 py-4">
-                            <div className="rounded-xl border border-[#E5DDD5] bg-white overflow-hidden shadow-sm">
-                              <div className="bg-[#FAF8F6] px-4 py-2 border-b border-[#E5DDD5] flex items-center gap-2">
-                                <Layers size={14} className="text-[#C9A84C]" />
-                                <span className="text-[10px] font-bold text-[#7A6055] uppercase tracking-wider">Stock Batch Details</span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="font-semibold text-[#1A1210]">{product.name}</div>
+                            <div className="text-xs text-[#A89080]">{product.itemNumber}</div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className="text-sm font-medium text-[#7A6055]">{product.category}</span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className="text-sm text-[#7A6055]">{product.color || "—"}</span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex flex-col items-center gap-1">
+                              <div className={`text-sm font-bold ${(product.quantity || 0) <= (product.reorderLevel || 5) ? 'text-rose-600' : 'text-[#1A1210]'}`}>
+                                {product.quantity || 0} <span className="text-[10px] font-normal text-[#A89080]">{product.unit || "Pcs"}</span>
                               </div>
-                              <table className="w-full text-xs text-left">
-                                <thead>
-                                  <tr className="border-b border-[#F0EBE5] bg-[#FDFCFB]">
-                                    <th className="py-2 px-4 font-bold text-[#A89080] uppercase">Batch No.</th>
-                                    <th className="py-2 px-4 font-bold text-[#A89080] uppercase text-center">Quantity</th>
-                                    <th className="py-2 px-4 font-bold text-[#A89080] uppercase text-right">Unit Price</th>
-                                    <th className="py-2 px-4 font-bold text-[#A89080] uppercase text-right">Total Value</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#F0EBE5]">
-                                  {product.batches.map((b: any, idx: number) => (
-                                    <tr key={idx} className="hover:bg-[#FAF8F6]">
-                                      <td className="py-2 px-4 font-mono text-[#7A6055]">{b.batchNumber}</td>
-                                      <td className="py-2 px-4 text-center font-semibold text-[#1A1210]">
-                                        {b.quantity} {product.unit || "Pcs"}
-                                      </td>
-                                      <td className="py-2 px-4 text-right"><CurrencySymbol className="w-3 h-3 mr-1" /> {(b.salePrice || product.salesAmount || 0).toLocaleString()}</td>
-                                      <td className="py-2 px-4 text-right font-bold text-[#1B3A2D]">
-                                        <CurrencySymbol className="w-3 h-3 mr-1" /> {(b.quantity * (b.salePrice || product.salesAmount || 0)).toLocaleString()}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                                <tfoot className="bg-[#FAF8F6] font-bold">
-                                  <tr>
-                                    <td className="py-2 px-4">Total across batches</td>
-                                    <td className="py-2 px-4 text-center">{product.quantity} {product.unit || "Pcs"}</td>
-                                    <td className="py-2 px-4 text-right">Avg: <CurrencySymbol className="w-3 h-3 mr-1" /> {Math.round(product.salesAmount || 0)}</td>
-                                    <td className="py-2 px-4 text-right text-[#1B3A2D]"><CurrencySymbol className="w-3 h-3 mr-1" /> {(product.quantity * (product.salesAmount || 0)).toLocaleString()}</td>
-                                  </tr>
-                                </tfoot>
-                              </table>
+                              {(product.quantity || 0) <= (product.reorderLevel || 5) && (
+                                <AlertTriangle size={12} className="text-rose-500" />
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 text-sm font-bold text-[#1A1210]">
+                            <CurrencySymbol className="w-3 h-3 mr-1" /> {(product.salesAmount || 0).toLocaleString()}
+                          </td>
+                          <td className="py-4 px-6 text-right">
+                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-[#7A6055]" onClick={() => handleEdit(product)}>
+                                <Edit size={14} />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-400" onClick={() => handleDelete(product._id)}>
+                                <Trash2 size={14} />
+                              </Button>
                             </div>
                           </td>
                         </tr>
+
+                        {expandedBatches.has(product._id) && product.batches?.length > 0 && (
+                          <tr className="bg-[#FAF9F7]">
+                            <td colSpan={7} className="px-12 py-4">
+                              <div className="rounded-xl border border-[#E5DDD5] bg-white overflow-hidden shadow-sm">
+                                <div className="bg-[#FAF8F6] px-4 py-2 border-b border-[#E5DDD5] flex items-center gap-2">
+                                  <Layers size={14} className="text-[#C9A84C]" />
+                                  <span className="text-[10px] font-bold text-[#7A6055] uppercase tracking-wider">Stock Batch Details</span>
+                                </div>
+                                <table className="w-full text-xs text-left">
+                                  <thead>
+                                    <tr className="border-b border-[#F0EBE5] bg-[#FDFCFB]">
+                                      <th className="py-2 px-4 font-bold text-[#A89080] uppercase">Batch No.</th>
+                                      <th className="py-2 px-4 font-bold text-[#A89080] uppercase text-center">Quantity</th>
+                                      <th className="py-2 px-4 font-bold text-[#A89080] uppercase text-right">Unit Price</th>
+                                      <th className="py-2 px-4 font-bold text-[#A89080] uppercase text-right">Total Value</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-[#F0EBE5]">
+                                    {product.batches.map((b: any, idx: number) => (
+                                      <tr key={idx} className="hover:bg-[#FAF8F6]">
+                                        <td className="py-2 px-4 font-mono text-[#7A6055]">{b.batchNumber}</td>
+                                        <td className="py-2 px-4 text-center font-semibold text-[#1A1210]">
+                                          {b.quantity} {product.unit || "Pcs"}
+                                        </td>
+                                        <td className="py-2 px-4 text-right"><CurrencySymbol className="w-3 h-3 mr-1" /> {(b.salePrice || product.salesAmount || 0).toLocaleString()}</td>
+                                        <td className="py-2 px-4 text-right font-bold text-[#1B3A2D]">
+                                          <CurrencySymbol className="w-3 h-3 mr-1" /> {(b.quantity * (b.salePrice || product.salesAmount || 0)).toLocaleString()}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                  <tfoot className="bg-[#FAF8F6] font-bold">
+                                    <tr>
+                                      <td className="py-2 px-4">Total across batches</td>
+                                      <td className="py-2 px-4 text-center">{product.quantity} {product.unit || "Pcs"}</td>
+                                      <td className="py-2 px-4 text-right">Avg: <CurrencySymbol className="w-3 h-3 mr-1" /> {Math.round(product.salesAmount || 0)}</td>
+                                      <td className="py-2 px-4 text-right text-[#1B3A2D]"><CurrencySymbol className="w-3 h-3 mr-1" /> {(product.quantity * (product.salesAmount || 0)).toLocaleString()}</td>
+                                    </tr>
+                                  </tfoot>
+                                </table>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )) : (
+                      <tr>
+                        <td colSpan={7} className="py-10 text-center text-[#7A6055]">No products found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              ) : activeTab === "sold" ? (
+                <div className="space-y-4">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#FAF8F6] border-b border-[#E5DDD5]">
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Product Description</th>
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Sale Reference</th>
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Customer</th>
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Color & Size</th>
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-center">Quantity Sold</th>
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-right">Unit Price</th>
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-right">Total Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#F0EBE5]">
+                      {soldItems.length > 0 ? (
+                        soldItems.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-[#FAF8F6] transition-colors border-b border-[#F0EBE5]">
+                            <td className="py-4 px-6">
+                              <div className="font-semibold text-[#1A1210]">{item.itemName}</div>
+                              <div className="text-xs text-[#A89080]">{item.itemNumber}</div>
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="font-bold text-indigo-600">{item.saleNumber}</div>
+                              <div className="text-xs text-[#A89080]">
+                                {new Date(item.date).toLocaleDateString()}
+                              </div>
+                            </td>
+                            <td className="py-4 px-6 font-medium text-[#1A1210]">{item.customerName}</td>
+                            <td className="py-4 px-6 text-sm text-[#7A6055]">
+                              {item.color || "—"} / {item.size || "—"}
+                            </td>
+                            <td className="py-4 px-6 text-center font-bold text-[#1A1210]">{item.quantity}</td>
+                            <td className="py-4 px-6 text-right font-semibold text-[#7A6055]">
+                              <CurrencySymbol className="w-3 h-3 mr-1" />
+                              {(item.price || 0).toLocaleString()}
+                            </td>
+                            <td className="py-4 px-6 text-right font-extrabold text-[#1B3A2D]">
+                              <CurrencySymbol className="w-3 h-3 mr-1" />
+                              {(item.total || 0).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={7} className="py-10 text-center text-[#7A6055]">No sold products found</td>
+                        </tr>
                       )}
-                    </Fragment>
-                  )) : (
-                    <tr>
-                      <td colSpan={7} className="py-10 text-center text-[#7A6055]">No products found</td>
-                    </tr>
+                    </tbody>
+                  </table>
+
+                  {/* Sold Pagination */}
+                  {soldTotalPages > 1 && (
+                    <div className="flex items-center justify-between p-4 border-t border-[#F0EBE5]">
+                      <span className="text-xs text-[#7A6055]">
+                        Page <span className="font-bold text-[#1A1210]">{soldPage}</span> of <span className="font-bold text-[#1A1210]">{soldTotalPages}</span>
+                      </span>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          disabled={soldPage === 1}
+                          onClick={() => setSoldPage(prev => Math.max(prev - 1, 1))}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          disabled={soldPage === soldTotalPages}
+                          onClick={() => setSoldPage(prev => Math.min(prev + 1, soldTotalPages))}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
                   )}
-                </tbody>
-              </table>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#FAF8F6] border-b border-[#E5DDD5]">
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Product Description</th>
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Return Reference</th>
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Customer</th>
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-center">Returned Qty</th>
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-right">Price</th>
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-right">Refund Value</th>
+                        <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">Reason / Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#F0EBE5]">
+                      {returnedItems.length > 0 ? (
+                        returnedItems.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-[#FAF8F6] transition-colors border-b border-[#F0EBE5]">
+                            <td className="py-4 px-6">
+                              <div className="font-semibold text-[#1A1210]">{item.itemName}</div>
+                              <div className="text-xs text-[#A89080]">{item.itemNumber}</div>
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="font-bold text-rose-600">{item.returnNumber}</div>
+                              <div className="text-xs text-[#A89080]">
+                                {new Date(item.date).toLocaleDateString()}
+                              </div>
+                            </td>
+                            <td className="py-4 px-6 font-medium text-[#1A1210]">{item.customerName}</td>
+                            <td className="py-4 px-6 text-center font-bold text-rose-600">{item.quantity}</td>
+                            <td className="py-4 px-6 text-right font-semibold text-[#7A6055]">
+                              <CurrencySymbol className="w-3 h-3 mr-1" />
+                              {(item.price || 0).toLocaleString()}
+                            </td>
+                            <td className="py-4 px-6 text-right font-extrabold text-rose-700">
+                              <CurrencySymbol className="w-3 h-3 mr-1" />
+                              {(item.total || 0).toLocaleString()}
+                            </td>
+                            <td className="py-4 px-6 text-sm text-[#7A6055] italic">
+                              {item.reason}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={7} className="py-10 text-center text-[#7A6055]">No returned products found</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+
+                  {/* Returned Pagination */}
+                  {returnedTotalPages > 1 && (
+                    <div className="flex items-center justify-between p-4 border-t border-[#F0EBE5]">
+                      <span className="text-xs text-[#7A6055]">
+                        Page <span className="font-bold text-[#1A1210]">{returnedPage}</span> of <span className="font-bold text-[#1A1210]">{returnedTotalPages}</span>
+                      </span>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          disabled={returnedPage === 1}
+                          onClick={() => setReturnedPage(prev => Math.max(prev - 1, 1))}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          disabled={returnedPage === returnedTotalPages}
+                          onClick={() => setReturnedPage(prev => Math.min(prev + 1, returnedTotalPages))}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </CardContent>

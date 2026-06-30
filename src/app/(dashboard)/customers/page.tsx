@@ -31,8 +31,10 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import CustomerBalanceModal from "@/components/customers/CustomerBalanceModal";
 import CustomerLedgerModal from "@/components/customers/CustomerLedgerModal";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
+import { useDateFilter } from "@/context/DateFilterContext";
 
 export default function CustomersPage() {
+  const { startDate, endDate } = useDateFilter();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
   const perms = (session?.user?.permissions as any)?.customers;
@@ -58,7 +60,12 @@ export default function CustomersPage() {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/customers?search=${search}`);
+      const params = new URLSearchParams({
+        search,
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+      });
+      const res = await axios.get(`/api/customers?${params}`);
       if (res.data.success) {
         setCustomers(res.data.data);
       }
@@ -72,7 +79,7 @@ export default function CustomersPage() {
 
   useEffect(() => {
     fetchCustomers();
-  }, [search]);
+  }, [search, startDate, endDate]);
 
   const handleSubmitCustomer = async (data: any) => {
     setSaving(true);

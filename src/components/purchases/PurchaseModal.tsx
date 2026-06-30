@@ -156,6 +156,11 @@ export default function PurchaseModal({ open, onClose, onSubmit, purchase, loadi
     if (lineItems.length === 0) { setFormError("Add at least one item."); return; }
     const missing = lineItems.find(i => !i.refId);
     if (missing) { setFormError("Please select an item for every row."); return; }
+    const invalidQtyPrice = lineItems.find(i => i.qty <= 0 || i.price < 0);
+    if (invalidQtyPrice) {
+      setFormError("Quantity must be at least 1 and purchase price cannot be negative.");
+      return;
+    }
     const belowCost = lineItems.find(i => i.type === "product" && i.sellingPrice < i.price);
     if (belowCost) {
       setFormError(`Sales price for "${belowCost.name}" cannot be less than its purchase price (${belowCost.price.toLocaleString("en-IN")}).`);

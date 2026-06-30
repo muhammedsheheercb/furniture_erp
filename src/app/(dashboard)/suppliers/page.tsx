@@ -31,8 +31,10 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import SupplierBalanceModal from "@/components/suppliers/SupplierBalanceModal";
 import SupplierLedgerModal from "@/components/suppliers/SupplierLedgerModal";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
+import { useDateFilter } from "@/context/DateFilterContext";
 
 export default function SuppliersPage() {
+  const { startDate, endDate } = useDateFilter();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
   const perms = (session?.user?.permissions as any)?.suppliers;
@@ -58,7 +60,12 @@ export default function SuppliersPage() {
   const fetchSuppliers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/suppliers?search=${search}`);
+      const params = new URLSearchParams({
+        search,
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+      });
+      const res = await axios.get(`/api/suppliers?${params}`);
       if (res.data.success) {
         setSuppliers(res.data.data);
       }
@@ -72,7 +79,7 @@ export default function SuppliersPage() {
 
   useEffect(() => {
     fetchSuppliers();
-  }, [search]);
+  }, [search, startDate, endDate]);
 
   const handleSubmitSupplier = async (data: any) => {
     setSaving(true);

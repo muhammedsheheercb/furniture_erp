@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
+import { useDateFilter } from "@/context/DateFilterContext";
 import {
   Hammer,
   PlayCircle,
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import ProductionModal from "@/components/production/ProductionModal";
 import Modal from "@/components/ui/Modal";
+import { generateDeliveryChallanPDF } from "@/lib/pdf-utils";
 import {
   Card,
   CardContent,
@@ -23,6 +25,7 @@ import {
 
 export default function ProductionPage() {
   const { data: session } = useSession();
+  const { startDate, endDate } = useDateFilter();
   const isAdmin = session?.user?.role === "admin";
   const perms = (session?.user?.permissions as any)?.production;
   const canEdit = isAdmin || perms?.edit;
@@ -41,7 +44,10 @@ export default function ProductionPage() {
   const fetchProductions = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("/api/production");
+      const params = new URLSearchParams();
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
+      const res = await axios.get(`/api/production?${params}`);
       if (res.data.success) setProductions(res.data.data);
     } catch {
       toast.error("Failed to load production orders");
@@ -50,7 +56,7 @@ export default function ProductionPage() {
     }
   };
 
-  useEffect(() => { fetchProductions(); }, []);
+  useEffect(() => { fetchProductions(); }, [startDate, endDate]);
 
   const handleUpdateStatus = async (id: string, currentStatus: string) => {
     if (currentStatus === "pending") {
@@ -85,6 +91,24 @@ export default function ProductionPage() {
       });
       if (res.data.success) {
         toast.success("Production marked as finished and delivery created!");
+        
+        // Find the production order details to generate the PDF
+        const prod = productions.find(p => p._id === finishProdId);
+        if (prod) {
+          generateDeliveryChallanPDF({
+            saleNumber: prod.saleNumber || "",
+            customerName: prod.customerName || "",
+            customerMobile: prod.saleId?.customerMobile || "",
+            customerAddress: prod.saleId?.customerAddress || "",
+            deliveryAddress: prod.saleId?.deliveryAddress || "",
+            items: prod.items || [],
+            driverName: driverName.trim(),
+            driverContact: driverContact.trim(),
+            grandTotal: prod.saleId?.total || 0,
+            advancePaid: prod.saleId?.advancePaid || 0,
+          });
+        }
+
         setFinishModalOpen(false);
         fetchProductions();
       }
@@ -103,6 +127,9 @@ export default function ProductionPage() {
         remarks: data.remarks,
         deliveryDate: data.deliveryDate,
         items: data.items,
+        workerId: data.workerId,
+        workerName: data.workerName,
+        workerContact: data.workerContact,
       });
       if (res.data.success) {
         toast.success("Production started");
@@ -138,9 +165,14 @@ export default function ProductionPage() {
             <div>
               <h4 className="font-bold text-[#1A1210] text-lg">{prod.customerName}</h4>
               <p className="text-sm text-[#A89080]">Sale #: {prod.saleNumber} · {prod.items.length} item{prod.items.length !== 1 ? "s" : ""}</p>
-              <div className="flex gap-2 mt-1">
+              <div className="flex gap-2 mt-1 flex-wrap">
                 {prod.remarks && <p className="text-xs text-[#8B5E3C]">Remarks: {prod.remarks}</p>}
                 <p className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">Sales: {prod.saleId?.createdBy?.name || "—"}</p>
+                {prod.workerName && (
+                  <p className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                    Worker: {prod.workerName} ({prod.workerContact})
+                  </p>
+                )}
               </div>
             </div>
           </div>

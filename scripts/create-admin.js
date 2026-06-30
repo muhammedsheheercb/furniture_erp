@@ -24,7 +24,7 @@ if (!MONGODB_URI) {
 const UserSchema = new mongoose.Schema(
   {
     name: { type: String },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    email: { type: String, required: true, lowercase: true, trim: true },
     passwordHash: { type: String },
     password: { type: String },
     role: { type: String, enum: ["admin", "staff", "owner"], default: "staff" },

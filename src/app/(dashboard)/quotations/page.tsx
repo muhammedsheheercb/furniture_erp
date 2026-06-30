@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useDateFilter } from "@/context/DateFilterContext";
 import {
   Plus, Search, FileText, Pencil, Trash2, ChevronDown,
   CheckCircle, XCircle, Clock, Truck, Package, Calendar, Eye,
@@ -97,6 +98,8 @@ export default function QuotationsPage() {
   const canDelete = isAdmin || perms?.delete;
   const canView = isAdmin || perms?.view;
 
+  const { startDate, endDate } = useDateFilter();
+
   if (status === "loading") return <div className="flex items-center justify-center min-h-[400px]"><Spinner /></div>;
 
   if (!canView) {
@@ -151,6 +154,8 @@ export default function QuotationsPage() {
         page: String(page), limit: String(LIMIT), search,
         ...(statusFilter && { status: statusFilter }),
         ...(deliveryFilter && { deliveryStatus: deliveryFilter }),
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
       });
       const res = await fetch(`/api/quotations?${params}`);
       const data = await res.json();
@@ -162,7 +167,7 @@ export default function QuotationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, deliveryFilter]);
+  }, [page, search, statusFilter, deliveryFilter, startDate, endDate]);
 
   const fetchCustomers = async () => {
     setFetchingCustomers(true);
@@ -230,9 +235,20 @@ export default function QuotationsPage() {
     setEditingQuotation(q);
     setTaxPct(q.tax || 0);
     setDiscPct(q.discount || 0);
+
+    const rawCustId = typeof q.customerId === "object" ? (q.customerId as any)?._id : q.customerId;
+    const foundCust = customers.find(c => 
+      (rawCustId && String(c._id) === String(rawCustId)) || 
+      (q.customerName && c.name?.toLowerCase().trim() === q.customerName.toLowerCase().trim()) || 
+      (q.customerMobile && c.mobile?.trim() === q.customerMobile.trim())
+    );
+    const resolvedCustomerId = foundCust?._id || (typeof rawCustId === "string" ? rawCustId : "");
+
     setForm({
-      customerName: q.customerName, customerMobile: q.customerMobile || "",
-      customerAddress: q.customerAddress || "",
+      customerId: resolvedCustomerId,
+      customerName: q.customerName || foundCust?.name || "",
+      customerMobile: q.customerMobile || foundCust?.mobile || "",
+      customerAddress: q.customerAddress || foundCust?.address || "",
       items: q.items, subtotal: q.subtotal, tax: q.tax, discount: q.discount,
       total: q.total, status: q.status, deliveryStatus: q.deliveryStatus,
       deliveryDate: q.deliveryDate ? q.deliveryDate.split("T")[0] : "",
@@ -684,114 +700,129 @@ export default function QuotationsPage() {
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {/* Customer */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", letterSpacing: "0.04em", margin: 0 }}>
-                  CUSTOMER NAME *
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setCustomerModalOpen(true)}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", letterSpacing: "0.04em", margin: 0 }}>
+                    SELECT CUSTOMER
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setCustomerModalOpen(true)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 4, background: "none", border: "none",
+                      color: "#C9A84C", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0
+                    }}
+                  >
+                    <UserPlus size={12} /> NEW
+                  </button>
+                </div>
+                <select
+                  value={form.customerId || ""}
+                  onChange={e => {
+                    const c = customers.find(x => x._id === e.target.value);
+                    setForm(f => ({ 
+                      ...f, 
+                      customerId: e.target.value, 
+                      customerName: c?.name || f.customerName, 
+                      customerMobile: c?.mobile || f.customerMobile, 
+                      customerAddress: c?.address || f.customerAddress 
+                    }));
+                  }}
                   style={{
-                    display: "flex", alignItems: "center", gap: 4, background: "none", border: "none",
-                    color: "#C9A84C", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0
+                    width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
+                    padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
+                    background: "#FAF8F6", cursor: "pointer"
                   }}
                 >
-                  <UserPlus size={12} /> NEW
-                </button>
+                  <option value="">Select existing customer</option>
+                  {customers.map(c => (
+                    <option key={c._id} value={c._id}>{c.name}</option>
+                  ))}
+                </select>
               </div>
-              <select
-                value={form.customerId || ""}
-                onChange={e => {
-                  const c = customers.find(x => x._id === e.target.value);
-                  setForm(f => ({ 
-                    ...f, 
-                    customerId: e.target.value, 
-                    customerName: c?.name || "", 
-                    customerMobile: c?.mobile || "", 
-                    customerAddress: c?.address || "" 
-                  }));
-                }}
-                required
-                style={{
-                  width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
-                  padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
-                  background: "#FAF8F6", cursor: "pointer"
-                }}
-              >
-                <option value="">Select existing customer</option>
-                {customers.map(c => (
-                  <option key={c._id} value={c._id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
-                MOBILE *
-              </label>
-              <input
-                value={form.customerMobile}
-                onChange={e => setForm(f => ({ ...f, customerMobile: e.target.value }))}
-                required
-                style={{
-                  width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
-                  padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
-                  background: "#FAF8F6"
-                }}
-                placeholder="Mobile number *"
-              />
-            </div>
-            <div style={{ gridColumn: "span 2" }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
-                CUSTOMER ADDRESS *
-              </label>
-              <textarea
-                value={form.customerAddress}
-                onChange={e => setForm(f => ({ ...f, customerAddress: e.target.value }))}
-                required
-                style={{
-                  width: "100%", height: 60, border: "1.5px solid #E5DDD5", borderRadius: 8,
-                  padding: "10px 12px", fontSize: 13, color: "#1A1210", outline: "none",
-                  background: "#FAF8F6", resize: "none"
-                }}
-                placeholder="Customer address *"
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
-                DATE *
-              </label>
-              <input
-                type="date"
-                value={form.date}
-                onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                required
-                style={{
-                  width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
-                  padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
-                  background: "#FAF8F6"
-                }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
-                VALID UNTIL *
-              </label>
-              <input
-                type="date"
-                value={form.validUntil}
-                onChange={e => setForm(f => ({ ...f, validUntil: e.target.value }))}
-                required
-                style={{
-                  width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
-                  padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
-                  background: "#FAF8F6"
-                }}
-              />
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
+                  CUSTOMER NAME *
+                </label>
+                <input
+                  value={form.customerName}
+                  onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))}
+                  required
+                  style={{
+                    width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
+                    padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
+                    background: "#FAF8F6"
+                  }}
+                  placeholder="Customer name *"
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
+                  MOBILE *
+                </label>
+                <input
+                  value={form.customerMobile}
+                  onChange={e => setForm(f => ({ ...f, customerMobile: e.target.value }))}
+                  required
+                  style={{
+                    width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
+                    padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
+                    background: "#FAF8F6"
+                  }}
+                  placeholder="Mobile number *"
+                />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
+                  CUSTOMER ADDRESS *
+                </label>
+                <textarea
+                  value={form.customerAddress}
+                  onChange={e => setForm(f => ({ ...f, customerAddress: e.target.value }))}
+                  required
+                  style={{
+                    width: "100%", height: 60, border: "1.5px solid #E5DDD5", borderRadius: 8,
+                    padding: "10px 12px", fontSize: 13, color: "#1A1210", outline: "none",
+                    background: "#FAF8F6", resize: "none"
+                  }}
+                  placeholder="Customer address *"
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
+                  DATE *
+                </label>
+                <input
+                  type="date"
+                  value={form.date}
+                  onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                  required
+                  style={{
+                    width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
+                    padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
+                    background: "#FAF8F6"
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6, letterSpacing: "0.04em" }}>
+                  VALID UNTIL *
+                </label>
+                <input
+                  type="date"
+                  value={form.validUntil}
+                  onChange={e => setForm(f => ({ ...f, validUntil: e.target.value }))}
+                  required
+                  style={{
+                    width: "100%", height: 40, border: "1.5px solid #E5DDD5", borderRadius: 8,
+                    padding: "0 12px", fontSize: 13, color: "#1A1210", outline: "none",
+                    background: "#FAF8F6"
+                  }}
+                />
+              </div>
             </div>
           </div>
-        </div>
 
           {/* Status */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>

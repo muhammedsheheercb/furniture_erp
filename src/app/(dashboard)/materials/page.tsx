@@ -344,8 +344,11 @@ function BatchRows({ batches, unit }: { batches: Batch[]; unit: string }) {
   );
 }
 
+import { useDateFilter } from "@/context/DateFilterContext";
+
 // ─── page ─────────────────────────────────────────────────────────────────────
 export default function MaterialsPage() {
+  const { startDate, endDate } = useDateFilter();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
   const perms = (session?.user?.permissions as any)?.items;
@@ -365,13 +368,18 @@ export default function MaterialsPage() {
   const fetchMaterials = useCallback(async (q = "") => {
     setLoading(true);
     try {
-      const res  = await fetch(`/api/materials?search=${encodeURIComponent(q)}`);
+      const params = new URLSearchParams({
+        search: q,
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+      });
+      const res  = await fetch(`/api/materials?${params}`);
       const json = await res.json();
       if (json.success) setMaterials(json.data);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [startDate, endDate]);
 
   useEffect(() => { fetchMaterials(); }, [fetchMaterials]);
 

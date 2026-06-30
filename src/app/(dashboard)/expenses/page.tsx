@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
+import { useDateFilter } from "@/context/DateFilterContext";
 import { 
   Receipt, 
   Plus, 
@@ -35,6 +36,7 @@ import Spinner from "@/components/ui/Spinner";
 
 export default function ExpensesPage() {
   const { data: session } = useSession();
+  const { startDate, endDate } = useDateFilter();
   const isAdmin = session?.user?.role === "admin";
   const perms = (session?.user?.permissions as any)?.expenses;
   const canCreate = isAdmin || perms?.create;
@@ -65,6 +67,8 @@ export default function ExpensesPage() {
         limit: "10",
         search,
         ...(category && { category }),
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
       });
       const res = await axios.get(`/api/expenses?${params}`);
       if (res.data.success) {
@@ -77,7 +81,7 @@ export default function ExpensesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, category]);
+  }, [page, search, category, startDate, endDate]);
 
   useEffect(() => {
     fetchExpenses();

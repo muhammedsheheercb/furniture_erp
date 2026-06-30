@@ -30,17 +30,24 @@ export async function GET(req: NextRequest) {
       },
     };
 
-    if (startDateParam && endDateParam) {
-      matchRange = {
-        date: {
-          $gte: new Date(startDateParam),
-          $lte: new Date(endDateParam),
-        },
-      };
+    if (startDateParam || endDateParam) {
+      matchRange = { date: {} };
+      if (startDateParam) matchRange.date.$gte = new Date(startDateParam);
+      if (endDateParam) {
+        const end = new Date(endDateParam);
+        end.setHours(23, 59, 59, 999);
+        matchRange.date.$lte = end;
+      }
     }
 
     const yearStart = new Date(year, 0, 1);
     const yearEnd   = new Date(year, 11, 31, 23, 59, 59);
+    const chartStart = startDateParam ? new Date(startDateParam) : yearStart;
+    const chartEnd   = endDateParam ? (() => {
+      const d = new Date(endDateParam);
+      d.setHours(23, 59, 59, 999);
+      return d;
+    })() : yearEnd;
 
     // ── KPI totals ──────────────────────────────────
     const [
@@ -135,7 +142,7 @@ export async function GET(req: NextRequest) {
     // ── Monthly chart data ───────────────────────────
     const [monthlySales, monthlyReturns, monthlyPurchases, monthlyExpenses] = await Promise.all([
       Sale.aggregate([
-        { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
+        { $match: { date: { $gte: chartStart, $lte: chartEnd } } },
         { $group: {
           _id: { month: { $month: "$date" } },
           total: { $sum: "$total" },
@@ -143,7 +150,7 @@ export async function GET(req: NextRequest) {
         { $sort: { "_id.month": 1 } },
       ]),
       SalesReturn.aggregate([
-        { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
+        { $match: { date: { $gte: chartStart, $lte: chartEnd } } },
         { $group: {
           _id: { month: { $month: "$date" } },
           total: { $sum: "$totalAmount" },
@@ -151,7 +158,7 @@ export async function GET(req: NextRequest) {
         { $sort: { "_id.month": 1 } },
       ]),
       Purchase.aggregate([
-        { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
+        { $match: { date: { $gte: chartStart, $lte: chartEnd } } },
         { $group: {
           _id: { month: { $month: "$date" } },
           total: { $sum: "$total" },
@@ -159,7 +166,7 @@ export async function GET(req: NextRequest) {
         { $sort: { "_id.month": 1 } },
       ]),
       Expense.aggregate([
-        { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
+        { $match: { date: { $gte: chartStart, $lte: chartEnd } } },
         { $group: {
           _id: { month: { $month: "$date" } },
           total: { $sum: "$amount" },

@@ -9,9 +9,11 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
+import { useDateFilter } from "@/context/DateFilterContext";
 import { useSession } from "next-auth/react";
 
 export default function SalesReturnsPage() {
+  const { startDate, endDate } = useDateFilter();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin" || session?.user?.role === "owner";
   
@@ -30,11 +32,14 @@ export default function SalesReturnsPage() {
 
   useEffect(() => {
     fetchReturns();
-  }, []);
+  }, [startDate, endDate]);
 
   const fetchReturns = async () => {
     try {
-      const res = await axios.get("/api/sales/returns");
+      const params = new URLSearchParams();
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
+      const res = await axios.get(`/api/sales/returns?${params}`);
       if (res.data.success) setReturns(res.data.data);
     } catch (err) {
       console.error("Failed to fetch returns", err);
@@ -409,12 +414,8 @@ export default function SalesReturnsPage() {
                         className="w-full px-4 py-3 bg-[#F7F4F0] border border-[#E5DDD5] rounded-xl focus:ring-2 focus:ring-[#8B5E3C] text-[#1A1210] outline-none"
                       >
                         <option value="">Select a reason...</option>
-                        <option value="Damaged Product">Damaged Product</option>
-                        <option value="Wrong Item Delivered">Wrong Item Delivered</option>
-                        <option value="Quality Not as Expected">Quality Not as Expected</option>
-                        <option value="Customer Changed Mind">Customer Changed Mind</option>
-                        <option value="Size/Dimension Issue">Size/Dimension Issue</option>
-                        <option value="Other">Other (Specify in notes)</option>
+                        <option value="Damaged">Damaged</option>
+                        <option value="Other">Other</option>
                       </select>
                     </div>
 

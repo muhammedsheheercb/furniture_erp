@@ -30,14 +30,14 @@ const UNITS: { value: UnitType; label: string; hint: string }[] = [
 
 const schema = z.object({
   itemId:          z.string().optional(),
-  itemNumber:      z.string().min(1, "Item number is required"),
-  name:            z.string().min(1, "Name is required"),
-  category:        z.string().optional(),
-  unit:            z.string().default("pcs"),
-  salesAmount:     z.coerce.number().min(0).default(0),
-  purchaseAmount:  z.coerce.number().min(0).default(0),
-  quantity:        z.coerce.number().min(0).default(0),
-  batchNumber:     z.string().optional(),
+  itemNumber:      z.string().trim().min(1, "Item number is required"),
+  name:            z.string().trim().min(1, "Item name is required"),
+  category:        z.string().trim().optional(),
+  unit:            z.string().trim().default("pcs"),
+  salesAmount:     z.coerce.number().min(0, "Sales amount cannot be negative").default(0),
+  purchaseAmount:  z.coerce.number().min(0, "Purchase amount cannot be negative").default(0),
+  quantity:        z.coerce.number().min(0, "Quantity cannot be negative").default(0),
+  batchNumber:     z.string().trim().optional(),
 });
 type FormData = z.infer<typeof schema>;
 

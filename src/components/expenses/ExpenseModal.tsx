@@ -50,8 +50,10 @@ export default function ExpenseModal({ open, onClose, onSubmit, expense, loading
     description: "",
     paymentType: "cash",
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    setErrors({});
     if (expense) {
       setFormData({
         title: expense.title || "",
@@ -77,8 +79,21 @@ export default function ExpenseModal({ open, onClose, onSubmit, expense, loading
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const newErrors: Record<string, string> = {};
+    if (!formData.title.trim()) {
+      newErrors.title = "Expense title is required";
+    }
+    if (!formData.amount || Number(formData.amount) <= 0) {
+      newErrors.amount = "Amount must be greater than 0";
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
     onSubmit({
       ...formData,
+      title: formData.title.trim(),
       amount: Number(formData.amount),
     });
   };
@@ -101,9 +116,12 @@ export default function ExpenseModal({ open, onClose, onSubmit, expense, loading
               <Receipt className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89080]" size={18} />
               <Input
                 id="title"
-                required
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, title: e.target.value });
+                  if (errors.title) setErrors({ ...errors, title: "" });
+                }}
+                error={errors.title}
                 className="pl-10 border-[#E5DDD5] bg-[#FAF8F6] focus:ring-[#C9A84C]"
                 placeholder="e.g. Monthly Rent"
               />
@@ -120,11 +138,14 @@ export default function ExpenseModal({ open, onClose, onSubmit, expense, loading
               <Input
                 id="amount"
                 type="number"
-                required
                 min="0"
                 step="0.01"
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, amount: e.target.value });
+                  if (errors.amount) setErrors({ ...errors, amount: "" });
+                }}
+                error={errors.amount}
                 className="pl-10 border-[#E5DDD5] bg-[#FAF8F6] focus:ring-[#C9A84C]"
                 placeholder="0.00"
               />

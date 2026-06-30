@@ -44,6 +44,9 @@ export interface IProductionDocument extends Document {
   status: "pending" | "processing" | "finished";
   remarks?: string;
   deliveryDate?: Date;
+  workerId?: mongoose.Types.ObjectId;
+  workerName?: string;
+  workerContact?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -100,12 +103,18 @@ const ProductionSchema = new Schema<IProductionDocument>(
     status: { type: String, enum: ["pending", "processing", "finished"], default: "pending" },
     remarks: String,
     deliveryDate: Date,
+    workerId: { type: Schema.Types.ObjectId, ref: "Worker" },
+    workerName: String,
+    workerContact: String,
   },
   { timestamps: true }
 );
 
+if (mongoose.models.Production) {
+  delete (mongoose.models as any).Production;
+}
+
 const Production: Model<IProductionDocument> =
-  mongoose.models.Production ||
   mongoose.model<IProductionDocument>("Production", ProductionSchema);
 
 export default Production;

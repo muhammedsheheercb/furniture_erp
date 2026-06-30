@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { 
   Package, Ruler, Tag, Layers, 
-  ChevronRight, CheckCircle2, AlertCircle, Trash2, Plus
+  ChevronRight, CheckCircle2, AlertCircle, Trash2, Plus, Users
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
@@ -40,6 +40,48 @@ export default function ProductionModal({
   const [deliveryDate, setDeliveryDate] = useState("");
   const [remarks, setRemarks] = useState("");
 
+  const [workerSearch, setWorkerSearch] = useState("");
+  const [debouncedWorkerSearch, setDebouncedWorkerSearch] = useState("");
+  const [workers, setWorkers] = useState<any[]>([]);
+  const [selectedWorker, setSelectedWorker] = useState<any | null>(null);
+  const [loadingWorkers, setLoadingWorkers] = useState(false);
+  const [workerDropdownOpen, setWorkerDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Click outside worker dropdown to close it
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setWorkerDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Debounce worker search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedWorkerSearch(workerSearch);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [workerSearch]);
+
+  // Fetch workers when debounced search query changes
+  useEffect(() => {
+    if (open) {
+      setLoadingWorkers(true);
+      axios.get(`/api/workers?search=${encodeURIComponent(debouncedWorkerSearch)}`)
+        .then(r => {
+          if (r.data.success) {
+            setWorkers(r.data.data || []);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoadingWorkers(false));
+    }
+  }, [open, debouncedWorkerSearch]);
+
   useEffect(() => {
     if (open) {
       axios.get("/api/materials").then(r => setMaterials(r.data.data || [])).catch(() => {});
@@ -50,6 +92,12 @@ export default function ProductionModal({
     if (open && production && materials.length) {
       setDeliveryDate(production.deliveryDate ? production.deliveryDate.split("T")[0] : "");
       setRemarks(production.remarks || "");
+      setSelectedWorker(production.workerId ? {
+        _id: production.workerId,
+        name: production.workerName,
+        contactNumber: production.workerContact
+      } : null);
+      setWorkerSearch("");
       
       const states = production.items.map((item: any) => ({
         productName: item.itemName,
@@ -180,6 +228,7 @@ export default function ProductionModal({
 
   const handleFinalSubmit = async () => {
     if (!deliveryDate) return toast.error("Please set a target delivery date");
+    if (!selectedWorker) return toast.error("Please assign a production worker");
     
     for (let i = 0; i < itemStates.length; i++) {
         const item = itemStates[i];
@@ -211,7 +260,10 @@ export default function ProductionModal({
     await onSubmit(production._id, {
       remarks,
       deliveryDate,
-      items: itemStates
+      items: itemStates,
+      workerId: selectedWorker._id,
+      workerName: selectedWorker.name,
+      workerContact: selectedWorker.contactNumber
     });
   };
 
@@ -249,12 +301,63 @@ export default function ProductionModal({
     >
       <div className="flex flex-col h-[650px]">
         {/* Top: Global Production Settings */}
-        <div className="flex gap-4 p-4 bg-[#FAF8F6] rounded-xl border border-[#E5DDD5] mb-6">
-          <div className="flex-1">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-[#FAF8F6] rounded-xl border border-[#E5DDD5] mb-6">
+          <div>
             <label className={lbl}>Target Delivery Date *</label>
             <input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className={inp} />
           </div>
-          <div className="flex-[2]">
+          <div>
+            <label className={lbl}>Assign Production Worker *</label>
+            <div className="relative" ref={dropdownRef}>
+              <input
+                type="text"
+                placeholder={selectedWorker ? `${selectedWorker.name}` : "Search & Select Worker..."}
+                value={workerSearch}
+                onChange={e => {
+                  setWorkerSearch(e.target.value);
+                  setWorkerDropdownOpen(true);
+                }}
+                onFocus={() => setWorkerDropdownOpen(true)}
+                className={`${inp} pr-8`}
+              />
+              <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-[#A89080]">
+                <Users size={16} />
+              </span>
+              
+              {workerDropdownOpen && (
+                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-[#E5DDD5] rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                  {loadingWorkers ? (
+                    <div className="p-3 text-center text-xs text-[#7A6055] animate-pulse">Searching workers...</div>
+                  ) : workers.length === 0 ? (
+                    <div className="p-3 text-center text-xs text-[#A89080]">No workers found</div>
+                  ) : (
+                    workers.map((w: any) => (
+                      <button
+                        key={w._id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedWorker(w);
+                          setWorkerSearch("");
+                          setWorkerDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-[#FAF8F6] text-sm text-[#1A1210] border-b border-[#F0EBE5] last:border-0 transition-colors flex flex-col"
+                      >
+                        <span className="font-bold">{w.name}</span>
+                        <span className="text-xs text-[#7A6055]">{w.contactNumber}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+            {selectedWorker && (
+              <div className="mt-1 flex items-center justify-between text-xs bg-emerald-50 text-emerald-800 border border-emerald-100 rounded-lg px-2 py-1 font-semibold">
+                <span>Assigned: {selectedWorker.name} ({selectedWorker.contactNumber})</span>
+                <button type="button" onClick={() => { setSelectedWorker(null); setWorkerSearch(""); }} className="text-rose-500 hover:text-rose-700 ml-1 font-bold">✕</button>
+              </div>
+            )}
+          </div>
+          <div>
             <label className={lbl}>Special Remarks</label>
             <textarea 
               value={remarks} 

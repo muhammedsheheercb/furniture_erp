@@ -20,14 +20,26 @@ export async function GET(req: NextRequest) {
     const limit     = parseInt(searchParams.get("limit") || "10");
     const sortBy    = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") === "asc" ? 1 : -1;
+    const startDate = searchParams.get("startDate");
+    const endDate   = searchParams.get("endDate");
     const skip      = (page - 1) * limit;
 
-    const query = search
-      ? { $or: [
-          { name: { $regex: search, $options: "i" } },
-          { supplierNumber: { $regex: search, $options: "i" } },
-        ]}
-      : {};
+    const query: any = {};
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { supplierNumber: { $regex: search, $options: "i" } },
+      ];
+    }
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
 
     const [suppliers, total] = await Promise.all([
       Supplier.find(query)

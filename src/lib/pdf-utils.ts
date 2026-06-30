@@ -405,3 +405,106 @@ export const generateProductionJobCardPDF = (data: any) => {
         html2pdf.default().from(element).set(opt).save();
     });
 };
+
+export const generateDeliveryChallanPDF = (data: any) => {
+    const isArabic = containsArabic(data.deliveryAddress || "") || containsArabic(data.customerName || "");
+    const dir = isArabic ? "rtl" : "ltr";
+    const balanceDue = (data.grandTotal || 0) - (data.advancePaid || 0);
+    
+    const html = `
+        <div style="font-family: Arial, sans-serif; padding: 40px; color: #333; direction: ${dir}; text-align: ${isArabic ? 'right' : 'left'} font-size: 13px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1E8449; padding-bottom: 20px; margin-bottom: 30px">
+                <div>
+                    <h1 style="margin: 0; color: #1E8449; font-size: 28px">DIAMOND HOME</h1>
+                    <h2 style="margin: 5px 0 0; color: #666; font-size: 18px; text-transform: uppercase; letter-spacing: 2px">Delivery Challan & Gate Pass</h2>
+                </div>
+                <div style="text-align: right">
+                    <p style="margin: 0; font-weight: bold; color: #1E8449; font-size: 16px;">Sale #: ${data.saleNumber}</p>
+                    <p style="margin: 5px 0 0; font-size: 13px; color: #999">Date: ${formatDate(new Date())}</p>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px">
+                <div style="background: #F4FAF6; padding: 20px; border-radius: 12px; border: 1px solid #D5F5E3">
+                    <h3 style="margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #27AE60; letter-spacing: 1px">Customer Details</h3>
+                    <p style="margin: 0 0 5px; font-size: 18px; font-weight: bold; color: #2C1810">${data.customerName}</p>
+                    ${data.customerMobile ? `<p style="margin: 0 0 5px; font-size: 13px; color: #555"><strong>Mobile:</strong> ${data.customerMobile}</p>` : ''}
+                    ${data.customerAddress ? `<p style="margin: 0; font-size: 13px; color: #777; line-height: 1.4"><strong>Billing Address:</strong> ${data.customerAddress}</p>` : ''}
+                </div>
+                <div style="background: #FCF3CF; padding: 20px; border-radius: 12px; border: 1px solid #F9E79F">
+                    <h3 style="margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #B7950B; letter-spacing: 1px">Delivery Destination</h3>
+                    <p style="margin: 0 0 5px; font-size: 16px; font-weight: bold; color: #7D6608">${data.deliveryAddress || 'Same as Billing Address'}</p>
+                </div>
+            </div>
+
+            <div style="background: #FAF8F6; padding: 15px 20px; border-radius: 12px; border: 1px solid #E5DDD5; margin-bottom: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px">
+                <div>
+                    <h4 style="margin: 0 0 8px; font-size: 11px; text-transform: uppercase; color: #A89080">Driver Assignment</h4>
+                    <p style="margin: 0 0 3px; font-size: 14px; font-weight: bold; color: #2C1810">Driver: ${data.driverName}</p>
+                    <p style="margin: 0; font-size: 13px; color: #7A6055">Contact: ${data.driverContact}</p>
+                </div>
+                <div style="text-align: right; border-left: 1px solid #E5DDD5; padding-left: 20px">
+                    <h4 style="margin: 0 0 8px; font-size: 11px; text-transform: uppercase; color: #A89080">Payment Status</h4>
+                    <div style="font-size: 13px; color: #555; margin-bottom: 4px">Total Order: ${formatCurrency(data.grandTotal)}</div>
+                    <div style="font-size: 13px; color: #27AE60; margin-bottom: 6px">Advance Paid: ${formatCurrency(data.advancePaid)}</div>
+                    <div style="font-size: 18px; font-weight: bold; color: ${balanceDue > 0 ? '#C0392B' : '#27AE60'}">
+                        ${balanceDue > 0 ? `CASH TO COLLECT: ${formatCurrency(balanceDue)}` : 'PAID IN FULL'}
+                    </div>
+                </div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px">
+                <thead>
+                    <tr style="background: #1E8449; color: #fff">
+                        <th style="padding: 12px; text-align: center; border: 1px solid #1E8449; width: 40px">#</th>
+                        <th style="padding: 12px; text-align: left; border: 1px solid #1E8449">Item Description</th>
+                        <th style="padding: 12px; text-align: center; border: 1px solid #1E8449">Color</th>
+                        <th style="padding: 12px; text-align: center; border: 1px solid #1E8449">Size</th>
+                        <th style="padding: 12px; text-align: center; border: 1px solid #1E8449; width: 80px">Quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.items.map((item: any, i: number) => `
+                        <tr>
+                            <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5">${i + 1}</td>
+                            <td style="padding: 12px; border: 1px solid #E5DDD5">
+                                <div style="font-weight: bold">${item.itemName || item.productName}</div>
+                                <div style="font-size: 12px; color: #666">${item.material || ''}</div>
+                            </td>
+                            <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5">${item.color || '—'}</td>
+                            <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5">${item.size || '—'}</td>
+                            <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5; font-weight: bold">${item.quantity}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <div style="margin-top: 80px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div style="text-align: center; width: 220px; border-top: 1.5px solid #1E8449; padding-top: 10px; font-size: 11px; font-weight: bold; color: #2C1810;">
+                    Driver's Signature
+                </div>
+                <div style="font-size: 9px; color: #A89080; font-family: monospace; text-align: center">
+                    Challan ID: DEL-${data.saleNumber}<br>
+                    Generated: ${new Date().toLocaleString()}
+                </div>
+                <div style="text-align: center; width: 220px; border-top: 1.5px solid #1E8449; padding-top: 10px; font-size: 11px; font-weight: bold; color: #2C1810;">
+                    Customer Signature (Acknowledge Receipt)
+                </div>
+            </div>
+        </div>
+    `;
+
+    const element = document.createElement("div");
+    element.innerHTML = html;
+    
+    import("html2pdf.js").then((html2pdf: any) => {
+        const opt = {
+            margin: 0,
+            filename: `delivery-challan-${data.saleNumber}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf.default().from(element).set(opt).save();
+    });
+};

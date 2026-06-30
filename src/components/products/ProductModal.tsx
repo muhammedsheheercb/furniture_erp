@@ -323,8 +323,22 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs: Record<string, string> = {};
+    let errorTab = "basic";
     if (!form.productName.trim()) { errs.productName = "Product name is required"; }
-    if (Object.keys(errs).length) { setErrors(errs); setTab("basic"); return; }
+    if (form.currentStock < 0) { errs.currentStock = "Current stock cannot be negative"; }
+    if (mode === "direct") {
+      if (form.pricing.purchasePrice < 0) { errs.purchasePrice = "Purchase price cannot be negative"; errorTab = "pricing"; }
+      if (form.pricing.salesPrice < 0) { errs.salesPrice = "Sales price cannot be negative"; errorTab = "pricing"; }
+    } else {
+      if (form.pricing.laborCost < 0) { errs.laborCost = "Labour cost cannot be negative"; errorTab = "pricing"; }
+      if (form.pricing.extraCost < 0) { errs.extraCost = "Overhead cost cannot be negative"; errorTab = "pricing"; }
+    }
+    if (Object.keys(errs).length) { 
+      setErrors(errs); 
+      if (errs.productName || errs.currentStock) setTab("basic");
+      else setTab(errorTab);
+      return; 
+    }
 
     const isDirect = mode === "direct";
     const payload  = {
@@ -471,6 +485,7 @@ export default function ProductModal({ open, onClose, onSubmit, product, loading
                 <label className={lbl}>Current Stock</label>
                 <input type="number" min={0} value={form.currentStock}
                   onChange={e => setForm(p => ({ ...p, currentStock: Number(e.target.value) }))} className={inp} />
+                {errors.currentStock && <p className="text-xs text-rose-500 mt-1">{errors.currentStock}</p>}
               </div>
             </div>
 
