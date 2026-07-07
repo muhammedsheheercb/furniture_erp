@@ -25,6 +25,7 @@ import { useDateFilter } from "@/context/DateFilterContext";
 import PurchaseModal from "@/components/purchases/PurchaseModal";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
+import Pagination from "@/components/ui/Pagination";
 
 export default function PurchasesPage() {
   const { data: session } = useSession();
@@ -43,13 +44,27 @@ export default function PurchasesPage() {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
 
   const fetchPurchases = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/purchases?search=${search}&startDate=${startDate}&endDate=${endDate}`);
+      const params = new URLSearchParams({
+        search,
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      const res = await axios.get(`/api/purchases?${params}`);
       if (res.data.success) {
         setPurchases(res.data.data);
+        setTotalPages(res.data.totalPages || 1);
+        setTotal(res.data.total || 0);
       }
     } catch (err) {
       console.error("Purchases fetch error:", err);
@@ -60,8 +75,15 @@ export default function PurchasesPage() {
   };
 
   useEffect(() => {
-    fetchPurchases();
+    setPage(1);
   }, [search, startDate, endDate]);
+
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      fetchPurchases();
+    }, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [search, startDate, endDate, page]);
 
   const handleSubmitPurchase = async (data: any) => {
     setSaving(true);
@@ -238,6 +260,12 @@ export default function PurchasesPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+          
+          {!loading && totalPages > 1 && (
+            <div className="border-t border-[#E5DDD5]">
+              <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
             </div>
           )}
         </CardContent>

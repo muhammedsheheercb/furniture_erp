@@ -11,6 +11,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
 import { useDateFilter } from "@/context/DateFilterContext";
 import { useSession } from "next-auth/react";
+import Pagination from "@/components/ui/Pagination";
 
 export default function SalesReturnsPage() {
   const { startDate, endDate } = useDateFilter();
@@ -20,6 +21,11 @@ export default function SalesReturnsPage() {
   const [returns, setReturns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<any>(null);
   const [salesSearch, setSalesSearch] = useState("");
@@ -31,22 +37,38 @@ export default function SalesReturnsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchReturns();
-  }, [startDate, endDate]);
+    setPage(1);
+  }, [startDate, endDate, searchTerm]);
 
   const fetchReturns = async () => {
+    setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (startDate) params.set("startDate", startDate);
-      if (endDate) params.set("endDate", endDate);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        search: searchTerm,
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+      });
       const res = await axios.get(`/api/sales/returns?${params}`);
-      if (res.data.success) setReturns(res.data.data);
+      if (res.data.success) {
+        setReturns(res.data.data);
+        setTotalPages(res.data.totalPages || 1);
+        setTotal(res.data.total || 0);
+      }
     } catch (err) {
       console.error("Failed to fetch returns", err);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      fetchReturns();
+    }, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [startDate, endDate, page, searchTerm]);
 
   const handleSearchSales = async () => {
     if (!salesSearch.trim()) return;
@@ -165,12 +187,6 @@ export default function SalesReturnsPage() {
     setSearchResults([]);
   };
 
-  const filteredReturns = returns.filter(ret => 
-    ret.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ret.saleNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ret.returnNumber.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -198,7 +214,7 @@ export default function SalesReturnsPage() {
             </div>
             <div>
               <p className="text-sm text-[#7A6055]">Total Returns</p>
-              <h3 className="text-2xl font-bold text-[#1A1210]">{returns.length}</h3>
+              <h3 className="text-2xl font-bold text-[#1A1210]">{total}</h3>
             </div>
           </div>
         </div>
@@ -236,11 +252,11 @@ export default function SalesReturnsPage() {
                     <td colSpan={5} className="px-6 py-4 h-16 bg-[#F7F4F0]/50"></td>
                   </tr>
                 ))
-              ) : filteredReturns.length === 0 ? (
+              ) : returns.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-[#A89080]">No returns found</td>
                 </tr>
-              ) : filteredReturns.map((ret) => (
+              ) : returns.map((ret) => (
                 <tr key={ret._id} className="hover:bg-[#FAF8F6] transition-colors group">
                   <td className="px-6 py-4">
                     <div className="font-bold text-[#1A1210]">{ret.returnNumber}</div>
@@ -263,6 +279,11 @@ export default function SalesReturnsPage() {
             </tbody>
           </table>
         </div>
+        {!loading && totalPages > 1 && (
+          <div className="border-t border-[#E5DDD5] px-2 py-4">
+            <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
+          </div>
+        )}
       </div>
 
       {/* New Return Modal */}

@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const [suppliers, total] = await Promise.all([
+    const [suppliers, total, payablesAgg] = await Promise.all([
       Supplier.find(query)
         .populate("createdBy", "name")
         .populate("updatedBy", "name")
@@ -50,7 +50,10 @@ export async function GET(req: NextRequest) {
         .limit(limit)
         .lean(),
       Supplier.countDocuments(query),
+      Supplier.aggregate([{ $match: query }, { $group: { _id: null, total: { $sum: "$creditBalance" } } }])
     ]);
+
+    const totalPayables = payablesAgg[0]?.total || 0;
 
     return NextResponse.json({
       success: true,
@@ -59,6 +62,7 @@ export async function GET(req: NextRequest) {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+      totalPayables,
     });
   } catch (err) {
     console.error("[GET /api/suppliers]", err);

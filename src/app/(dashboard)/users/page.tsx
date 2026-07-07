@@ -14,6 +14,7 @@ import Button from "@/components/ui/Button";
 import { toast } from "react-hot-toast";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import Spinner from "@/components/ui/Spinner";
+import Pagination from "@/components/ui/Pagination";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDateFilter } from "@/context/DateFilterContext";
 
@@ -52,6 +53,11 @@ export default function UsersPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [createConfirmOpen, setCreateConfirmOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
 
   const initialPermissions = PAGES.reduce((acc, page) => ({
     ...acc,
@@ -68,18 +74,31 @@ export default function UsersPage() {
 
   const { startDate, endDate } = useDateFilter();
 
-  useEffect(() => { fetchUsers(); }, [startDate, endDate]);
+  useEffect(() => { 
+    setPage(1); 
+  }, [startDate, endDate]);
+
+  useEffect(() => { 
+    fetchUsers(); 
+  }, [startDate, endDate, page]);
 
   const fetchUsers = async () => {
     try {
       const params = new URLSearchParams({
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
+        page: page.toString(),
+        limit: limit.toString(),
       });
       const res = await fetch(`/api/users?${params}`);
       const data = await res.json();
-      if (data.success && Array.isArray(data.data)) setUsers(data.data);
-      else setUsers([]);
+      if (data.success && Array.isArray(data.data)) {
+        setUsers(data.data);
+        setTotalPages(data.totalPages || 1);
+        setTotal(data.total || 0);
+      } else {
+        setUsers([]);
+      }
     } catch {
       toast.error("Failed to fetch users");
       setUsers([]);
@@ -319,6 +338,18 @@ export default function UsersPage() {
           </tbody>
         </table>
       </div>
+      
+      {totalPages > 1 && (
+        <div style={{ marginTop: 20 }}>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            limit={limit}
+            onPageChange={setPage}
+          />
+        </div>
+      )}
 
       {/* Create/Edit Modal */}
       <Modal

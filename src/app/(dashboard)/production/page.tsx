@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import ProductionModal from "@/components/production/ProductionModal";
+import Pagination from "@/components/ui/Pagination";
 import Modal from "@/components/ui/Modal";
 import { generateDeliveryChallanPDF } from "@/lib/pdf-utils";
 import {
@@ -40,6 +41,11 @@ export default function ProductionPage() {
   const [driverName, setDriverName] = useState("");
   const [driverContact, setDriverContact] = useState("");
   const [finishing, setFinishing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"pending" | "processing" | "finished">("pending");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
 
   const fetchProductions = async () => {
     setLoading(true);
@@ -47,8 +53,15 @@ export default function ProductionPage() {
       const params = new URLSearchParams();
       if (startDate) params.set("startDate", startDate);
       if (endDate) params.set("endDate", endDate);
+      params.set("status", activeTab);
+      params.set("page", page.toString());
+      params.set("limit", limit.toString());
       const res = await axios.get(`/api/production?${params}`);
-      if (res.data.success) setProductions(res.data.data);
+      if (res.data.success) {
+        setProductions(res.data.data);
+        setTotalPages(res.data.totalPages || 1);
+        setTotal(res.data.total || 0);
+      }
     } catch {
       toast.error("Failed to load production orders");
     } finally {
@@ -56,7 +69,8 @@ export default function ProductionPage() {
     }
   };
 
-  useEffect(() => { fetchProductions(); }, [startDate, endDate]);
+  useEffect(() => { setPage(1); }, [startDate, endDate, activeTab]);
+  useEffect(() => { fetchProductions(); }, [startDate, endDate, activeTab, page]);
 
   const handleUpdateStatus = async (id: string, currentStatus: string) => {
     if (currentStatus === "pending") {
@@ -146,8 +160,6 @@ export default function ProductionPage() {
   const inProgress = productions.filter(p => p.status === "pending" || p.status === "processing");
   const finished   = productions.filter(p => p.status === "finished");
 
-  const [activeTab, setActiveTab] = useState<"pending" | "processing" | "finished">("pending");
-
   const stages = [
     { name: "Pending",    icon: Clock,        color: "bg-gray-400",    key: "pending" },
     { name: "Processing", icon: PlayCircle,   color: "bg-amber-500",   key: "processing" },
@@ -231,7 +243,7 @@ export default function ProductionPage() {
                 : "text-[#7A6055] hover:text-[#1A1210]"
             }`}
           >
-            Pending ({productions.filter(p => p.status === "pending").length})
+            Pending
           </button>
           <button
             onClick={() => setActiveTab("processing")}
@@ -241,7 +253,7 @@ export default function ProductionPage() {
                 : "text-[#7A6055] hover:text-[#1A1210]"
             }`}
           >
-            Started ({productions.filter(p => p.status === "processing").length})
+            Started
           </button>
           <button
             onClick={() => setActiveTab("finished")}
@@ -251,7 +263,7 @@ export default function ProductionPage() {
                 : "text-[#7A6055] hover:text-[#1A1210]"
             }`}
           >
-            Finished ({productions.filter(p => p.status === "finished").length})
+            Finished
           </button>
         </div>
       </div>
@@ -268,7 +280,14 @@ export default function ProductionPage() {
               <p className="text-[#A89080]">No {activeTab} production orders found.</p>
             </div>
           ) : (
-            filteredProductions.map(prod => <ProductionCard key={prod._id} prod={prod} />)
+            <>
+              {filteredProductions.map(prod => <ProductionCard key={prod._id} prod={prod} />)}
+              {totalPages > 1 && (
+                <div className="mt-4 bg-white rounded-xl border border-[#E5DDD5]">
+                  <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

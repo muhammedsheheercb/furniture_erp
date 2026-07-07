@@ -20,6 +20,7 @@ import SaleModal          from "@/components/sales/SaleModal";
 import UpdateBalanceModal from "@/components/sales/UpdateBalanceModal";
 import ConfirmModal       from "@/components/ui/ConfirmModal";
 import CurrencySymbol     from "@/components/ui/CurrencySymbol";
+import Pagination         from "@/components/ui/Pagination";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -60,6 +61,10 @@ export default function SalesPage() {
   const [sales,     setSales]     = useState<any[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [search,    setSearch]    = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
   const [modalOpen, setModalOpen] = useState(false);
   const [editSale,  setEditSale]  = useState<any | null>(null);
   const [saving,    setSaving]    = useState(false);
@@ -74,8 +79,19 @@ export default function SalesPage() {
   const fetchSales = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/sales?search=${search}&startDate=${startDate}&endDate=${endDate}`);
-      if (res.data.success) setSales(res.data.data);
+      const params = new URLSearchParams({
+        search,
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      const res = await axios.get(`/api/sales?${params}`);
+      if (res.data.success) {
+        setSales(res.data.data);
+        setTotalPages(res.data.totalPages || 1);
+        setTotal(res.data.total || 0);
+      }
     } catch {
       toast.error("Failed to load sales");
     } finally {
@@ -95,7 +111,8 @@ export default function SalesPage() {
     }
   };
 
-  useEffect(() => { fetchSales(); fetchQuotes(); }, [search, startDate, endDate]);
+  useEffect(() => { setPage(1); }, [search, startDate, endDate]);
+  useEffect(() => { fetchSales(); fetchQuotes(); }, [search, startDate, endDate, page]);
 
   // ── submit sale ───────────────────────────────────────────────────────────
   const handleSubmitSale = async (data: any) => {
@@ -537,6 +554,12 @@ export default function SalesPage() {
                   </div>
                 </TabsContent>
               </>
+            )}
+            
+            {!loading && totalPages > 1 && activeTab !== "convert" && (
+              <div className="border-t border-[#E5DDD5]">
+                <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
+              </div>
             )}
           </CardContent>
         </Card>

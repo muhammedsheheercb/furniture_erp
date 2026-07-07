@@ -31,6 +31,7 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import CustomerBalanceModal from "@/components/customers/CustomerBalanceModal";
 import CustomerLedgerModal from "@/components/customers/CustomerLedgerModal";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
+import Pagination from "@/components/ui/Pagination";
 import { useDateFilter } from "@/context/DateFilterContext";
 
 export default function CustomersPage() {
@@ -55,7 +56,12 @@ export default function CustomersPage() {
   const [balanceModalOpen, setBalanceModalOpen] = useState(false);
   const [ledgerModalOpen, setLedgerModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
-  // balanceUpdating removed — modal handles its own loading state
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [serverTotalReceivables, setServerTotalReceivables] = useState(0);
+  const limit = 10;
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -64,10 +70,15 @@ export default function CustomersPage() {
         search,
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
+        page: page.toString(),
+        limit: limit.toString(),
       });
       const res = await axios.get(`/api/customers?${params}`);
       if (res.data.success) {
         setCustomers(res.data.data);
+        setTotalPages(res.data.totalPages || 1);
+        setTotal(res.data.total || 0);
+        setServerTotalReceivables(res.data.totalReceivables || 0);
       }
     } catch (err) {
       console.error("Customers fetch error:", err);
@@ -77,9 +88,8 @@ export default function CustomersPage() {
     }
   };
 
-  useEffect(() => {
-    fetchCustomers();
-  }, [search, startDate, endDate]);
+  useEffect(() => { setPage(1); }, [search, startDate, endDate]);
+  useEffect(() => { fetchCustomers(); }, [search, startDate, endDate, page]);
 
   const handleSubmitCustomer = async (data: any) => {
     setSaving(true);
@@ -148,7 +158,7 @@ export default function CustomersPage() {
     fetchCustomers();
   };
 
-  const totalReceivables = customers.reduce((sum, c) => sum + (c.creditBalance || 0), 0);
+  const totalReceivables = serverTotalReceivables;
 
   return (
     <div className="space-y-6">
@@ -318,6 +328,12 @@ export default function CustomersPage() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            )}
+            
+            {!loading && totalPages > 1 && (
+              <div className="border-t border-[#E5DDD5]">
+                <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
               </div>
             )}
           </CardContent>

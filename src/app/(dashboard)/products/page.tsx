@@ -31,6 +31,7 @@ import ProductModal from "@/components/products/ProductModal";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import { useDateFilter } from "@/context/DateFilterContext";
+import Pagination from "@/components/ui/Pagination";
 
 export default function ProductsPage() {
   const { startDate, endDate } = useDateFilter();
@@ -49,10 +50,19 @@ export default function ProductsPage() {
   const [activeTab, setActiveTab] = useState<"available" | "sold" | "returned">("available");
   const [soldItems, setSoldItems] = useState<any[]>([]);
   const [returnedItems, setReturnedItems] = useState<any[]>([]);
+  
+  const limit = 10;
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
   const [soldPage, setSoldPage] = useState(1);
-  const [returnedPage, setReturnedPage] = useState(1);
   const [soldTotalPages, setSoldTotalPages] = useState(1);
+  const [soldTotal, setSoldTotal] = useState(0);
+
+  const [returnedPage, setReturnedPage] = useState(1);
   const [returnedTotalPages, setReturnedTotalPages] = useState(1);
+  const [returnedTotal, setReturnedTotal] = useState(0);
 
   function toggleBatches(id: string) {
     setExpandedBatches(prev => {
@@ -68,21 +78,25 @@ export default function ProductsPage() {
       const dateParam = `${startDate ? `&startDate=${startDate}` : ""}${endDate ? `&endDate=${endDate}` : ""}`;
       if (activeTab === "available") {
         const catParam = category !== "all" ? `&category=${category}` : "";
-        const res = await axios.get(`/api/items?search=${search}${catParam}${dateParam}`);
+        const res = await axios.get(`/api/items?search=${search}&page=${page}&limit=${limit}${catParam}${dateParam}`);
         if (res.data.success) {
           setProducts(res.data.data);
+          setTotalPages(res.data.totalPages || 1);
+          setTotal(res.data.total || 0);
         }
       } else if (activeTab === "sold") {
-        const res = await axios.get(`/api/items/sold?search=${search}&page=${soldPage}&limit=10${dateParam}`);
+        const res = await axios.get(`/api/items/sold?search=${search}&page=${soldPage}&limit=${limit}${dateParam}`);
         if (res.data.success) {
           setSoldItems(res.data.data);
           setSoldTotalPages(res.data.pagination.totalPages || 1);
+          setSoldTotal(res.data.pagination.total || 0);
         }
       } else if (activeTab === "returned") {
-        const res = await axios.get(`/api/items/returned?search=${search}&page=${returnedPage}&limit=10${dateParam}`);
+        const res = await axios.get(`/api/items/returned?search=${search}&page=${returnedPage}&limit=${limit}${dateParam}`);
         if (res.data.success) {
           setReturnedItems(res.data.data);
           setReturnedTotalPages(res.data.pagination.totalPages || 1);
+          setReturnedTotal(res.data.pagination.total || 0);
         }
       }
     } catch (err) {
@@ -93,9 +107,11 @@ export default function ProductsPage() {
     }
   };
 
+  useEffect(() => { setPage(1); setSoldPage(1); setReturnedPage(1); }, [search, category, activeTab, startDate, endDate]);
+
   useEffect(() => {
     fetchProducts();
-  }, [search, category, activeTab, soldPage, returnedPage, startDate, endDate]);
+  }, [search, category, activeTab, page, soldPage, returnedPage, startDate, endDate]);
 
   const handleTabChange = (tab: "available" | "sold" | "returned") => {
     setActiveTab(tab);
@@ -306,7 +322,8 @@ export default function ProductsPage() {
           ) : (
             <div className="overflow-x-auto">
               {activeTab === "available" ? (
-                <table className="w-full text-left border-collapse">
+                <>
+                  <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-[#FAF8F6] border-b border-[#E5DDD5]">
                       <th className="w-10"></th>
@@ -416,6 +433,12 @@ export default function ProductsPage() {
                     )}
                   </tbody>
                 </table>
+                {totalPages > 1 && (
+                  <div className="border-t border-[#E5DDD5]">
+                    <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
+                  </div>
+                )}
+                </>
               ) : activeTab === "sold" ? (
                 <div className="space-y-4">
                   <table className="w-full text-left border-collapse">
@@ -467,30 +490,9 @@ export default function ProductsPage() {
                     </tbody>
                   </table>
 
-                  {/* Sold Pagination */}
                   {soldTotalPages > 1 && (
-                    <div className="flex items-center justify-between p-4 border-t border-[#F0EBE5]">
-                      <span className="text-xs text-[#7A6055]">
-                        Page <span className="font-bold text-[#1A1210]">{soldPage}</span> of <span className="font-bold text-[#1A1210]">{soldTotalPages}</span>
-                      </span>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="xs"
-                          disabled={soldPage === 1}
-                          onClick={() => setSoldPage(prev => Math.max(prev - 1, 1))}
-                        >
-                          Previous
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="xs"
-                          disabled={soldPage === soldTotalPages}
-                          onClick={() => setSoldPage(prev => Math.min(prev + 1, soldTotalPages))}
-                        >
-                          Next
-                        </Button>
-                      </div>
+                    <div className="border-t border-[#E5DDD5]">
+                      <Pagination page={soldPage} totalPages={soldTotalPages} total={soldTotal} limit={limit} onPageChange={setSoldPage} />
                     </div>
                   )}
                 </div>
@@ -545,30 +547,9 @@ export default function ProductsPage() {
                     </tbody>
                   </table>
 
-                  {/* Returned Pagination */}
                   {returnedTotalPages > 1 && (
-                    <div className="flex items-center justify-between p-4 border-t border-[#F0EBE5]">
-                      <span className="text-xs text-[#7A6055]">
-                        Page <span className="font-bold text-[#1A1210]">{returnedPage}</span> of <span className="font-bold text-[#1A1210]">{returnedTotalPages}</span>
-                      </span>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="xs"
-                          disabled={returnedPage === 1}
-                          onClick={() => setReturnedPage(prev => Math.max(prev - 1, 1))}
-                        >
-                          Previous
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="xs"
-                          disabled={returnedPage === returnedTotalPages}
-                          onClick={() => setReturnedPage(prev => Math.min(prev + 1, returnedTotalPages))}
-                        >
-                          Next
-                        </Button>
-                      </div>
+                    <div className="border-t border-[#E5DDD5]">
+                      <Pagination page={returnedPage} totalPages={returnedTotalPages} total={returnedTotal} limit={limit} onPageChange={setReturnedPage} />
                     </div>
                   )}
                 </div>

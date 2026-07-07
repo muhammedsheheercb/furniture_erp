@@ -97,6 +97,7 @@ export async function GET(req: NextRequest) {
       {
         $facet: {
           metadata: [{ $count: "total" }],
+          receivables: [{ $group: { _id: null, total: { $sum: "$creditBalance" } } }],
           data: [
             { $skip: skip },
             { $limit: limit },
@@ -141,11 +142,13 @@ export async function GET(req: NextRequest) {
         page,
         limit,
         totalPages: 0,
+        totalReceivables: 0,
       });
     }
 
     const customers = results[0].data || [];
     const total = results[0].metadata && results[0].metadata[0] ? results[0].metadata[0].total : 0;
+    const totalReceivables = results[0].receivables && results[0].receivables[0] ? results[0].receivables[0].total : 0;
 
 
     return NextResponse.json({
@@ -155,6 +158,7 @@ export async function GET(req: NextRequest) {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+      totalReceivables,
     });
   } catch (err: any) {
     console.error("[GET /api/customers] FATAL ERROR:", err);

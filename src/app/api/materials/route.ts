@@ -33,6 +33,9 @@ export async function GET(req: NextRequest) {
     const search    = searchParams.get("search") || "";
     const startDate = searchParams.get("startDate");
     const endDate   = searchParams.get("endDate");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
 
     const query: any = {};
     if (search) {
@@ -53,8 +56,37 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const materials = await Material.find(query).sort({ createdAt: -1 }).lean();
-    return NextResponse.json({ success: true, data: materials });
+    const [materials, total, summaryAgg] = await Promise.all([
+      Material.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Material.countDocuments(query),
+      Material.aggregate([
+        { $match: query },
+        {
+          $group: {
+            _id: null,
+            totalValue: { $sum: { $multiply: ["$currentStock", "$lastPurchasePrice"] } },
+            lowStockCount: {
+              $sum: {
+                $cond: [{ $lte: ["$currentStock", "$reorderLevel"] }, 1, 0]
+              }
+            }
+          }
+        }
+      ])
+    ]);
+    
+    const summary = summaryAgg[0] || { totalValue: 0, lowStockCount: 0 };
+    
+    return NextResponse.json({ 
+      success: true, 
+      data: materials,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      totalValue: summary.totalValue,
+      lowStockCount: summary.lowStockCount
+    });
   } catch (err) {
     console.error("[GET /api/materials]", err);
     return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });

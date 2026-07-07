@@ -33,6 +33,7 @@ import ExpenseModal from "@/components/expenses/ExpenseModal";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { Badge } from "@/components/ui/Badge";
 import Spinner from "@/components/ui/Spinner";
+import Pagination from "@/components/ui/Pagination";
 
 export default function ExpensesPage() {
   const { data: session } = useSession();
@@ -48,6 +49,8 @@ export default function ExpensesPage() {
   const [totalAmount, setTotalAmount] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   
@@ -75,6 +78,7 @@ export default function ExpensesPage() {
         setExpenses(res.data.data);
         setTotalAmount(res.data.totalAmount);
         setTotalPages(res.data.totalPages);
+        setTotal(res.data.total || 0);
       }
     } catch (err) {
       toast.error("Failed to load expenses");
@@ -276,32 +280,9 @@ export default function ExpensesPage() {
               </table>
             </div>
             
-            {/* Pagination */}
             {totalPages > 1 && (
-              <div className="p-4 border-t border-[#E5DDD5] flex items-center justify-between bg-white">
-                <p className="text-xs text-[#A89080]">
-                  Page <span className="font-bold text-[#1A1210]">{page}</span> of {totalPages}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page === 1}
-                    onClick={() => setPage(p => p - 1)}
-                    className="border-[#E5DDD5] h-8 px-2"
-                  >
-                    <ChevronLeft size={16} />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page === totalPages}
-                    onClick={() => setPage(p => p + 1)}
-                    className="border-[#E5DDD5] h-8 px-2"
-                  >
-                    <ChevronRight size={16} />
-                  </Button>
-                </div>
+              <div className="border-t border-[#E5DDD5]">
+                <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
               </div>
             )}
           </CardContent>

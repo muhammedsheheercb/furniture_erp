@@ -14,6 +14,9 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
     
     const query: any = {};
     if (status) query.status = status;
@@ -27,15 +30,27 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const productions = await Production.find(query)
-      .populate({
-        path: "saleId",
-        populate: { path: "createdBy", select: "name" }
-      })
-      .sort({ createdAt: -1 })
-      .lean();
+    const [productions, total] = await Promise.all([
+      Production.find(query)
+        .populate({
+          path: "saleId",
+          populate: { path: "createdBy", select: "name" }
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Production.countDocuments(query)
+    ]);
 
-    return NextResponse.json({ success: true, data: productions });
+    return NextResponse.json({ 
+      success: true, 
+      data: productions,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    });
   } catch (err) {
     console.error("[GET /api/production]", err);
     return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });

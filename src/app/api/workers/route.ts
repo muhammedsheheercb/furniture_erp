@@ -15,6 +15,9 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
 
     const query: any = {};
     if (search.trim()) {
@@ -33,7 +36,10 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const workers = await Worker.find(query).sort({ name: 1 }).lean();
+    const [workers, total] = await Promise.all([
+      Worker.find(query).sort({ name: 1 }).skip(skip).limit(limit).lean(),
+      Worker.countDocuments(query)
+    ]);
 
     // Fetch work stats for each worker
     const workersWithStats = await Promise.all(
@@ -77,7 +83,14 @@ export async function GET(req: NextRequest) {
       })
     );
 
-    return NextResponse.json({ success: true, data: workersWithStats });
+    return NextResponse.json({ 
+      success: true, 
+      data: workersWithStats,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    });
   } catch (err) {
     console.error("[GET /api/workers]", err);
     return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });

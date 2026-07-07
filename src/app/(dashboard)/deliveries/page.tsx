@@ -18,6 +18,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
+import Pagination from "@/components/ui/Pagination";
 import Modal from "@/components/ui/Modal";
 
 export default function DeliveriesPage() {
@@ -35,6 +36,10 @@ export default function DeliveriesPage() {
   const [driverName, setDriverName] = useState("");
   const [driverContact, setDriverContact] = useState("");
   const [finishing, setFinishing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
 
   const fetchDeliveries = async () => {
     setLoading(true);
@@ -42,9 +47,13 @@ export default function DeliveriesPage() {
       const params = new URLSearchParams();
       if (startDate) params.set("startDate", startDate);
       if (endDate) params.set("endDate", endDate);
+      params.set("page", page.toString());
+      params.set("limit", limit.toString());
       const res = await axios.get(`/api/deliveries?${params}`);
       if (res.data.success) {
         setDeliveries(res.data.data);
+        setTotalPages(res.data.totalPages || 1);
+        setTotal(res.data.total || 0);
       }
     } catch (err) {
       toast.error("Failed to load deliveries");
@@ -53,9 +62,8 @@ export default function DeliveriesPage() {
     }
   };
 
-  useEffect(() => {
-    fetchDeliveries();
-  }, [startDate, endDate]);
+  useEffect(() => { setPage(1); }, [startDate, endDate]);
+  useEffect(() => { fetchDeliveries(); }, [startDate, endDate, page]);
 
   const handleMarkDone = (delivery: any) => {
     setSelectedDeliveryId(delivery._id);
@@ -119,13 +127,6 @@ export default function DeliveriesPage() {
         >
           <Clock size={15} />
           Delivery Pending
-          {pending.length > 0 && (
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-              activeTab === "pending" ? "bg-white/30 text-white" : "bg-[#C9A84C]/20 text-[#C9A84C]"
-            }`}>
-              {pending.length}
-            </span>
-          )}
         </button>
         <button
           type="button"
@@ -138,13 +139,6 @@ export default function DeliveriesPage() {
         >
           <PackageCheck size={15} />
           Delivered
-          {delivered.length > 0 && (
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-              activeTab === "delivered" ? "bg-white/30 text-white" : "bg-[#1B3A2D]/10 text-[#1B3A2D]"
-            }`}>
-              {delivered.length}
-            </span>
-          )}
         </button>
       </div>
 
@@ -241,6 +235,12 @@ export default function DeliveriesPage() {
           ))
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="bg-white rounded-xl border border-[#E5DDD5]">
+          <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
+        </div>
+      )}
 
       <Modal
         open={modalOpen}

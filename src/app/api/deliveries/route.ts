@@ -13,6 +13,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
 
     const query: any = {};
     if (startDate || endDate) {
@@ -25,9 +28,19 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const deliveries = await Delivery.find(query).sort({ createdAt: -1 }).lean();
+    const [deliveries, total] = await Promise.all([
+      Delivery.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Delivery.countDocuments(query)
+    ]);
 
-    return NextResponse.json({ success: true, data: deliveries });
+    return NextResponse.json({ 
+      success: true, 
+      data: deliveries,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    });
   } catch (err) {
     console.error("[GET /api/deliveries]", err);
     return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });

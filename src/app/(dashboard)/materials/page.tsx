@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
+import Pagination from "@/components/ui/Pagination";
 import { format } from "date-fns";
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -364,29 +365,48 @@ export default function MaterialsPage() {
   const [deleteItem,  setDeleteItem]  = useState<Material | null>(null);
   const [deleting,    setDeleting]    = useState(false);
   const [expanded,    setExpanded]    = useState<Set<string>>(new Set());
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [serverTotalValue, setServerTotalValue] = useState(0);
+  const [serverLowStockCount, setServerLowStockCount] = useState(0);
+  const limit = 10;
 
-  const fetchMaterials = useCallback(async (q = "") => {
+  const fetchMaterials = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
-        search: q,
+        search,
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
+        page: page.toString(),
+        limit: limit.toString(),
       });
       const res  = await fetch(`/api/materials?${params}`);
       const json = await res.json();
-      if (json.success) setMaterials(json.data);
+      if (json.success) {
+        setMaterials(json.data);
+        setTotalPages(json.totalPages || 1);
+        setTotal(json.total || 0);
+        setServerTotalValue(json.totalValue || 0);
+        setServerLowStockCount(json.lowStockCount || 0);
+      }
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate]);
-
-  useEffect(() => { fetchMaterials(); }, [fetchMaterials]);
+  }, [startDate, endDate, page, search]);
 
   useEffect(() => {
-    const t = setTimeout(() => fetchMaterials(search), 300);
+    setPage(1);
+  }, [startDate, endDate, search]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      fetchMaterials();
+    }, 300);
     return () => clearTimeout(t);
-  }, [search, fetchMaterials]);
+  }, [startDate, endDate, page, search, fetchMaterials]);
 
   function toggleExpand(id: string) {
     setExpanded(prev => {
@@ -418,8 +438,8 @@ export default function MaterialsPage() {
     }
   }
 
-  const lowStock   = materials.filter(m => m.currentStock <= m.reorderLevel).length;
-  const totalValue = materials.reduce((s, m) => s + m.currentStock * m.lastPurchasePrice, 0);
+  const lowStock   = serverLowStockCount;
+  const totalValue = serverTotalValue;
 
   return (
     <div className="space-y-6">
@@ -597,6 +617,11 @@ export default function MaterialsPage() {
               </tbody>
             </table>
           </div>
+          {!loading && totalPages > 1 && (
+            <div className="border-t border-[#E5DDD5]">
+              <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
+            </div>
+          )}
         </CardContent>
       </Card>
 

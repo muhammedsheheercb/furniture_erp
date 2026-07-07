@@ -31,6 +31,7 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import SupplierBalanceModal from "@/components/suppliers/SupplierBalanceModal";
 import SupplierLedgerModal from "@/components/suppliers/SupplierLedgerModal";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
+import Pagination from "@/components/ui/Pagination";
 import { useDateFilter } from "@/context/DateFilterContext";
 
 export default function SuppliersPage() {
@@ -56,6 +57,12 @@ export default function SuppliersPage() {
   const [ledgerModalOpen, setLedgerModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any | null>(null);
   const [balanceUpdating, setBalanceUpdating] = useState(false);
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [serverTotalPayables, setServerTotalPayables] = useState(0);
+  const limit = 10;
 
   const fetchSuppliers = async () => {
     setLoading(true);
@@ -64,10 +71,15 @@ export default function SuppliersPage() {
         search,
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
+        page: page.toString(),
+        limit: limit.toString(),
       });
       const res = await axios.get(`/api/suppliers?${params}`);
       if (res.data.success) {
         setSuppliers(res.data.data);
+        setTotalPages(res.data.totalPages || 1);
+        setTotal(res.data.total || 0);
+        setServerTotalPayables(res.data.totalPayables || 0);
       }
     } catch (err) {
       console.error("Suppliers fetch error:", err);
@@ -77,9 +89,8 @@ export default function SuppliersPage() {
     }
   };
 
-  useEffect(() => {
-    fetchSuppliers();
-  }, [search, startDate, endDate]);
+  useEffect(() => { setPage(1); }, [search, startDate, endDate]);
+  useEffect(() => { fetchSuppliers(); }, [search, startDate, endDate, page]);
 
   const handleSubmitSupplier = async (data: any) => {
     setSaving(true);
@@ -160,7 +171,7 @@ export default function SuppliersPage() {
     }
   };
 
-  const totalPayables = suppliers.reduce((sum, s) => sum + (s.creditBalance || 0), 0);
+  const totalPayables = serverTotalPayables;
 
   return (
     <div className="space-y-6">
@@ -322,6 +333,12 @@ export default function SuppliersPage() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            )}
+            
+            {!loading && totalPages > 1 && (
+              <div className="border-t border-[#E5DDD5]">
+                <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
               </div>
             )}
           </CardContent>

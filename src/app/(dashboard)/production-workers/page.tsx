@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 
 import { useDateFilter } from "@/context/DateFilterContext";
+import Pagination from "@/components/ui/Pagination";
 
 interface WorkerStats {
   pending: number;
@@ -40,6 +41,11 @@ export default function ProductionWorkersPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "processing" | "finished">("all");
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
 
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
@@ -102,10 +108,14 @@ export default function ProductionWorkersPage() {
         search: debouncedSearch,
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
+        page: page.toString(),
+        limit: limit.toString(),
       });
       const res = await axios.get(`/api/workers?${params}`);
       if (res.data.success) {
         setWorkers(res.data.data);
+        setTotalPages(res.data.totalPages || 1);
+        setTotal(res.data.total || 0);
       }
     } catch {
       toast.error("Failed to load workers list");
@@ -114,9 +124,8 @@ export default function ProductionWorkersPage() {
     }
   };
 
-  useEffect(() => {
-    fetchWorkers();
-  }, [debouncedSearch, startDate, endDate]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, startDate, endDate]);
+  useEffect(() => { fetchWorkers(); }, [debouncedSearch, startDate, endDate, page]);
 
   // Handle form submission with proper validation
   const handleSubmit = async (e: React.FormEvent) => {
@@ -329,6 +338,12 @@ export default function ProductionWorkersPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          
+          {!loading && totalPages > 1 && (
+            <div className="mt-6 border-t border-[#E5DDD5] pt-4">
+              <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
             </div>
           )}
         </>

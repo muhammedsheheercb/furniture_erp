@@ -23,12 +23,17 @@ import { formatDate, formatCurrency } from "@/lib/utils";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import UpdateBalanceModal from "@/components/sales/UpdateBalanceModal";
 import { useDateFilter } from "@/context/DateFilterContext";
+import Pagination from "@/components/ui/Pagination";
 
 export default function InvoicesPage() {
   const { startDate, endDate } = useDateFilter();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
   const [balanceSale, setBalanceSale] = useState<any | null>(null);
   const [balanceModalOpen, setBalanceModalOpen] = useState(false);
 
@@ -39,12 +44,16 @@ export default function InvoicesPage() {
       const params = new URLSearchParams({
         status: "invoiced",
         search,
+        page: page.toString(),
+        limit: limit.toString(),
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
       });
       const res = await axios.get(`/api/sales?${params}`);
       if (res.data.success) {
         setInvoices(res.data.data);
+        setTotalPages(res.data.totalPages || 1);
+        setTotal(res.data.total || 0);
       }
     } catch (err) {
       toast.error("Failed to load invoices");
@@ -53,9 +62,10 @@ export default function InvoicesPage() {
     }
   };
 
+  useEffect(() => { setPage(1); }, [search, startDate, endDate]);
   useEffect(() => {
     fetchInvoices();
-  }, [search, startDate, endDate]);
+  }, [search, startDate, endDate, page]);
 
   return (
     <div className="space-y-6">
@@ -189,6 +199,12 @@ export default function InvoicesPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          
+          {totalPages > 1 && (
+            <div className="border-t border-[#E5DDD5]">
+              <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
             </div>
           )}
         </CardContent>
