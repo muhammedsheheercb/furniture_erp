@@ -13,7 +13,11 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
@@ -21,12 +25,19 @@ export async function GET(_req: NextRequest, { params }: Params) {
       .populate("createdBy", "name")
       .populate("updatedBy", "name")
       .lean();
-    if (!sale) return NextResponse.json({ success: false, error: "Sale not found" }, { status: 404 });
+    if (!sale)
+      return NextResponse.json(
+        { success: false, error: "Sale not found" },
+        { status: 404 },
+      );
 
     return NextResponse.json({ success: true, data: sale });
   } catch (err) {
     console.error("[GET /api/sales/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -34,35 +45,53 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
     const body = await req.json();
 
     const oldSale = await Sale.findById(id);
-    if (!oldSale) return NextResponse.json({ success: false, error: "Sale not found" }, { status: 404 });
+    if (!oldSale)
+      return NextResponse.json(
+        { success: false, error: "Sale not found" },
+        { status: 404 },
+      );
 
     // Reverse old inventory impact (increase stock because sale is being "undone")
     for (const item of oldSale.items) {
-      await Item.findByIdAndUpdate(item.itemId, { $inc: { quantity: item.quantity } });
+      await Item.findByIdAndUpdate(item.itemId, {
+        $inc: { quantity: item.quantity },
+      });
     }
 
     // Update record
     body.updatedBy = session.user.id;
-    const sale = await Sale.findByIdAndUpdate(id, body, { new: true, runValidators: true });
+    const sale = await Sale.findByIdAndUpdate(id, body, {
+      new: true,
+      runValidators: true,
+    });
 
     // Apply new inventory impact (decrease stock for the updated sale)
     if (sale) {
-        for (const item of sale.items) {
-          await Item.findByIdAndUpdate(item.itemId, { $inc: { quantity: -item.quantity } });
-        }
+      for (const item of sale.items) {
+        await Item.findByIdAndUpdate(item.itemId, {
+          $inc: { quantity: -item.quantity },
+        });
+      }
     }
 
     return NextResponse.json({ success: true, data: sale });
   } catch (err: unknown) {
     console.error("[PUT /api/sales/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -70,17 +99,27 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
-    
+
     const sale = await Sale.findById(id);
-    if (!sale) return NextResponse.json({ success: false, error: "Sale not found" }, { status: 404 });
+    if (!sale)
+      return NextResponse.json(
+        { success: false, error: "Sale not found" },
+        { status: 404 },
+      );
 
     // Reverse inventory impact before delete
     for (const item of sale.items) {
-      await Item.findByIdAndUpdate(item.itemId, { $inc: { quantity: item.quantity } });
+      await Item.findByIdAndUpdate(item.itemId, {
+        $inc: { quantity: item.quantity },
+      });
     }
 
     // Reverse customer outstanding for any sale that had an unpaid balance
@@ -103,6 +142,9 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     return NextResponse.json({ success: true, message: "Sale deleted" });
   } catch (err) {
     console.error("[DELETE /api/sales/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }

@@ -21,24 +21,32 @@ import Quotation from "@/models/Quotation";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    if (!(await hasPermission("sales", "view"))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    if (!(await hasPermission("sales", "view")))
+      return NextResponse.json(
+        { success: false, error: "Forbidden" },
+        { status: 403 },
+      );
 
     await connectDB();
 
     const { searchParams } = new URL(req.url);
-    const search      = searchParams.get("search") || "";
-    const page        = parseInt(searchParams.get("page") || "1");
-    const limit       = parseInt(searchParams.get("limit") || "10");
-    const sortBy      = searchParams.get("sortBy") || "createdAt";
-    const sortOrder   = searchParams.get("sortOrder") === "asc" ? 1 : -1;
-    const startDate   = searchParams.get("startDate");
-    const endDate     = searchParams.get("endDate");
-    const month       = searchParams.get("month");
-    const year        = searchParams.get("year");
+    const search = searchParams.get("search") || "";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const sortOrder = searchParams.get("sortOrder") === "asc" ? 1 : -1;
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+    const month = searchParams.get("month");
+    const year = searchParams.get("year");
     const paymentType = searchParams.get("paymentType");
-    const status      = searchParams.get("status");
-    const skip        = (page - 1) * limit;
+    const status = searchParams.get("status");
+    const skip = (page - 1) * limit;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const query: Record<string, any> = {};
@@ -60,14 +68,18 @@ export async function GET(req: NextRequest) {
         query.date.$lte = end;
       }
     } else if (month && year) {
-      const m = parseInt(month), y = parseInt(year);
+      const m = parseInt(month),
+        y = parseInt(year);
       query.date = {
         $gte: new Date(y, m - 1, 1),
         $lte: new Date(y, m, 0, 23, 59, 59),
       };
     } else if (year) {
       const y = parseInt(year);
-      query.date = { $gte: new Date(y, 0, 1), $lte: new Date(y, 11, 31, 23, 59, 59) };
+      query.date = {
+        $gte: new Date(y, 0, 1),
+        $lte: new Date(y, 11, 31, 23, 59, 59),
+      };
     }
 
     const [sales, total, totalAmountResult] = await Promise.all([
@@ -79,7 +91,10 @@ export async function GET(req: NextRequest) {
         .limit(limit)
         .lean(),
       Sale.countDocuments(query),
-      Sale.aggregate([{ $match: query }, { $group: { _id: null, total: { $sum: "$total" } } }]),
+      Sale.aggregate([
+        { $match: query },
+        { $group: { _id: null, total: { $sum: "$total" } } },
+      ]),
     ]);
 
     const totalAmount = totalAmountResult[0]?.total ?? 0;
@@ -88,7 +103,7 @@ export async function GET(req: NextRequest) {
     const saleIds = sales.map((s: any) => s._id);
     const [productions, deliveries] = await Promise.all([
       Production.find({ saleId: { $in: saleIds } }).lean(),
-      Delivery.find({ saleId: { $in: saleIds } }).lean()
+      Delivery.find({ saleId: { $in: saleIds } }).lean(),
     ]);
 
     const prodMap = productions.reduce((acc: any, p: any) => {
@@ -104,7 +119,7 @@ export async function GET(req: NextRequest) {
     const salesWithStatuses = sales.map((s: any) => ({
       ...s,
       productionStatus: prodMap[s._id.toString()] || "pending",
-      deliveryStatus: delMap[s._id.toString()] || "pending"
+      deliveryStatus: delMap[s._id.toString()] || "pending",
     }));
 
     return NextResponse.json({
@@ -118,7 +133,10 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("[GET /api/sales]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -128,17 +146,25 @@ export async function POST(req: NextRequest) {
   dbSession.startTransaction();
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const body = await req.json();
-    const lastSale = await Sale.findOne({ 
-      saleNumber: { $regex: /^(sale-|SALE-)\d{3,6}$/ } 
-    }).sort({ createdAt: -1 }).session(dbSession);
-    
+    const lastSale = await Sale.findOne({
+      saleNumber: { $regex: /^(sale-|SALE-)\d{3,6}$/ },
+    })
+      .sort({ createdAt: -1 })
+      .session(dbSession);
+
     let nextNum = 100;
     if (lastSale && lastSale.saleNumber) {
-      const lastNumString = lastSale.saleNumber.replace("sale-", "").replace("SALE-", "");
+      const lastNumString = lastSale.saleNumber
+        .replace("sale-", "")
+        .replace("SALE-", "");
       const lastNum = parseInt(lastNumString);
       if (!isNaN(lastNum)) {
         nextNum = lastNum + 1;
@@ -147,12 +173,17 @@ export async function POST(req: NextRequest) {
     const saleNumber = `sale-${nextNum.toString().padStart(3, "0")}`;
 
     // 1 — create sale
-    const [sale] = await Sale.create([{ 
-        ...body, 
-        saleNumber,
-        createdBy: session.user.id,
-        updatedBy: session.user.id
-    }], { session: dbSession });
+    const [sale] = await Sale.create(
+      [
+        {
+          ...body,
+          saleNumber,
+          createdBy: session.user.id,
+          updatedBy: session.user.id,
+        },
+      ],
+      { session: dbSession },
+    );
 
     // 2 — decrease item quantities and batches (manual or FIFO)
     for (const saleItem of body.items) {
@@ -163,7 +194,9 @@ export async function POST(req: NextRequest) {
       if (!item) continue;
 
       if ((item.quantity || 0) < saleItem.quantity) {
-        throw new Error(`Insufficient stock for item: ${saleItem.itemName} (Available: ${item.quantity || 0}, Requested: ${saleItem.quantity})`);
+        throw new Error(
+          `Insufficient stock for item: ${saleItem.itemName} (Available: ${item.quantity || 0}, Requested: ${saleItem.quantity})`,
+        );
       }
 
       // Update total quantity
@@ -173,16 +206,25 @@ export async function POST(req: NextRequest) {
       if (item.batches && item.batches.length > 0) {
         if (saleItem.batch) {
           // Find specific batch - match by batchNumber
-          const batch = item.batches.find((b: any) => b.batchNumber === saleItem.batch);
+          const batch = item.batches.find(
+            (b: any) => b.batchNumber === saleItem.batch,
+          );
           if (batch) {
             batch.quantity -= saleItem.quantity;
           } else {
             // Fallback to FIFO if batch name not found
             let remainingToDeduct = saleItem.quantity;
-            item.batches.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            item.batches.sort(
+              (a: any, b: any) =>
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime(),
+            );
             for (const b of item.batches) {
               if (remainingToDeduct <= 0) break;
-              const deductFromThisBatch = Math.min(b.quantity, remainingToDeduct);
+              const deductFromThisBatch = Math.min(
+                b.quantity,
+                remainingToDeduct,
+              );
               b.quantity -= deductFromThisBatch;
               remainingToDeduct -= deductFromThisBatch;
             }
@@ -190,11 +232,17 @@ export async function POST(req: NextRequest) {
         } else {
           // FIFO as before
           let remainingToDeduct = saleItem.quantity;
-          item.batches.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          item.batches.sort(
+            (a: any, b: any) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+          );
 
           for (const batch of item.batches) {
             if (remainingToDeduct <= 0) break;
-            const deductFromThisBatch = Math.min(batch.quantity, remainingToDeduct);
+            const deductFromThisBatch = Math.min(
+              batch.quantity,
+              remainingToDeduct,
+            );
             batch.quantity -= deductFromThisBatch;
             remainingToDeduct -= deductFromThisBatch;
           }
@@ -205,12 +253,16 @@ export async function POST(req: NextRequest) {
     }
 
     // 3 — update customer outstanding for any sale that has an unpaid balance
-    const outstandingAmount = Number(body.total) - Number(body.advancePaid || 0);
+    const outstandingAmount =
+      Number(body.total) - Number(body.advancePaid || 0);
     if (outstandingAmount > 0) {
-      const customer = await Customer.findById(body.customerId).session(dbSession);
+      const customer = await Customer.findById(body.customerId).session(
+        dbSession,
+      );
       if (customer) {
         if (!customer.balanceHistory) customer.balanceHistory = [];
-        customer.creditBalance = (customer.creditBalance || 0) + outstandingAmount;
+        customer.creditBalance =
+          (customer.creditBalance || 0) + outstandingAmount;
         customer.balanceHistory.push({
           date: new Date(),
           amount: outstandingAmount,
@@ -225,18 +277,27 @@ export async function POST(req: NextRequest) {
     // 4 — create production entry
     // Direct sales bills skip production (items already produced) — mark as finished immediately
     const productionStatus = body.isDirect ? "finished" : "pending";
-    console.log("[POST /api/sales] Creating production with items:", JSON.stringify(body.items.map((it: any) => ({
-        itemName: it.itemName,
-        bom: it.bom,
-        pricing: it.pricing
-    })), null, 2));
+    console.log(
+      "[POST /api/sales] Creating production with items:",
+      JSON.stringify(
+        body.items.map((it: any) => ({
+          itemName: it.itemName,
+          bom: it.bom,
+          pricing: it.pricing,
+        })),
+        null,
+        2,
+      ),
+    );
 
-    await Production.create([{
-        saleId: sale._id,
-        saleNumber: sale.saleNumber,
-        customerId: sale.customerId,
-        customerName: sale.customerName,
-        items: body.items.map((it: any) => ({
+    await Production.create(
+      [
+        {
+          saleId: sale._id,
+          saleNumber: sale.saleNumber,
+          customerId: sale.customerId,
+          customerName: sale.customerName,
+          items: body.items.map((it: any) => ({
             itemName: it.itemName,
             quantity: it.quantity,
             color: it.color,
@@ -247,37 +308,49 @@ export async function POST(req: NextRequest) {
             pricing: it.pricing,
             variants: it.variants,
             status: productionStatus,
-        })),
-        status: productionStatus,
-        remarks: body.remarks || "",
-        deliveryDate: body.deliveryDate ? new Date(body.deliveryDate) : undefined,
-    }], { session: dbSession });
+          })),
+          status: productionStatus,
+          remarks: body.remarks || "",
+          deliveryDate: body.deliveryDate
+            ? new Date(body.deliveryDate)
+            : undefined,
+        },
+      ],
+      { session: dbSession },
+    );
 
     // 5 — for direct sales, create a delivery entry immediately (pending)
     if (body.isDirect) {
-      await Delivery.create([{
-        saleId:          sale._id,
-        saleNumber:      sale.saleNumber,
-        customerId:      sale.customerId,
-        customerName:    sale.customerName,
-        items:           body.items.map((it: any) => ({
-          itemName: it.itemName,
-          quantity: it.quantity,
-          status:   "pending",
-        })),
-        status:          "pending",
-        deliveryDate:    body.deliveryDate    ? new Date(body.deliveryDate)    : undefined,
-        deliveryAddress: body.deliveryAddress || "",
-        remarks:         body.remarks         || "",
-      }], { session: dbSession });
+      await Delivery.create(
+        [
+          {
+            saleId: sale._id,
+            saleNumber: sale.saleNumber,
+            customerId: sale.customerId,
+            customerName: sale.customerName,
+            items: body.items.map((it: any) => ({
+              itemName: it.itemName,
+              quantity: it.quantity,
+              status: "pending",
+            })),
+            status: "pending",
+            deliveryDate: body.deliveryDate
+              ? new Date(body.deliveryDate)
+              : undefined,
+            deliveryAddress: body.deliveryAddress || "",
+            remarks: body.remarks || "",
+          },
+        ],
+        { session: dbSession },
+      );
     }
 
     // 7 — if converted from quotation, update quotation
     if (body.quotationId) {
-        await Quotation.findByIdAndUpdate(body.quotationId, {
-            status: "sale",
-            convertedToSaleId: sale._id
-        }).session(dbSession);
+      await Quotation.findByIdAndUpdate(body.quotationId, {
+        status: "sale",
+        convertedToSaleId: sale._id,
+      }).session(dbSession);
     }
 
     await dbSession.commitTransaction();

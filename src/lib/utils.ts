@@ -6,10 +6,13 @@ export const cn = (...inputs: ClassValue[]) => {
 };
 
 export const formatCurrency = (amount: number): string => {
-  return "OMR " + (amount || 0).toLocaleString("en-OM", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
-  });
+  return (
+    "OMR " +
+    (amount || 0).toLocaleString("en-OM", {
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3,
+    })
+  );
 };
 
 export const formatDate = (date: Date | string): string => {
@@ -27,18 +30,23 @@ export const formatDateInput = (date: Date | string): string => {
   if (!date) return "";
   const d = new Date(date);
   if (isNaN(d.getTime())) return "";
-  return d.toISOString().split('T')[0] || "";
+  return d.toISOString().split("T")[0] || "";
 };
 
 export const generateUniqueNumber = (prefix: string): string => {
   const timestamp = Date.now().toString().slice(-6);
-  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  const random = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0");
   return `${prefix}-${timestamp}${random}`;
 };
 
-export const generateDocNumber = (prefix: string, lastNumber: number): string => {
+export const generateDocNumber = (
+  prefix: string,
+  lastNumber: number,
+): string => {
   const year = new Date().getFullYear();
-  const seq = (lastNumber + 1).toString().padStart(4, '0');
+  const seq = (lastNumber + 1).toString().padStart(4, "0");
   return `${prefix}-${year}-${seq}`;
 };
 

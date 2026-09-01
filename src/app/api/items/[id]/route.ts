@@ -13,7 +13,11 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
@@ -21,12 +25,19 @@ export async function GET(_req: NextRequest, { params }: Params) {
       .populate("createdBy", "name")
       .populate("updatedBy", "name")
       .lean();
-    if (!item) return NextResponse.json({ success: false, error: "Item not found" }, { status: 404 });
+    if (!item)
+      return NextResponse.json(
+        { success: false, error: "Item not found" },
+        { status: 404 },
+      );
 
     return NextResponse.json({ success: true, data: item });
   } catch (err) {
     console.error("[GET /api/items/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -34,46 +45,57 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
     const body = await req.json();
-    if (body.salesAmount !== undefined) body.salesAmount = Number(body.salesAmount);
-    if (body.purchaseAmount !== undefined) body.purchaseAmount = Number(body.purchaseAmount);
+    if (body.salesAmount !== undefined)
+      body.salesAmount = Number(body.salesAmount);
+    if (body.purchaseAmount !== undefined)
+      body.purchaseAmount = Number(body.purchaseAmount);
     if (body.mrp !== undefined) body.mrp = Number(body.mrp);
     if (body.quantity !== undefined) body.quantity = Number(body.quantity);
-    if (body.reorderLevel !== undefined) body.reorderLevel = Number(body.reorderLevel);
+    if (body.reorderLevel !== undefined)
+      body.reorderLevel = Number(body.reorderLevel);
     if (body.taxRate !== undefined) body.taxRate = Number(body.taxRate);
     if (body.leadTime !== undefined) body.leadTime = Number(body.leadTime);
     body.updatedBy = session.user.id;
 
     let item;
     if (body.isOpeningStock) {
-      item = await Item.findByIdAndUpdate(id, {
-        $inc: { quantity: body.quantity },
-        $set: { updatedBy: session.user.id },
-        $push: {
-          batches: {
-            purchaseNumber: "OPENING",
-            batchNumber: body.batchNumber || "OPN-INT",
-            purchasePrice: body.purchaseAmount || 0,
-            salePrice: body.salesAmount || 0,
-            quantity: body.quantity || 0,
-            manufacturingDate: body.manufacturingDate,
-            expiryDate: body.expiryDate,
-            createdAt: body.batchDate ? new Date(body.batchDate) : new Date()
-          }
-        }
-      }, { new: true }).lean();
+      item = await Item.findByIdAndUpdate(
+        id,
+        {
+          $inc: { quantity: body.quantity },
+          $set: { updatedBy: session.user.id },
+          $push: {
+            batches: {
+              purchaseNumber: "OPENING",
+              batchNumber: body.batchNumber || "OPN-INT",
+              purchasePrice: body.purchaseAmount || 0,
+              salePrice: body.salesAmount || 0,
+              quantity: body.quantity || 0,
+              manufacturingDate: body.manufacturingDate,
+              expiryDate: body.expiryDate,
+              createdAt: body.batchDate ? new Date(body.batchDate) : new Date(),
+            },
+          },
+        },
+        { new: true },
+      ).lean();
     } else {
       // Reverse old BOM deductions, then apply new ones
-      const existing = await Item.findById(id).lean() as any;
+      const existing = (await Item.findById(id).lean()) as any;
       const oldBom: any[] = (existing?.bom || []).filter(
-        (r: any) => r.materialId && r.batchNumber && Number(r.quantity) > 0
+        (r: any) => r.materialId && r.batchNumber && Number(r.quantity) > 0,
       );
       const newBom: any[] = (body.bom || []).filter(
-        (r: any) => r.materialId && r.batchNumber && Number(r.quantity) > 0
+        (r: any) => r.materialId && r.batchNumber && Number(r.quantity) > 0,
       );
 
       // Restore old quantities back to materials
@@ -87,9 +109,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
                   currentStock: Number(r.quantity),
                   "batches.$.quantity": Number(r.quantity),
                 },
-              }
-            )
-          )
+              },
+            ),
+          ),
         );
       }
 
@@ -104,16 +126,23 @@ export async function PUT(req: NextRequest, { params }: Params) {
                   currentStock: -Number(r.quantity),
                   "batches.$.quantity": -Number(r.quantity),
                 },
-              }
-            )
-          )
+              },
+            ),
+          ),
         );
       }
 
-      item = await Item.findByIdAndUpdate(id, body, { new: true, runValidators: true }).lean();
+      item = await Item.findByIdAndUpdate(id, body, {
+        new: true,
+        runValidators: true,
+      }).lean();
     }
 
-    if (!item) return NextResponse.json({ success: false, error: "Item not found" }, { status: 404 });
+    if (!item)
+      return NextResponse.json(
+        { success: false, error: "Item not found" },
+        { status: 404 },
+      );
 
     return NextResponse.json({ success: true, data: item });
   } catch (err: unknown) {
@@ -127,16 +156,27 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
     const item = await Item.findByIdAndDelete(id);
-    if (!item) return NextResponse.json({ success: false, error: "Item not found" }, { status: 404 });
+    if (!item)
+      return NextResponse.json(
+        { success: false, error: "Item not found" },
+        { status: 404 },
+      );
 
     return NextResponse.json({ success: true, message: "Item deleted" });
   } catch (err) {
     console.error("[DELETE /api/items/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }

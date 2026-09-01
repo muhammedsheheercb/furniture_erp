@@ -1,20 +1,16 @@
 "use client";
-import { 
-  Plus, 
-  Search, 
+import {
+  Plus,
+  Search,
   CheckCircle2,
   Edit,
   Trash2,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import axios from "axios";
@@ -26,8 +22,10 @@ import PurchaseModal from "@/components/purchases/PurchaseModal";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import Pagination from "@/components/ui/Pagination";
+import { useLanguage } from "../../../context/LanguageContext";
 
 export default function PurchasesPage() {
+  const { t } = useLanguage();
   const { data: session } = useSession();
   const { startDate, endDate } = useDateFilter();
   const isAdmin = session?.user?.role === "admin";
@@ -44,7 +42,7 @@ export default function PurchasesPage() {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  
+
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -141,23 +139,25 @@ export default function PurchasesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-[#1A1210]">Purchase Orders</h2>
-          <p className="text-[#7A6055]">Procure raw materials and track supplier shipments.</p>
+          <h2 className="text-3xl font-extrabold text-[#1A1210]">
+            {t("purchaseOrders")}
+          </h2>
+          <p className="text-[#7A6055]">{t("procureRawMaterialsAndTrack")}</p>
         </div>
         {canCreate && (
-          <Button 
+          <Button
             className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
             onClick={() => {
               setEditPurchase(null);
               setModalOpen(true);
             }}
           >
-            <Plus size={18} className="mr-2" /> Create PO
+            <Plus size={18} className="me-2" /> {t("createPo")}
           </Button>
         )}
       </div>
 
-      <PurchaseModal 
+      <PurchaseModal
         open={modalOpen}
         onClose={() => {
           setModalOpen(false);
@@ -168,22 +168,25 @@ export default function PurchasesPage() {
         loading={saving}
       />
 
-      <ConfirmModal 
+      <ConfirmModal
         open={!!deleteId}
         onClose={() => setDeleteId(null)}
         onConfirm={handleConfirmDelete}
-        title="Delete Purchase Order"
-        message="Are you sure you want to delete this order? This will also revert the stock quantities."
+        title={t("deletePurchaseOrder")}
+        message={t("areYouSureYouWant")}
         loading={deleting}
       />
 
       <Card className="border-[#E5DDD5]">
         <CardHeader className="p-4 border-b border-[#E5DDD5]">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89080]" size={18} />
-            <Input 
-              placeholder="Search by PO number or supplier..." 
-              className="pl-10 border-[#E5DDD5] bg-[#FAF8F6]"
+            <Search
+              className="absolute start-3 top-1/2 -translate-y-1/2 text-[#A89080]"
+              size={18}
+            />
+            <Input
+              placeholder={t("searchByPoNumberOr")}
+              className="ps-10 border-[#E5DDD5] bg-[#FAF8F6]"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -196,41 +199,69 @@ export default function PurchasesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-start border-collapse">
                 <thead>
                   <tr className="bg-[#FAF8F6] border-b border-[#E5DDD5]">
-                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">PO Number</th>
-                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">Supplier</th>
-                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">Order Date</th>
-                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">Amount</th>
-                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">Status</th>
-                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">Created By</th>
-                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider text-right">Actions</th>
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">
+                      {t("poNumber")}
+                    </th>
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">
+                      {t("supplier")}
+                    </th>
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">
+                      {t("orderDate")}
+                    </th>
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">
+                      {t("amount")}
+                    </th>
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">
+                      {t("status")}
+                    </th>
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider">
+                      {t("createdBy")}
+                    </th>
+                    <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase tracking-wider text-end">
+                      {t("actions")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F0EBE5]">
-                  {purchases.length > 0 ? purchases.map((po) => (
-                    <tr key={po._id} className="hover:bg-[#FAF8F6] transition-colors group">
-                      <td className="py-4 px-6 font-mono text-sm text-[#1A1210]">{po.purchaseNumber}</td>
-                      <td className="py-4 px-6 font-semibold text-[#1A1210]">{po.supplierName}</td>
-                      <td className="py-4 px-6 text-sm text-[#7A6055]">{format(new Date(po.date), "dd MMM yyyy")}</td>
-                      <td className="py-4 px-6 text-sm font-bold text-[#1A1210]"><CurrencySymbol /> {po.total.toLocaleString()}</td>
-                      <td className="py-4 px-6">
-                        <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100">
-                          <span className="flex items-center gap-1"><CheckCircle2 size={12} /> Received</span>
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
-                          {po.createdBy?.name || "—"}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {purchases.length > 0 ? (
+                    purchases.map((po) => (
+                      <tr
+                        key={po._id}
+                        className="hover:bg-[#FAF8F6] transition-colors group"
+                      >
+                        <td className="py-4 px-6 font-mono text-sm text-[#1A1210]">
+                          {po.purchaseNumber}
+                        </td>
+                        <td className="py-4 px-6 font-semibold text-[#1A1210]">
+                          {po.supplierName}
+                        </td>
+                        <td className="py-4 px-6 text-sm text-[#7A6055]">
+                          {format(new Date(po.date), "dd MMM yyyy")}
+                        </td>
+                        <td className="py-4 px-6 text-sm font-bold text-[#1A1210]">
+                          <CurrencySymbol /> {po.total.toLocaleString()}
+                        </td>
+                        <td className="py-4 px-6">
+                          <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100">
+                            <span className="flex items-center gap-1">
+                              <CheckCircle2 size={12} /> {t("received")}
+                            </span>
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+                            {po.createdBy?.name || "—"}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-end">
+                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             {canEdit && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="text-[#7A6055]"
                                 onClick={() => handleEdit(po)}
                               >
@@ -238,34 +269,50 @@ export default function PurchasesPage() {
                               </Button>
                             )}
                             {canDelete && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="text-rose-500"
                                 onClick={() => handleDelete(po._id)}
                               >
                                 <Trash2 size={16} />
                               </Button>
                             )}
-                            <Button variant="ghost" size="icon" className="text-[#C9A84C]">
-                                <ChevronRight size={16} />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-[#C9A84C]"
+                            >
+                              <ChevronRight size={16} />
                             </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  )) : (
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
                     <tr>
-                      <td colSpan={6} className="py-10 text-center text-[#7A6055]">No purchase orders found</td>
+                      <td
+                        colSpan={6}
+                        className="py-10 text-center text-[#7A6055]"
+                      >
+                        {t("noPurchaseOrdersFound")}
+                      </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
           )}
-          
+
           {!loading && totalPages > 1 && (
             <div className="border-t border-[#E5DDD5]">
-              <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                total={total}
+                limit={limit}
+                onPageChange={setPage}
+              />
             </div>
           )}
         </CardContent>

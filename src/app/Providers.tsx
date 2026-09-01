@@ -23,7 +23,6 @@ const Providers = ({ children }: ProvidersProps) => {
       </LanguageProvider>
     </QueryClientProvider>
   );
-
 };
 
 export default Providers;

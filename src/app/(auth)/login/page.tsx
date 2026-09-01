@@ -6,8 +6,17 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Lock, User, Armchair, ChevronRight, Sparkles } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  User,
+  Armchair,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "../../../context/LanguageContext";
 
 const schema = z.object({
   email: z.string().min(1, "Name or Email is required"),
@@ -17,23 +26,27 @@ type FormData = z.infer<typeof schema>;
 
 const SLIDES = [
   {
-    image: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=85",
+    image:
+      "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=85",
     title: "Contemporary Living",
-    desc: "Crafted in warm natural walnut, hand-spun fabrics, and soft architectural outlines."
+    desc: "Crafted in warm natural walnut, hand-spun fabrics, and soft architectural outlines.",
   },
   {
-    image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1200&q=85",
+    image:
+      "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1200&q=85",
     title: "Masterful Artistry",
-    desc: "Exquisite solid oak joinery and leather details designed for sophisticated homes."
+    desc: "Exquisite solid oak joinery and leather details designed for sophisticated homes.",
   },
   {
-    image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=85",
+    image:
+      "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=85",
     title: "Showroom Ambience",
-    desc: "Cozy travertine stone backdrops blended with minimalist forms and warm luxury light."
-  }
+    desc: "Cozy travertine stone backdrops blended with minimalist forms and warm luxury light.",
+  },
 ];
 
 export default function LoginPage() {
+  const { t } = useLanguage();
   const { status } = useSession();
   const router = useRouter();
   const [showPwd, setShowPwd] = useState(false);
@@ -96,7 +109,11 @@ export default function LoginPage() {
     },
   };
 
-  const currentSlide = SLIDES[activeSlide] || { image: "", title: "", desc: "" };
+  const currentSlide = SLIDES[activeSlide] || {
+    image: "",
+    title: "",
+    desc: "",
+  };
 
   return (
     <>
@@ -182,7 +199,14 @@ export default function LoginPage() {
         }}
       >
         {/* Soft, warm showroom aura lights in background */}
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        >
           {/* Terracotta/Amber light */}
           <div
             style={{
@@ -191,7 +215,8 @@ export default function LoginPage() {
               left: "-5%",
               width: "50%",
               height: "60%",
-              background: "radial-gradient(circle, rgba(197, 168, 128, 0.12) 0%, rgba(74, 59, 50, 0.05) 50%, transparent 70%)",
+              background:
+                "radial-gradient(circle, rgba(197, 168, 128, 0.12) 0%, rgba(74, 59, 50, 0.05) 50%, transparent 70%)",
               borderRadius: "50%",
               filter: "blur(60px)",
               animation: "float-blob-1 28s infinite alternate ease-in-out",
@@ -205,7 +230,8 @@ export default function LoginPage() {
               right: "-5%",
               width: "55%",
               height: "65%",
-              background: "radial-gradient(circle, rgba(229, 213, 192, 0.1) 0%, rgba(46, 37, 32, 0.04) 55%, transparent 75%)",
+              background:
+                "radial-gradient(circle, rgba(229, 213, 192, 0.1) 0%, rgba(46, 37, 32, 0.04) 55%, transparent 75%)",
               borderRadius: "50%",
               filter: "blur(75px)",
               animation: "float-blob-2 24s infinite alternate ease-in-out",
@@ -218,7 +244,12 @@ export default function LoginPage() {
           className="login-card"
           initial={{ opacity: 0, y: 35, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: "spring", stiffness: 70, damping: 15, delay: 0.1 }}
+          transition={{
+            type: "spring",
+            stiffness: 70,
+            damping: 15,
+            delay: 0.1,
+          }}
           style={{
             position: "relative",
             zIndex: 1,
@@ -229,7 +260,8 @@ export default function LoginPage() {
             borderRadius: 28,
             overflow: "hidden",
             background: "rgba(255, 255, 255, 0.99)",
-            boxShadow: "0 30px 80px rgba(0,0,0,0.45), 0 0 80px rgba(197, 168, 128, 0.04)",
+            boxShadow:
+              "0 30px 80px rgba(0,0,0,0.45), 0 0 80px rgba(197, 168, 128, 0.04)",
             border: "1px solid rgba(255, 255, 255, 0.8)",
           }}
         >
@@ -250,38 +282,46 @@ export default function LoginPage() {
             }}
           >
             {/* Self-drawing Lounge Chair Vector Wireframe in background */}
-            <div style={{
-              position: "absolute",
-              right: 15,
-              bottom: 15,
-              width: "210px",
-              height: "210px",
-              pointerEvents: "none",
-              zIndex: 0,
-              opacity: 0.045,
-              color: "var(--primary)",
-            }}>
-              <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ width: "100%", height: "100%" }}>
-                <motion.path 
-                  d="M20 75 C 20 75, 80 75, 80 75 M30 75 L 24 88 M70 75 L 76 88" 
+            <div
+              style={{
+                position: "absolute",
+                right: 15,
+                bottom: 15,
+                width: "210px",
+                height: "210px",
+                pointerEvents: "none",
+                zIndex: 0,
+                opacity: 0.045,
+                color: "var(--primary)",
+              }}
+            >
+              <svg
+                viewBox="0 0 100 100"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                style={{ width: "100%", height: "100%" }}
+              >
+                <motion.path
+                  d="M20 75 C 20 75, 80 75, 80 75 M30 75 L 24 88 M70 75 L 76 88"
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
                   transition={{ duration: 2.2, ease: "easeInOut", delay: 0.6 }}
                 />
-                <motion.path 
-                  d="M15 50 C 15 65, 25 72, 50 72 C 75 72, 85 65, 85 50" 
+                <motion.path
+                  d="M15 50 C 15 65, 25 72, 50 72 C 75 72, 85 65, 85 50"
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
                   transition={{ duration: 2.5, ease: "easeInOut", delay: 0.9 }}
                 />
-                <motion.path 
-                  d="M15 50 C 15 38, 20 32, 32 32 C 38 32, 44 40, 50 40 C 56 40, 62 32, 68 32 C 80 32, 85 38, 85 50" 
+                <motion.path
+                  d="M15 50 C 15 38, 20 32, 32 32 C 38 32, 44 40, 50 40 C 56 40, 62 32, 68 32 C 80 32, 85 38, 85 50"
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
                   transition={{ duration: 2.8, ease: "easeInOut", delay: 1.2 }}
                 />
-                <motion.path 
-                  d="M32 32 C 32 20, 38 15, 50 15 C 62 15, 68 20, 68 32" 
+                <motion.path
+                  d="M32 32 C 32 20, 38 15, 50 15 C 62 15, 68 20, 68 32"
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
                   transition={{ duration: 3, ease: "easeInOut", delay: 1.5 }}
@@ -302,7 +342,8 @@ export default function LoginPage() {
             >
               <div
                 style={{
-                  background: "linear-gradient(135deg, var(--primary), var(--primary-light))",
+                  background:
+                    "linear-gradient(135deg, var(--primary), var(--primary-light))",
                   width: 38,
                   height: 38,
                   borderRadius: 10,
@@ -312,7 +353,11 @@ export default function LoginPage() {
                   boxShadow: "0 4px 12px rgba(46, 37, 32, 0.15)",
                 }}
               >
-                <Armchair size={19} color="var(--gold)" style={{ strokeWidth: 2.2 }} />
+                <Armchair
+                  size={19}
+                  color="var(--gold)"
+                  style={{ strokeWidth: 2.2 }}
+                />
               </div>
               <span
                 style={{
@@ -322,7 +367,7 @@ export default function LoginPage() {
                   color: "var(--primary)",
                 }}
               >
-                DIMOND HOME
+                {t("dimondHome")}
               </span>
             </motion.div>
 
@@ -340,9 +385,9 @@ export default function LoginPage() {
                 zIndex: 1,
               }}
             >
-              Welcome back
+              {t("welcomeBack")}
             </motion.h1>
-            
+
             <motion.p
               className="login-subtitle"
               variants={itemVariants}
@@ -355,13 +400,18 @@ export default function LoginPage() {
                 zIndex: 1,
               }}
             >
-              Log in to access your dashboard, inventory schedules, and operations.
+              {t("logInToAccessYour")}
             </motion.p>
 
             {/* Credentials Form */}
             <form
               onSubmit={handleSubmit(onSubmit)}
-              style={{ display: "flex", flexDirection: "column", gap: 20, zIndex: 1 }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 20,
+                zIndex: 1,
+              }}
             >
               {/* Username/Email Field */}
               <motion.div variants={itemVariants}>
@@ -375,7 +425,7 @@ export default function LoginPage() {
                     letterSpacing: "0.02em",
                   }}
                 >
-                  Name or Email
+                  {t("nameOrEmail")}
                 </label>
                 <div style={{ position: "relative" }}>
                   <User
@@ -385,7 +435,10 @@ export default function LoginPage() {
                       left: 16,
                       top: "50%",
                       transform: "translateY(-50%)",
-                      color: focusedField === "email" ? "var(--gold)" : "var(--text-muted)",
+                      color:
+                        focusedField === "email"
+                          ? "var(--gold)"
+                          : "var(--text-muted)",
                       transition: "color 0.2s",
                       pointerEvents: "none",
                     }}
@@ -393,7 +446,7 @@ export default function LoginPage() {
                   <input
                     className="login-input"
                     type="text"
-                    placeholder="Enter Username or Email"
+                    placeholder={t("enterUsernameOrEmail")}
                     {...register("email")}
                     onFocus={() => setFocusedField("email")}
                     onBlur={() => setFocusedField(null)}
@@ -410,8 +463,18 @@ export default function LoginPage() {
                     }}
                   />
                 </div>
-                <p style={{ margin: "6px 0 0 4px", fontSize: 11, color: "var(--gold)", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-                  <Sparkles size={11} /> Staff/Workers: Log in using your registered Name
+                <p
+                  style={{
+                    margin: "6px 0 0 4px",
+                    fontSize: 11,
+                    color: "var(--gold)",
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <Sparkles size={11} /> {t("staffworkersLogInUsingYour")}
                 </p>
                 <AnimatePresence>
                   {errors.email && (
@@ -419,7 +482,11 @@ export default function LoginPage() {
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      style={{ margin: "5px 0 0 4px", fontSize: 12, color: "var(--danger)" }}
+                      style={{
+                        margin: "5px 0 0 4px",
+                        fontSize: 12,
+                        color: "var(--danger)",
+                      }}
                     >
                       {errors.email.message}
                     </motion.p>
@@ -439,7 +506,7 @@ export default function LoginPage() {
                     letterSpacing: "0.02em",
                   }}
                 >
-                  Password
+                  {t("password")}
                 </label>
                 <div style={{ position: "relative" }}>
                   <Lock
@@ -449,7 +516,10 @@ export default function LoginPage() {
                       left: 16,
                       top: "50%",
                       transform: "translateY(-50%)",
-                      color: focusedField === "password" ? "var(--gold)" : "var(--text-muted)",
+                      color:
+                        focusedField === "password"
+                          ? "var(--gold)"
+                          : "var(--text-muted)",
                       transition: "color 0.2s",
                       pointerEvents: "none",
                     }}
@@ -499,7 +569,11 @@ export default function LoginPage() {
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      style={{ margin: "5px 0 0 4px", fontSize: 12, color: "var(--danger)" }}
+                      style={{
+                        margin: "5px 0 0 4px",
+                        fontSize: 12,
+                        color: "var(--danger)",
+                      }}
                     >
                       {errors.password.message}
                     </motion.p>
@@ -556,18 +630,21 @@ export default function LoginPage() {
                   justifyContent: "center",
                   gap: 8,
                   boxShadow: "0 10px 24px rgba(46, 37, 32, 0.15)",
-                  transition: "background 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)",
+                  transition:
+                    "background 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)",
                 }}
                 onMouseEnter={(e) => {
                   if (!isSubmitting) {
                     e.currentTarget.style.background = "var(--primary-light)";
-                    e.currentTarget.style.boxShadow = "0 12px 28px rgba(46, 37, 32, 0.22)";
+                    e.currentTarget.style.boxShadow =
+                      "0 12px 28px rgba(46, 37, 32, 0.22)";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isSubmitting) {
                     e.currentTarget.style.background = "var(--primary)";
-                    e.currentTarget.style.boxShadow = "0 10px 24px rgba(46, 37, 32, 0.15)";
+                    e.currentTarget.style.boxShadow =
+                      "0 10px 24px rgba(46, 37, 32, 0.15)";
                   }
                 }}
               >
@@ -579,12 +656,24 @@ export default function LoginPage() {
                     viewBox="0 0 18 18"
                     fill="none"
                   >
-                    <circle cx="9" cy="9" r="7" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
-                    <path d="M9 2 a7 7 0 0 1 7 7" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                    <circle
+                      cx="9"
+                      cy="9"
+                      r="7"
+                      stroke="rgba(255,255,255,0.3)"
+                      strokeWidth="2"
+                    />
+                    <path
+                      d="M9 2 a7 7 0 0 1 7 7"
+                      stroke="#fff"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
                   </svg>
                 ) : (
                   <>
-                    LOG IN <ChevronRight size={16} style={{ strokeWidth: 2.5 }} />
+                    {t("logIn")}
+                    <ChevronRight size={16} style={{ strokeWidth: 2.5 }} />
                   </>
                 )}
               </motion.button>
@@ -625,7 +714,8 @@ export default function LoginPage() {
               style={{
                 position: "absolute",
                 inset: 0,
-                background: "linear-gradient(to top, rgba(46, 37, 32, 0.85) 0%, rgba(46, 37, 32, 0.35) 60%, rgba(46, 37, 32, 0.1) 100%)",
+                background:
+                  "linear-gradient(to top, rgba(46, 37, 32, 0.85) 0%, rgba(46, 37, 32, 0.35) 60%, rgba(46, 37, 32, 0.1) 100%)",
                 zIndex: 1,
               }}
             />
@@ -683,7 +773,14 @@ export default function LoginPage() {
               </AnimatePresence>
 
               {/* Progress indicators */}
-              <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 16 }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  justifyContent: "center",
+                  marginTop: 16,
+                }}
+              >
                 {SLIDES.map((_, idx) => (
                   <div
                     key={idx}
@@ -692,7 +789,10 @@ export default function LoginPage() {
                       width: activeSlide === idx ? 24 : 6,
                       height: 6,
                       borderRadius: 3,
-                      background: activeSlide === idx ? "var(--gold)" : "rgba(255,255,255,0.4)",
+                      background:
+                        activeSlide === idx
+                          ? "var(--gold)"
+                          : "rgba(255,255,255,0.4)",
                       cursor: "pointer",
                       transition: "all 0.3s ease",
                     }}

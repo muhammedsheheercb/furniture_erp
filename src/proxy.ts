@@ -13,9 +13,10 @@ export default async function proxy(req: NextRequest) {
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
-    cookieName: process.env.NODE_ENV === "production"
-      ? "__Secure-next-auth.session-token"
-      : "next-auth.session-token",
+    cookieName:
+      process.env.NODE_ENV === "production"
+        ? "__Secure-next-auth.session-token"
+        : "next-auth.session-token",
   });
 
   // not logged in → redirect to login (if not already on login or api/auth)
@@ -35,34 +36,34 @@ export default async function proxy(req: NextRequest) {
 
     // Determine module from path
     const segments = pathname.split("/");
-    const module = segments[2]; 
+    const module = segments[2];
 
     if (!module) return NextResponse.next();
 
     // Mapping of API segments to permission keys
     const moduleMap: Record<string, string> = {
-      "items": "items",
-      "customers": "customers",
-      "suppliers": "suppliers",
-      "quotations": "quotations",
-      "sales": "sales",
-      "production": "production",
-      "deliveries": "deliveries",
-      "purchases": "purchases",
-      "expenses": "expenses",
-      "materials": "items",
+      items: "items",
+      customers: "customers",
+      suppliers: "suppliers",
+      quotations: "quotations",
+      sales: "sales",
+      production: "production",
+      deliveries: "deliveries",
+      purchases: "purchases",
+      expenses: "expenses",
+      materials: "items",
       "damaged-items": "damaged_items",
       "sales-returns": "sales_returns",
-      "dashboard": "dashboard",
-      "users": "users",
-      "settings": "settings",
+      dashboard: "dashboard",
+      users: "users",
+      settings: "settings",
     };
 
     const permissionKey = moduleMap[module];
 
     if (permissionKey) {
       const permissions = (token.permissions as any)?.[permissionKey] || {};
-      
+
       let action = "";
       if (method === "GET") action = "view";
       else if (method === "POST") action = "create";
@@ -71,8 +72,15 @@ export default async function proxy(req: NextRequest) {
 
       if (action && !permissions[action]) {
         return new NextResponse(
-          JSON.stringify({ success: false, error: "Forbidden: Missing " + action + " permission for " + permissionKey }),
-          { status: 403, headers: { "content-type": "application/json" } }
+          JSON.stringify({
+            success: false,
+            error:
+              "Forbidden: Missing " +
+              action +
+              " permission for " +
+              permissionKey,
+          }),
+          { status: 403, headers: { "content-type": "application/json" } },
         );
       }
     }
@@ -82,7 +90,5 @@ export default async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

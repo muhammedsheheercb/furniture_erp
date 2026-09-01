@@ -7,7 +7,8 @@ const MONGODB_URI = process.env.MONGODB_URI;
 
 const DeliverySchema = new mongoose.Schema({}, { strict: false });
 
-const Delivery = mongoose.models.Delivery || mongoose.model("Delivery", DeliverySchema);
+const Delivery =
+  mongoose.models.Delivery || mongoose.model("Delivery", DeliverySchema);
 
 async function main() {
   await mongoose.connect(MONGODB_URI);

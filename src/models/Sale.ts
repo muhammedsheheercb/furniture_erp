@@ -21,7 +21,7 @@ const SaleItemSchema = new Schema(
       height: Number,
       depth: Number,
       weight: Number,
-      unit: String
+      unit: String,
     },
     bom: [
       {
@@ -32,13 +32,13 @@ const SaleItemSchema = new Schema(
         batchNumber: String,
         pricePerUnit: Number,
         quantity: Number,
-        subtotal: Number
-      }
+        subtotal: Number,
+      },
     ],
     variants: {
       colors: [String],
       sizes: [String],
-      finishes: [String]
+      finishes: [String],
     },
     pricing: {
       materialCost: Number,
@@ -47,10 +47,10 @@ const SaleItemSchema = new Schema(
       totalCost: Number,
       profitMargin: Number,
       sellingPrice: Number,
-      discountPrice: Number
-    }
+      discountPrice: Number,
+    },
   },
-  { _id: false }
+  { _id: false },
 );
 
 export interface ISaleDocument extends Document {
@@ -148,13 +148,13 @@ const SaleSchema = new Schema<ISaleDocument>(
     deliveryDate: { type: Date },
     deliveryAddress: { type: String, trim: true },
     remarks: { type: String, trim: true },
-    status: { 
-      type: String, 
+    status: {
+      type: String,
       enum: ["pending", "processing", "delivered", "invoiced"],
-      default: "pending"
+      default: "pending",
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 SaleSchema.index({ date: -1 });

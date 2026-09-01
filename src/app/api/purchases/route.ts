@@ -12,27 +12,31 @@ import mongoose from "mongoose";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
 
     const { searchParams } = new URL(req.url);
-    const search      = searchParams.get("search") || "";
-    const page        = parseInt(searchParams.get("page") || "1");
-    const limit       = parseInt(searchParams.get("limit") || "10");
-    const sortBy      = searchParams.get("sortBy") || "createdAt";
-    const sortOrder   = searchParams.get("sortOrder") === "asc" ? 1 : -1;
-    const startDate   = searchParams.get("startDate");
-    const endDate     = searchParams.get("endDate");
-    const month       = searchParams.get("month");
-    const year        = searchParams.get("year");
+    const search = searchParams.get("search") || "";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const sortOrder = searchParams.get("sortOrder") === "asc" ? 1 : -1;
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+    const month = searchParams.get("month");
+    const year = searchParams.get("year");
     const paymentType = searchParams.get("paymentType");
-    const skip        = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
     const query: Record<string, any> = {};
     if (search) {
       query.$or = [
-        { supplierName:   { $regex: search, $options: "i" } },
+        { supplierName: { $regex: search, $options: "i" } },
         { purchaseNumber: { $regex: search, $options: "i" } },
       ];
     }
@@ -46,11 +50,18 @@ export async function GET(req: NextRequest) {
         query.date.$lte = end;
       }
     } else if (month && year) {
-      const m = parseInt(month), y = parseInt(year);
-      query.date = { $gte: new Date(y, m - 1, 1), $lte: new Date(y, m, 0, 23, 59, 59) };
+      const m = parseInt(month),
+        y = parseInt(year);
+      query.date = {
+        $gte: new Date(y, m - 1, 1),
+        $lte: new Date(y, m, 0, 23, 59, 59),
+      };
     } else if (year) {
       const y = parseInt(year);
-      query.date = { $gte: new Date(y, 0, 1), $lte: new Date(y, 11, 31, 23, 59, 59) };
+      query.date = {
+        $gte: new Date(y, 0, 1),
+        $lte: new Date(y, 11, 31, 23, 59, 59),
+      };
     }
 
     const [purchases, total, totalAmountResult] = await Promise.all([
@@ -62,7 +73,10 @@ export async function GET(req: NextRequest) {
         .limit(limit)
         .lean(),
       Purchase.countDocuments(query),
-      Purchase.aggregate([{ $match: query }, { $group: { _id: null, total: { $sum: "$total" } } }]),
+      Purchase.aggregate([
+        { $match: query },
+        { $group: { _id: null, total: { $sum: "$total" } } },
+      ]),
     ]);
 
     return NextResponse.json({
@@ -76,7 +90,10 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("[GET /api/purchases]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -86,7 +103,11 @@ export async function POST(req: NextRequest) {
   dbSession.startTransaction();
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const body = await req.json();
@@ -94,7 +115,9 @@ export async function POST(req: NextRequest) {
     // Generate purchase number
     const lastPurchase = await Purchase.findOne({
       purchaseNumber: { $regex: /^PUR-\d+$/ },
-    }).sort({ createdAt: -1 }).session(dbSession);
+    })
+      .sort({ createdAt: -1 })
+      .session(dbSession);
 
     let nextNum = 100;
     if (lastPurchase?.purchaseNumber) {
@@ -105,8 +128,15 @@ export async function POST(req: NextRequest) {
 
     // Create purchase
     const [purchase] = await Purchase.create(
-      [{ ...body, purchaseNumber, createdBy: session.user.id, updatedBy: session.user.id }],
-      { session: dbSession }
+      [
+        {
+          ...body,
+          purchaseNumber,
+          createdBy: session.user.id,
+          updatedBy: session.user.id,
+        },
+      ],
+      { session: dbSession },
     );
     if (!purchase) throw new Error("Failed to create purchase record");
 
@@ -125,17 +155,17 @@ export async function POST(req: NextRequest) {
             $set: { lastPurchasePrice: pi.price },
             $push: {
               batches: {
-                purchaseId:     String(purchase._id),
+                purchaseId: String(purchase._id),
                 purchaseNumber: purchase.purchaseNumber,
                 batchNumber,
-                purchaseDate:   body.date ? new Date(body.date) : new Date(),
-                purchasePrice:  pi.price,
-                quantity:       pi.quantity,
-                createdAt:      new Date(),
+                purchaseDate: body.date ? new Date(body.date) : new Date(),
+                purchasePrice: pi.price,
+                quantity: pi.quantity,
+                createdAt: new Date(),
               },
             },
           },
-          { session: dbSession }
+          { session: dbSession },
         );
       } else if (pi.itemId) {
         await Item.findByIdAndUpdate(
@@ -143,26 +173,26 @@ export async function POST(req: NextRequest) {
           {
             $inc: { quantity: pi.quantity },
             $set: {
-              purchaseAmount:   pi.price,
-              salesAmount:      pi.sellingPrice || pi.price,
+              purchaseAmount: pi.price,
+              salesAmount: pi.sellingPrice || pi.price,
               manufacturingDate: pi.manufacturingDate,
-              expiryDate:       pi.expiryDate,
+              expiryDate: pi.expiryDate,
             },
             $push: {
               batches: {
-                purchaseId:       String(purchase._id),
-                purchaseNumber:   purchase.purchaseNumber,
+                purchaseId: String(purchase._id),
+                purchaseNumber: purchase.purchaseNumber,
                 batchNumber,
                 manufacturingDate: pi.manufacturingDate,
-                expiryDate:       pi.expiryDate,
-                purchasePrice:    pi.price,
-                salePrice:        pi.sellingPrice || pi.price,
-                quantity:         pi.quantity,
-                createdAt:        new Date(),
+                expiryDate: pi.expiryDate,
+                purchasePrice: pi.price,
+                salePrice: pi.sellingPrice || pi.price,
+                quantity: pi.quantity,
+                createdAt: new Date(),
               },
             },
           },
-          { session: dbSession }
+          { session: dbSession },
         );
       }
     }
@@ -176,20 +206,23 @@ export async function POST(req: NextRequest) {
           $inc: { creditBalance: unpaidBalance },
           $push: {
             balanceHistory: {
-              date:          new Date(),
-              amount:        unpaidBalance,
-              type:          "adjustment",
+              date: new Date(),
+              amount: unpaidBalance,
+              type: "adjustment",
               paymentMethod: body.paymentType,
-              note:          `Purchase #${purchaseNumber} — Balance due (Bill: ${body.total}, Paid: ${body.paidAmount || 0}) OMR`,
+              note: `Purchase #${purchaseNumber} — Balance due (Bill: ${body.total}, Paid: ${body.paidAmount || 0}) OMR`,
             },
           },
         },
-        { session: dbSession }
+        { session: dbSession },
       );
     }
 
     await dbSession.commitTransaction();
-    return NextResponse.json({ success: true, data: purchase }, { status: 201 });
+    return NextResponse.json(
+      { success: true, data: purchase },
+      { status: 201 },
+    );
   } catch (err: unknown) {
     await dbSession.abortTransaction();
     console.error("[POST /api/purchases]", err);

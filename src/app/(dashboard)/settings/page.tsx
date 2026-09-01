@@ -1,13 +1,6 @@
 "use client";
 
-import { 
-  Store, 
-  Lock, 
-  Save, 
-  Globe,
-  Loader2,
-  CheckCircle2
-} from "lucide-react";
+import { Store, Lock, Save, Globe, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
@@ -15,7 +8,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription
+  CardDescription,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
@@ -23,8 +16,10 @@ import axios from "axios";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "../../../context/LanguageContext";
 
 export default function SettingsPage() {
+  const { t } = useLanguage();
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState("shop");
   const [loading, setLoading] = useState(true);
@@ -83,7 +78,8 @@ export default function SettingsPage() {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!passwordData.newPassword) return toast.error("Password cannot be empty");
+    if (!passwordData.newPassword)
+      return toast.error("Password cannot be empty");
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       return toast.error("Passwords do not match");
     }
@@ -91,7 +87,7 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       const res = await axios.put(`/api/users/${session?.user?.id}`, {
-        password: passwordData.newPassword
+        password: passwordData.newPassword,
       });
       if (res.data.success) {
         toast.success("Password updated successfully");
@@ -116,8 +112,12 @@ export default function SettingsPage() {
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-[#1A1210] tracking-tight">Settings</h2>
-          <p className="text-[#7A6055] mt-1">Configure your shop profile, taxes and security.</p>
+          <h2 className="text-3xl font-extrabold text-[#1A1210] tracking-tight">
+            {t("settings")}
+          </h2>
+          <p className="text-[#7A6055] mt-1">
+            {t("configureYourShopProfileTaxes")}
+          </p>
         </div>
       </div>
 
@@ -126,35 +126,35 @@ export default function SettingsPage() {
         <div className="lg:col-span-1">
           <Card className="border-[#E5DDD5] shadow-sm overflow-hidden sticky top-24">
             <nav className="flex flex-col p-2">
-              <button 
+              <button
                 onClick={() => setActiveTab("shop")}
                 className={`flex items-center px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === "shop" 
-                    ? "bg-[#2C1810] text-white shadow-md" 
+                  activeTab === "shop"
+                    ? "bg-[#2C1810] text-white shadow-md"
                     : "text-[#7A6055] hover:bg-[#FAF8F6]"
                 }`}
               >
-                <Store size={18} className="mr-3" /> Shop Profile
+                <Store size={18} className="me-3" /> {t("shopProfile")}
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab("taxes")}
                 className={`flex items-center px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === "taxes" 
-                    ? "bg-[#2C1810] text-white shadow-md" 
+                  activeTab === "taxes"
+                    ? "bg-[#2C1810] text-white shadow-md"
                     : "text-[#7A6055] hover:bg-[#FAF8F6]"
                 }`}
               >
-                <Globe size={18} className="mr-3" /> Taxes & Invoicing
+                <Globe size={18} className="me-3" /> {t("taxesInvoicing")}
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab("password")}
                 className={`flex items-center px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === "password" 
-                    ? "bg-[#2C1810] text-white shadow-md" 
+                  activeTab === "password"
+                    ? "bg-[#2C1810] text-white shadow-md"
                     : "text-[#7A6055] hover:bg-[#FAF8F6]"
                 }`}
               >
-                <Lock size={18} className="mr-3" /> Change Password
+                <Lock size={18} className="me-3" /> {t("changePassword")}
               </button>
             </nav>
           </Card>
@@ -164,80 +164,123 @@ export default function SettingsPage() {
         <div className="lg:col-span-3">
           <AnimatePresence mode="wait">
             {activeTab === "shop" && (
-              <motion.div 
+              <motion.div
                 key="shop"
-                initial={{ opacity: 0, x: 20 }} 
+                initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
               >
                 <Card className="border-[#E5DDD5] shadow-lg overflow-hidden">
                   <CardHeader className="bg-gradient-to-r from-white to-[#FAF8F6] border-b border-[#F0EBE6]">
-                    <CardTitle className="text-[#1A1210]">Shop Details</CardTitle>
-                    <CardDescription>This information will appear on your quotations and invoices.</CardDescription>
+                    <CardTitle className="text-[#1A1210]">
+                      {t("shopDetails")}
+                    </CardTitle>
+                    <CardDescription>
+                      {t("thisInformationWillAppearOn")}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 space-y-6">
                     <form onSubmit={handleSaveSettings} className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label className="text-[#1A1210] font-semibold">Shop Name</Label>
-                          <Input 
-                            value={settings.shopName} 
-                            onChange={(e) => setSettings({...settings, shopName: e.target.value})}
-                            placeholder="Diamond Home Furniture" 
-                            className="border-[#E5DDD5] focus:ring-[#C9A84C]" 
+                          <Label className="text-[#1A1210] font-semibold">
+                            {t("shopName")}
+                          </Label>
+                          <Input
+                            value={settings.shopName}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                shopName: e.target.value,
+                              })
+                            }
+                            placeholder={t("diamondHomeFurniture")}
+                            className="border-[#E5DDD5] focus:ring-[#C9A84C]"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[#1A1210] font-semibold">GSTIN</Label>
-                          <Input 
-                            value={settings.gstin} 
-                            onChange={(e) => setSettings({...settings, gstin: e.target.value})}
-                            placeholder="27AAAAA0000A1Z5" 
-                            className="border-[#E5DDD5] focus:ring-[#C9A84C]" 
+                          <Label className="text-[#1A1210] font-semibold">
+                            {t("gstin")}
+                          </Label>
+                          <Input
+                            value={settings.gstin}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                gstin: e.target.value,
+                              })
+                            }
+                            placeholder={t("27aaaaa0000a1z5")}
+                            className="border-[#E5DDD5] focus:ring-[#C9A84C]"
                           />
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
-                        <Label className="text-[#1A1210] font-semibold">Business Address</Label>
-                        <Input 
-                          value={settings.address} 
-                          onChange={(e) => setSettings({...settings, address: e.target.value})}
-                          placeholder="Industrial Estate, Karnataka" 
-                          className="border-[#E5DDD5] focus:ring-[#C9A84C]" 
+                        <Label className="text-[#1A1210] font-semibold">
+                          {t("businessAddress")}
+                        </Label>
+                        <Input
+                          value={settings.address}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              address: e.target.value,
+                            })
+                          }
+                          placeholder={t("industrialEstateKarnataka")}
+                          className="border-[#E5DDD5] focus:ring-[#C9A84C]"
                         />
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label className="text-[#1A1210] font-semibold">Phone Number</Label>
-                          <Input 
-                            value={settings.phone} 
-                            onChange={(e) => setSettings({...settings, phone: e.target.value})}
-                            placeholder="+91 98765 43210" 
-                            className="border-[#E5DDD5] focus:ring-[#C9A84C]" 
+                          <Label className="text-[#1A1210] font-semibold">
+                            {t("phoneNumber")}
+                          </Label>
+                          <Input
+                            value={settings.phone}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                phone: e.target.value,
+                              })
+                            }
+                            placeholder="+91 98765 43210"
+                            className="border-[#E5DDD5] focus:ring-[#C9A84C]"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[#1A1210] font-semibold">Email Address</Label>
-                          <Input 
-                            value={settings.email} 
-                            onChange={(e) => setSettings({...settings, email: e.target.value})}
-                            placeholder="contact@diamondhome.com" 
-                            className="border-[#E5DDD5] focus:ring-[#C9A84C]" 
+                          <Label className="text-[#1A1210] font-semibold">
+                            {t("emailAddress")}
+                          </Label>
+                          <Input
+                            value={settings.email}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                email: e.target.value,
+                              })
+                            }
+                            placeholder={t("contactdiamondhomecom")}
+                            className="border-[#E5DDD5] focus:ring-[#C9A84C]"
                           />
                         </div>
                       </div>
 
                       <div className="pt-4 flex justify-end">
-                        <Button 
-                          type="submit" 
+                        <Button
+                          type="submit"
                           disabled={saving}
                           className="bg-[#C9A84C] hover:bg-[#B8973B] text-white px-8 h-11 rounded-xl shadow-lg shadow-[#C9A84C]/20"
                         >
-                          {saving ? <Loader2 className="animate-spin mr-2" size={18} /> : <Save size={18} className="mr-2" />}
-                          Save Shop Profile
+                          {saving ? (
+                            <Loader2 className="animate-spin me-2" size={18} />
+                          ) : (
+                            <Save size={18} className="me-2" />
+                          )}
+                          {t("saveShopProfile")}
                         </Button>
                       </div>
                     </form>
@@ -247,78 +290,121 @@ export default function SettingsPage() {
             )}
 
             {activeTab === "taxes" && (
-              <motion.div 
+              <motion.div
                 key="taxes"
-                initial={{ opacity: 0, x: 20 }} 
+                initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
               >
                 <Card className="border-[#E5DDD5] shadow-lg overflow-hidden">
                   <CardHeader className="bg-gradient-to-r from-white to-[#FAF8F6] border-b border-[#F0EBE6]">
-                    <CardTitle className="text-[#1A1210]">Invoice & Tax Configuration</CardTitle>
-                    <CardDescription>Prefixes and starting numbers for documents.</CardDescription>
+                    <CardTitle className="text-[#1A1210]">
+                      {t("invoiceTaxConfiguration")}
+                    </CardTitle>
+                    <CardDescription>
+                      {t("prefixesAndStartingNumbersFor")}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 space-y-6">
                     <form onSubmit={handleSaveSettings} className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                          <Label className="text-[#1A1210] font-semibold">Quotation Prefix</Label>
-                          <Input 
-                            value={settings.quotationPrefix} 
-                            onChange={(e) => setSettings({...settings, quotationPrefix: e.target.value})}
-                            placeholder="QT-" 
-                            className="border-[#E5DDD5] focus:ring-[#C9A84C]" 
+                          <Label className="text-[#1A1210] font-semibold">
+                            {t("quotationPrefix")}
+                          </Label>
+                          <Input
+                            value={settings.quotationPrefix}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                quotationPrefix: e.target.value,
+                              })
+                            }
+                            placeholder={t("qt")}
+                            className="border-[#E5DDD5] focus:ring-[#C9A84C]"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[#1A1210] font-semibold">Order Prefix</Label>
-                          <Input 
-                            value={settings.orderPrefix} 
-                            onChange={(e) => setSettings({...settings, orderPrefix: e.target.value})}
-                            placeholder="SO-" 
-                            className="border-[#E5DDD5] focus:ring-[#C9A84C]" 
+                          <Label className="text-[#1A1210] font-semibold">
+                            {t("orderPrefix")}
+                          </Label>
+                          <Input
+                            value={settings.orderPrefix}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                orderPrefix: e.target.value,
+                              })
+                            }
+                            placeholder={t("so")}
+                            className="border-[#E5DDD5] focus:ring-[#C9A84C]"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[#1A1210] font-semibold">Invoice Prefix</Label>
-                          <Input 
-                            value={settings.invoicePrefix} 
-                            onChange={(e) => setSettings({...settings, invoicePrefix: e.target.value})}
-                            placeholder="INV-" 
-                            className="border-[#E5DDD5] focus:ring-[#C9A84C]" 
+                          <Label className="text-[#1A1210] font-semibold">
+                            {t("invoicePrefix")}
+                          </Label>
+                          <Input
+                            value={settings.invoicePrefix}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                invoicePrefix: e.target.value,
+                              })
+                            }
+                            placeholder={t("inv")}
+                            className="border-[#E5DDD5] focus:ring-[#C9A84C]"
                           />
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label className="text-[#1A1210] font-semibold">Tax Rate (GST %)</Label>
-                          <Input 
-                            type="number" 
-                            value={settings.taxRate} 
-                            onChange={(e) => setSettings({...settings, taxRate: parseFloat(e.target.value)})}
-                            className="border-[#E5DDD5] focus:ring-[#C9A84C]" 
+                          <Label className="text-[#1A1210] font-semibold">
+                            {t("taxRateGst")}
+                          </Label>
+                          <Input
+                            type="number"
+                            value={settings.taxRate}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                taxRate: parseFloat(e.target.value),
+                              })
+                            }
+                            className="border-[#E5DDD5] focus:ring-[#C9A84C]"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[#1A1210] font-semibold">Currency Symbol</Label>
-                          <Input 
-                            value={settings.currencySymbol} 
-                            onChange={(e) => setSettings({...settings, currencySymbol: e.target.value})}
-                            className="border-[#E5DDD5] focus:ring-[#C9A84C]" 
+                          <Label className="text-[#1A1210] font-semibold">
+                            {t("currencySymbol")}
+                          </Label>
+                          <Input
+                            value={settings.currencySymbol}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                currencySymbol: e.target.value,
+                              })
+                            }
+                            className="border-[#E5DDD5] focus:ring-[#C9A84C]"
                           />
                         </div>
                       </div>
 
                       <div className="pt-4 flex justify-end">
-                        <Button 
-                          type="submit" 
+                        <Button
+                          type="submit"
                           disabled={saving}
                           className="bg-[#C9A84C] hover:bg-[#B8973B] text-white px-8 h-11 rounded-xl shadow-lg shadow-[#C9A84C]/20"
                         >
-                          {saving ? <Loader2 className="animate-spin mr-2" size={18} /> : <Save size={18} className="mr-2" />}
-                          Save Invoice Settings
+                          {saving ? (
+                            <Loader2 className="animate-spin me-2" size={18} />
+                          ) : (
+                            <Save size={18} className="me-2" />
+                          )}
+                          {t("saveInvoiceSettings")}
                         </Button>
                       </div>
                     </form>
@@ -328,51 +414,73 @@ export default function SettingsPage() {
             )}
 
             {activeTab === "password" && (
-              <motion.div 
+              <motion.div
                 key="password"
-                initial={{ opacity: 0, x: 20 }} 
+                initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
               >
                 <Card className="border-[#E5DDD5] shadow-lg overflow-hidden">
                   <CardHeader className="bg-gradient-to-r from-white to-[#FAF8F6] border-b border-[#F0EBE6]">
-                    <CardTitle className="text-[#1A1210]">Security Settings</CardTitle>
-                    <CardDescription>Update your account password regularly to stay secure.</CardDescription>
+                    <CardTitle className="text-[#1A1210]">
+                      {t("securitySettings")}
+                    </CardTitle>
+                    <CardDescription>
+                      {t("updateYourAccountPasswordRegularly")}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 space-y-6">
                     <form onSubmit={handleChangePassword} className="space-y-6">
                       <div className="max-w-md space-y-4">
                         <div className="space-y-2">
-                          <Label className="text-[#1A1210] font-semibold">New Password</Label>
-                          <Input 
-                            type="password" 
+                          <Label className="text-[#1A1210] font-semibold">
+                            {t("newPassword")}
+                          </Label>
+                          <Input
+                            type="password"
                             value={passwordData.newPassword}
-                            onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
-                            placeholder="••••••••" 
-                            className="border-[#E5DDD5] focus:ring-[#C9A84C]" 
+                            onChange={(e) =>
+                              setPasswordData({
+                                ...passwordData,
+                                newPassword: e.target.value,
+                              })
+                            }
+                            placeholder="••••••••"
+                            className="border-[#E5DDD5] focus:ring-[#C9A84C]"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[#1A1210] font-semibold">Confirm New Password</Label>
-                          <Input 
-                            type="password" 
+                          <Label className="text-[#1A1210] font-semibold">
+                            {t("confirmNewPassword")}
+                          </Label>
+                          <Input
+                            type="password"
                             value={passwordData.confirmPassword}
-                            onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-                            placeholder="••••••••" 
-                            className="border-[#E5DDD5] focus:ring-[#C9A84C]" 
+                            onChange={(e) =>
+                              setPasswordData({
+                                ...passwordData,
+                                confirmPassword: e.target.value,
+                              })
+                            }
+                            placeholder="••••••••"
+                            className="border-[#E5DDD5] focus:ring-[#C9A84C]"
                           />
                         </div>
                       </div>
 
                       <div className="pt-4 flex justify-end">
-                        <Button 
-                          type="submit" 
+                        <Button
+                          type="submit"
                           disabled={saving}
                           className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white px-8 h-11 rounded-xl shadow-lg"
                         >
-                          {saving ? <Loader2 className="animate-spin mr-2" size={18} /> : <CheckCircle2 size={18} className="mr-2" />}
-                          Update Password
+                          {saving ? (
+                            <Loader2 className="animate-spin me-2" size={18} />
+                          ) : (
+                            <CheckCircle2 size={18} className="me-2" />
+                          )}
+                          {t("updatePassword")}
                         </Button>
                       </div>
                     </form>

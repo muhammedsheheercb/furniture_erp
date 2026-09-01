@@ -10,9 +10,15 @@ interface DateFilterContextType {
   clearDates: () => void;
 }
 
-const DateFilterContext = createContext<DateFilterContextType | undefined>(undefined);
+const DateFilterContext = createContext<DateFilterContextType | undefined>(
+  undefined,
+);
 
-export function DateFilterProvider({ children }: { children: React.ReactNode }) {
+export function DateFilterProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [startDate, setStartDateState] = useState<string>("");
   const [endDate, setEndDateState] = useState<string>("");
 

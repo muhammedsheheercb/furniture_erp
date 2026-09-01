@@ -9,12 +9,18 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const UserSchema = new mongoose.Schema(
   {
     name: { type: String },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
     passwordHash: { type: String },
     password: { type: String },
     role: { type: String, enum: ["admin", "staff", "owner"], default: "staff" },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const User = mongoose.models.User || mongoose.model("User", UserSchema);
@@ -25,7 +31,7 @@ async function main() {
   const hashed = await bcrypt.hash("admin123", 12);
   const result = await User.updateOne(
     { email: "admin@example.com" },
-    { $set: { passwordHash: hashed } }
+    { $set: { passwordHash: hashed } },
   );
   console.log("Update result:", result);
   await mongoose.disconnect();

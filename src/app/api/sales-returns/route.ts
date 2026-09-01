@@ -12,7 +12,8 @@ import { authOptions } from "@/lib/auth";
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     await connectDB();
     const { searchParams } = new URL(req.url);
@@ -42,9 +43,9 @@ export async function GET(req: Request) {
       return NextResponse.json({ data: returns });
     }
 
-    const page  = parseInt(searchParams.get("page")  || "1");
+    const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
-    const skip  = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
     const [returns, total] = await Promise.all([
       SaleReturn.find(query)
@@ -53,7 +54,7 @@ export async function GET(req: Request) {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
-      SaleReturn.countDocuments(query)
+      SaleReturn.countDocuments(query),
     ]);
 
     return NextResponse.json({
@@ -61,10 +62,13 @@ export async function GET(req: Request) {
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
     });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch returns" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch returns" },
+      { status: 500 },
+    );
   }
 }
 
@@ -74,7 +78,8 @@ export async function POST(req: Request) {
 
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     await connectDB();
     const body = await req.json();
@@ -85,7 +90,7 @@ export async function POST(req: Request) {
       const dbItem = await Item.findById(it.itemId).session(dbSession);
       enrichedItems.push({
         ...it,
-        itemNumber: it.itemNumber || dbItem?.itemNumber || "—"
+        itemNumber: it.itemNumber || dbItem?.itemNumber || "—",
       });
     }
 
@@ -102,16 +107,18 @@ export async function POST(req: Request) {
       const item = await Item.findById(itemData.itemId).session(dbSession);
       if (item) {
         item.quantity = (item.quantity || 0) + itemData.quantity;
-        
+
         let batchUpdated = false;
         if (itemData.batch && item.batches && item.batches.length > 0) {
-          const batch = item.batches.find((b: any) => b.batchNumber === itemData.batch);
+          const batch = item.batches.find(
+            (b: any) => b.batchNumber === itemData.batch,
+          );
           if (batch) {
             batch.quantity += itemData.quantity;
             batchUpdated = true;
           }
         }
-        
+
         if (!batchUpdated) {
           if (!item.batches) item.batches = [];
           item.batches.push({
@@ -119,36 +126,39 @@ export async function POST(req: Request) {
             purchasePrice: itemData.price,
             salePrice: itemData.price,
             quantity: itemData.quantity,
-            createdAt: new Date()
+            createdAt: new Date(),
           } as any);
         }
-        
+
         await item.save({ session: dbSession });
       }
     }
 
     // 3 — Update customer balance (Sales Return decreases customer's credit balance only if the sale had unpaid balance)
     const sale = await Sale.findById(body.saleId).session(dbSession);
-    const isCreditSale = sale && (sale.paymentType === "credit" || (sale.total - (sale.advancePaid || 0) > 0));
+    const isCreditSale =
+      sale &&
+      (sale.paymentType === "credit" ||
+        sale.total - (sale.advancePaid || 0) > 0);
 
     if (isCreditSale) {
       const refundAmount = Number(body.totalAmount || body.total || 0);
       await Customer.findByIdAndUpdate(
         body.customerId,
-        { 
-          $inc: { 
-            creditBalance: -refundAmount
+        {
+          $inc: {
+            creditBalance: -refundAmount,
           },
-          $push: { 
+          $push: {
             balanceHistory: {
               date: new Date(),
               amount: refundAmount,
               type: "payment", // Returns are like payments (reduce debt)
-              note: `Sales Return #${newReturn.returnNumber} (Original Sale: ${body.saleNumber})`
-            }
-          }
+              note: `Sales Return #${newReturn.returnNumber} (Original Sale: ${body.saleNumber})`,
+            },
+          },
         },
-        { session: dbSession }
+        { session: dbSession },
       );
     }
 

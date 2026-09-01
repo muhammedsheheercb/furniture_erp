@@ -69,7 +69,7 @@ const QuotationSchema = new Schema<IQuotationDocument>(
           height: Number,
           depth: Number,
           weight: Number,
-          unit: String
+          unit: String,
         },
         bom: [
           {
@@ -80,13 +80,13 @@ const QuotationSchema = new Schema<IQuotationDocument>(
             batchNumber: String,
             pricePerUnit: Number,
             quantity: Number,
-            subtotal: Number
-          }
+            subtotal: Number,
+          },
         ],
         variants: {
           colors: [String],
           sizes: [String],
-          finishes: [String]
+          finishes: [String],
         },
         pricing: {
           materialCost: Number,
@@ -95,8 +95,8 @@ const QuotationSchema = new Schema<IQuotationDocument>(
           totalCost: Number,
           profitMargin: Number,
           sellingPrice: Number,
-          discountPrice: Number
-        }
+          discountPrice: Number,
+        },
       },
     ],
     subtotal: { type: Number, required: true, default: 0 },
@@ -122,7 +122,7 @@ const QuotationSchema = new Schema<IQuotationDocument>(
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 QuotationSchema.index({ customerName: "text", quotationNumber: "text" });

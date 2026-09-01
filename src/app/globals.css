@@ -2,36 +2,44 @@
 
 /* ── Design Tokens ─────────────────────────────────── */
 :root {
-  --primary:        #2E2520; /* Rich Walnut / Dark Espresso */
-  --primary-light:  #4A3B32; /* Warm Mahogany Wood */
-  --gold:           #C5A880; /* Champagne Bronze / Satin Brass */
-  --gold-light:     #E5D5C0; /* Soft Brass highlight */
-  --bg:             #F7F4EB; /* Warm Travertine / Natural Linen */
-  --surface:        #FFFFFF; /* White */
-  --border:         #E2DDCE; /* Subtle Warm Sand Border */
-  --text:           #27221F; /* Charcoal Espresso */
-  --text-secondary: #5C544E; /* Warm Slate / Earthy Stone */
-  --text-muted:     #A39B92; /* Muted Taupe */
-  --nav-bg:         #2E2520; /* Deep Mahogany header */
-  --success:        #4F6D59; /* Sage Green */
-  --success-bg:     #F2F6F3;
-  --danger:         #A84343; /* Terracotta Red */
-  --danger-bg:      #FAF1F1;
-  --warning:        #D97706; /* Burnt Amber */
-  --warning-bg:     #FFFBEB;
-  --info:           #4A6B82; /* Muted Slate Blue */
-  --info-bg:        #F0F4F7;
+  --primary: #2e2520; /* Rich Walnut / Dark Espresso */
+  --primary-light: #4a3b32; /* Warm Mahogany Wood */
+  --gold: #c5a880; /* Champagne Bronze / Satin Brass */
+  --gold-light: #e5d5c0; /* Soft Brass highlight */
+  --bg: #f7f4eb; /* Warm Travertine / Natural Linen */
+  --surface: #ffffff; /* White */
+  --border: #e2ddce; /* Subtle Warm Sand Border */
+  --text: #27221f; /* Charcoal Espresso */
+  --text-secondary: #5c544e; /* Warm Slate / Earthy Stone */
+  --text-muted: #a39b92; /* Muted Taupe */
+  --nav-bg: #2e2520; /* Deep Mahogany header */
+  --success: #4f6d59; /* Sage Green */
+  --success-bg: #f2f6f3;
+  --danger: #a84343; /* Terracotta Red */
+  --danger-bg: #faf1f1;
+  --warning: #d97706; /* Burnt Amber */
+  --warning-bg: #fffbeb;
+  --info: #4a6b82; /* Muted Slate Blue */
+  --info-bg: #f0f4f7;
 }
 
 /* ── Base ─────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 body {
   background-color: var(--bg);
   color: var(--text);
-  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+[dir="rtl"] body {
+  font-family: var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* ── Layout helpers ───────────────────────────────── */
@@ -47,7 +55,7 @@ body {
   background-color: var(--surface);
   border-radius: 0.75rem;
   border: 1px solid var(--border);
-  box-shadow: 0 1px 4px rgba(15,23,42,0.04);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
   min-width: 0;
 }
 
@@ -56,7 +64,7 @@ body {
   border-radius: 0.75rem;
   border: 1px solid var(--border);
   background-color: var(--surface);
-  box-shadow: 0 1px 4px rgba(15,23,42,0.04);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
 }
 
 /* ── Table cells ──────────────────────────────────── */
@@ -68,7 +76,7 @@ body {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  background-color: #F1F5F9;
+  background-color: #f1f5f9;
   user-select: none;
   white-space: nowrap;
   border-bottom: 1px solid var(--border);
@@ -82,7 +90,7 @@ body {
 }
 
 .tr-hover:hover {
-  background-color: #F8FAFC;
+  background-color: #f8fafc;
   transition: background-color 150ms;
 }
 
@@ -96,16 +104,18 @@ body {
   font-size: 0.875rem;
   color: var(--text);
   outline: none;
-  transition: border-color 150ms, box-shadow 150ms;
+  transition:
+    border-color 150ms,
+    box-shadow 150ms;
 }
 
 .input-base:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(27,58,45,0.15);
+  box-shadow: 0 0 0 2px rgba(27, 58, 45, 0.15);
 }
 
 .input-base:disabled {
-  background-color: #F0F5F2;
+  background-color: #f0f5f2;
   color: var(--text-muted);
   cursor: not-allowed;
 }
@@ -132,19 +142,44 @@ body {
   scrollbar-color: var(--border) transparent;
 }
 
-.scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
-.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background-color: var(--border);
   border-radius: 3px;
 }
 
 /* ── Status badges ────────────────────────────────── */
-.badge-quote    { background: #EBF5FB; color: #2980B9; border: 1px solid #AED6F1; }
-.badge-sale     { background: #EAFAF1; color: #1E8449; border: 1px solid #A9DFBF; }
-.badge-reject   { background: #FDEDEC; color: #C0392B; border: 1px solid #F5B7B1; }
-.badge-pending  { background: #FEF5E7; color: #CA6F1E; border: 1px solid #FAD7A0; }
-.badge-delivered{ background: #EAFAF1; color: #1E8449; border: 1px solid #A9DFBF; }
+.badge-quote {
+  background: #ebf5fb;
+  color: #2980b9;
+  border: 1px solid #aed6f1;
+}
+.badge-sale {
+  background: #eafaf1;
+  color: #1e8449;
+  border: 1px solid #a9dfbf;
+}
+.badge-reject {
+  background: #fdedec;
+  color: #c0392b;
+  border: 1px solid #f5b7b1;
+}
+.badge-pending {
+  background: #fef5e7;
+  color: #ca6f1e;
+  border: 1px solid #fad7a0;
+}
+.badge-delivered {
+  background: #eafaf1;
+  color: #1e8449;
+  border: 1px solid #a9dfbf;
+}
 
 /* ── Top nav ──────────────────────────────────────── */
 .topnav {
@@ -157,8 +192,8 @@ body {
   z-index: 100;
   display: flex;
   align-items: center;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  box-shadow: 0 2px 16px rgba(0,0,0,0.22);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.22);
 }
 
 /* ── Mobile nav ───────────────────────────────────── */
@@ -178,4 +213,13 @@ body {
   .mobile-nav {
     display: none !important;
   }
+}
+
+/* ── RTL Support for Icons ───────────────────────── */
+[dir="rtl"] .lucide-arrow-right,
+[dir="rtl"] .lucide-arrow-left,
+[dir="rtl"] .lucide-chevron-right,
+[dir="rtl"] .lucide-chevron-left,
+[dir="rtl"] .lucide-undo-2 {
+  transform: scaleX(-1);
 }

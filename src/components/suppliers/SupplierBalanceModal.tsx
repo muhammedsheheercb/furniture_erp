@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { useLanguage } from "../../context/LanguageContext";
 
 const schema = z.object({
   adjustAmount: z.coerce.number().min(0.01, "Amount must be greater than 0"),
@@ -31,6 +32,7 @@ export default function SupplierBalanceModal({
   supplierName,
   loading,
 }: SupplierBalanceModalProps) {
+  const { t } = useLanguage();
   const {
     register,
     handleSubmit,
@@ -58,55 +60,65 @@ export default function SupplierBalanceModal({
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button form="balance-form" type="submit" loading={loading}>
-            Update Balance
+            {t("updateBalance")}
           </Button>
         </>
       }
     >
-      <form id="balance-form" onSubmit={handleSubmit(onSubmitHandler)} className="space-y-4">
+      <form
+        id="balance-form"
+        onSubmit={handleSubmit(onSubmitHandler)}
+        className="space-y-4"
+      >
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">Entry Type</label>
+            <label className="text-sm font-medium">{t("entryType")}</label>
             <select
               {...register("adjustType")}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             >
-              <option value="subtract">Payment Made (Reduces Payable)</option>
-              <option value="add">Balance Adjustment (Increases Payable)</option>
+              <option value="subtract">{t("paymentMadeReducesPayable")}</option>
+              <option value="add">
+                {t("balanceAdjustmentIncreasesPayable")}
+              </option>
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">Payment Method</label>
+            <label className="text-sm font-medium">{t("paymentMethod")}</label>
             <select
               {...register("paymentMethod")}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             >
-              <option value="cash">Cash</option>
-              <option value="bank">Bank / UPI</option>
-              <option value="credit">On Account</option>
+              <option value="cash">{t("cash")}</option>
+              <option value="bank">{t("bankUpi")}</option>
+              <option value="credit">{t("onAccount")}</option>
             </select>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Input 
-            label="Amount" 
-            type="number" 
-            step="0.01" 
-            required 
-            error={errors.adjustAmount?.message} 
-            {...register("adjustAmount")} 
+          <Input
+            label={t("amount")}
+            type="number"
+            step="0.01"
+            required
+            error={errors.adjustAmount?.message}
+            {...register("adjustAmount")}
           />
-          <Input label="Date" type="date" required {...register("date")} />
+          <Input label={t("date")} type="date" required {...register("date")} />
         </div>
 
-        <Input label="Note / Reference" placeholder="e.g. Paid via GPay" {...register("note")} />
-        
+        <Input
+          label={t("noteReference")}
+          placeholder={t("egPaidViaGpay")}
+          {...register("note")}
+        />
+
         <p className="text-[10px] text-gray-500 italic">
-          * Choosing "Payment Made" will subtract the amount from the supplier's total outstanding payable.
+          {t("choosingPaymentMadeWillSubtract")}
         </p>
       </form>
     </Modal>

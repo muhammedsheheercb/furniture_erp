@@ -8,7 +8,11 @@ import { authOptions } from "@/lib/auth";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { searchParams } = new URL(req.url);
@@ -38,7 +42,7 @@ export async function GET(req: NextRequest) {
 
     const [workers, total] = await Promise.all([
       Worker.find(query).sort({ name: 1 }).skip(skip).limit(limit).lean(),
-      Worker.countDocuments(query)
+      Worker.countDocuments(query),
     ]);
 
     // Fetch work stats for each worker
@@ -48,10 +52,7 @@ export async function GET(req: NextRequest) {
         const queryFilter = (statusVal: string) => {
           const filterQuery: any = {
             status: statusVal,
-            $or: [
-              { workerId: w._id },
-              { workerId: workerIdStr }
-            ]
+            $or: [{ workerId: w._id }, { workerId: workerIdStr }],
           };
           if (startDate || endDate) {
             filterQuery.createdAt = {};
@@ -65,11 +66,12 @@ export async function GET(req: NextRequest) {
           return filterQuery;
         };
 
-        const [pendingCount, processingCount, finishedCount] = await Promise.all([
-          Production.countDocuments(queryFilter("pending")),
-          Production.countDocuments(queryFilter("processing")),
-          Production.countDocuments(queryFilter("finished")),
-        ]);
+        const [pendingCount, processingCount, finishedCount] =
+          await Promise.all([
+            Production.countDocuments(queryFilter("pending")),
+            Production.countDocuments(queryFilter("processing")),
+            Production.countDocuments(queryFilter("finished")),
+          ]);
 
         return {
           ...w,
@@ -80,27 +82,34 @@ export async function GET(req: NextRequest) {
             total: pendingCount + processingCount + finishedCount,
           },
         };
-      })
+      }),
     );
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: workersWithStats,
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
     });
   } catch (err) {
     console.error("[GET /api/workers]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { name, contactNumber } = await req.json();
@@ -109,10 +118,16 @@ export async function POST(req: NextRequest) {
     const trimmedContact = (contactNumber || "").trim();
 
     if (!trimmedName) {
-      return NextResponse.json({ success: false, error: "Worker Name is required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Worker Name is required" },
+        { status: 400 },
+      );
     }
     if (!trimmedContact) {
-      return NextResponse.json({ success: false, error: "Contact Number is required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Contact Number is required" },
+        { status: 400 },
+      );
     }
 
     // Check if worker already exists with same name and contact number
@@ -121,7 +136,13 @@ export async function POST(req: NextRequest) {
       contactNumber: trimmedContact,
     });
     if (existing) {
-      return NextResponse.json({ success: false, error: "Worker already exists with this name and contact number" }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Worker already exists with this name and contact number",
+        },
+        { status: 400 },
+      );
     }
 
     const worker = await Worker.create({
@@ -132,6 +153,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: worker });
   } catch (err: any) {
     console.error("[POST /api/workers]", err);
-    return NextResponse.json({ success: false, error: err.message || "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: err.message || "Server error" },
+      { status: 500 },
+    );
   }
 }

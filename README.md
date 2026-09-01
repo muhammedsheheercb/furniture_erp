@@ -3,6 +3,7 @@
 A comprehensive full-stack ERP system built for single owners managing both retail furniture sales and manufacturing units.
 
 ## Tech Stack
+
 - **Framework**: Next.js 14+ (App Router)
 - **Database**: MongoDB Atlas with Mongoose
 - **Auth**: NextAuth.js (Credentials)
@@ -11,6 +12,7 @@ A comprehensive full-stack ERP system built for single owners managing both reta
 - **Forms**: React Hook Form + Zod
 
 ## Features
+
 - **Dashboard**: Real-time KPIs and business overview.
 - **Product Catalog**: Manage SKU, categories, and manufacturing status.
 - **BOM Management**: Define raw materials and labor for manufactured items.
@@ -46,9 +48,12 @@ A comprehensive full-stack ERP system built for single owners managing both reta
    ```
 
 ## Initial Setup
+
 If you are running for the first time without seeding:
+
 - Navigate to `/register` to create your owner account.
 - Once created, you will be redirected to the login page.
 
 ## License
+
 MIT

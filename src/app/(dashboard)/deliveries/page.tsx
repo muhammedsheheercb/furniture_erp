@@ -9,19 +9,18 @@ import {
   Calendar as CalendarIcon,
   CheckCircle2,
   Clock,
-  PackageCheck
+  PackageCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
 import Pagination from "@/components/ui/Pagination";
 import Modal from "@/components/ui/Modal";
+import { useLanguage } from "../../../context/LanguageContext";
 
 export default function DeliveriesPage() {
+  const { t } = useLanguage();
   const { data: session } = useSession();
   const { startDate, endDate } = useDateFilter();
   const isAdmin = session?.user?.role === "admin";
@@ -30,9 +29,13 @@ export default function DeliveriesPage() {
 
   const [deliveries, setDeliveries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"pending" | "delivered">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "delivered">(
+    "pending",
+  );
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null);
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(
+    null,
+  );
   const [driverName, setDriverName] = useState("");
   const [driverContact, setDriverContact] = useState("");
   const [finishing, setFinishing] = useState(false);
@@ -62,8 +65,12 @@ export default function DeliveriesPage() {
     }
   };
 
-  useEffect(() => { setPage(1); }, [startDate, endDate]);
-  useEffect(() => { fetchDeliveries(); }, [startDate, endDate, page]);
+  useEffect(() => {
+    setPage(1);
+  }, [startDate, endDate]);
+  useEffect(() => {
+    fetchDeliveries();
+  }, [startDate, endDate, page]);
 
   const handleMarkDone = (delivery: any) => {
     setSelectedDeliveryId(delivery._id);
@@ -87,7 +94,7 @@ export default function DeliveriesPage() {
       const res = await axios.put(`/api/deliveries/${selectedDeliveryId}`, {
         status: "delivered",
         driverName: driverName.trim(),
-        driverContact: driverContact.trim()
+        driverContact: driverContact.trim(),
       });
       if (res.data.success) {
         toast.success("Delivery marked as completed!");
@@ -101,16 +108,20 @@ export default function DeliveriesPage() {
     }
   };
 
-  const pending   = deliveries.filter(d => d.status !== "delivered");
-  const delivered = deliveries.filter(d => d.status === "delivered");
-  const shown     = activeTab === "pending" ? pending : delivered;
+  const pending = deliveries.filter((d) => d.status !== "delivered");
+  const delivered = deliveries.filter((d) => d.status === "delivered");
+  const shown = activeTab === "pending" ? pending : delivered;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-[#1A1210]">Deliveries</h2>
-          <p className="text-[#7A6055]">Track shipments and logistics schedule.</p>
+          <h2 className="text-3xl font-extrabold text-[#1A1210]">
+            {t("deliveries")}
+          </h2>
+          <p className="text-[#7A6055]">
+            {t("trackShipmentsAndLogisticsSchedule")}
+          </p>
         </div>
       </div>
 
@@ -126,7 +137,7 @@ export default function DeliveriesPage() {
           }`}
         >
           <Clock size={15} />
-          Delivery Pending
+          {t("deliveryPending")}
         </button>
         <button
           type="button"
@@ -138,7 +149,7 @@ export default function DeliveriesPage() {
           }`}
         >
           <PackageCheck size={15} />
-          Delivered
+          {t("delivered")}
         </button>
       </div>
 
@@ -152,51 +163,84 @@ export default function DeliveriesPage() {
           <div className="py-16 text-center text-[#7A6055]">
             <Truck size={40} className="mx-auto mb-3 text-[#E5DDD5]" />
             <p className="font-medium">
-              {activeTab === "pending" ? "No pending deliveries." : "No delivered orders yet."}
+              {activeTab === "pending"
+                ? "No pending deliveries."
+                : "No delivered orders yet."}
             </p>
           </div>
         ) : (
           shown.map((delivery) => (
-            <Card key={delivery._id} className={`border transition-colors ${
-              delivery.status === "delivered"
-                ? "border-[#D0E4D8] bg-[#F7FBF8]"
-                : "border-[#E5DDD5] hover:border-[#C9A84C]"
-            }`}>
+            <Card
+              key={delivery._id}
+              className={`border transition-colors ${
+                delivery.status === "delivered"
+                  ? "border-[#D0E4D8] bg-[#F7FBF8]"
+                  : "border-[#E5DDD5] hover:border-[#C9A84C]"
+              }`}
+            >
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row justify-between gap-6">
                   <div className="flex gap-4">
-                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${
-                      delivery.status === "delivered"
-                        ? "bg-[#E8F0EC] text-[#1B3A2D]"
-                        : "bg-[#FAF8F6] text-[#8B5E3C]"
-                    }`}>
-                      {delivery.status === "delivered" ? <CheckCircle2 size={24} /> : <Truck size={24} />}
+                    <div
+                      className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${
+                        delivery.status === "delivered"
+                          ? "bg-[#E8F0EC] text-[#1B3A2D]"
+                          : "bg-[#FAF8F6] text-[#8B5E3C]"
+                      }`}
+                    >
+                      {delivery.status === "delivered" ? (
+                        <CheckCircle2 size={24} />
+                      ) : (
+                        <Truck size={24} />
+                      )}
                     </div>
                     <div>
                       <h4 className="font-bold text-[#1A1210] flex items-center gap-2">
-                        Order {delivery.saleNumber}
-                        <Badge variant={delivery.status === "delivered" ? "success" : "warning"}>
-                          {delivery.status === "delivered" ? "Delivered" : "Pending"}
+                        {t("order")}
+                        {delivery.saleNumber}
+                        <Badge
+                          variant={
+                            delivery.status === "delivered"
+                              ? "success"
+                              : "warning"
+                          }
+                        >
+                          {delivery.status === "delivered"
+                            ? "Delivered"
+                            : "Pending"}
                         </Badge>
                       </h4>
-                      <p className="text-sm font-medium text-[#7A6055] mt-1">{delivery.customerName}</p>
+                      <p className="text-sm font-medium text-[#7A6055] mt-1">
+                        {delivery.customerName}
+                      </p>
                       <div className="mt-2 space-y-1">
                         {delivery.items.map((it: any, i: number) => (
-                          <p key={i} className="text-xs text-[#A89080]">{it.itemName} (x{it.quantity})</p>
+                          <p key={i} className="text-xs text-[#A89080]">
+                            {it.itemName} {t("x")}
+                            {it.quantity})
+                          </p>
                         ))}
                       </div>
                       {(delivery.driverName || delivery.driverContact) && (
                         <div className="mt-3 pt-3 border-t border-[#E5DDD5]/40 space-y-1 max-w-xs">
                           {delivery.driverName && (
                             <p className="text-xs text-[#7A6055] flex justify-between gap-4">
-                              <span className="font-semibold text-[#8B5E3C]">Driver Name:</span>
-                              <span className="font-bold text-[#1A1210]">{delivery.driverName}</span>
+                              <span className="font-semibold text-[#8B5E3C]">
+                                {t("driverName")}
+                              </span>
+                              <span className="font-bold text-[#1A1210]">
+                                {delivery.driverName}
+                              </span>
                             </p>
                           )}
                           {delivery.driverContact && (
                             <p className="text-xs text-[#7A6055] flex justify-between gap-4">
-                              <span className="font-semibold text-[#8B5E3C]">Driver Mobile:</span>
-                              <span className="font-bold text-indigo-600 font-mono">{delivery.driverContact}</span>
+                              <span className="font-semibold text-[#8B5E3C]">
+                                {t("driverMobile")}
+                              </span>
+                              <span className="font-bold text-indigo-600 font-mono">
+                                {delivery.driverContact}
+                              </span>
                             </p>
                           )}
                         </div>
@@ -207,10 +251,12 @@ export default function DeliveriesPage() {
                   <div className="flex flex-col md:items-end justify-center gap-2">
                     <div className="text-sm font-bold text-[#1A1210] flex items-center gap-2">
                       <CalendarIcon size={16} className="text-[#C9A84C]" />
-                      {delivery.deliveryDate ? formatDate(delivery.deliveryDate) : "No date set"}
+                      {delivery.deliveryDate
+                        ? formatDate(delivery.deliveryDate)
+                        : "No date set"}
                     </div>
                     {delivery.deliveryAddress && (
-                      <p className="text-xs text-[#A89080] text-right max-w-48 truncate">
+                      <p className="text-xs text-[#A89080] text-end max-w-48 truncate">
                         {delivery.deliveryAddress}
                       </p>
                     )}
@@ -220,12 +266,13 @@ export default function DeliveriesPage() {
                         className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
                         size="sm"
                       >
-                        <CheckCircle2 size={16} className="mr-2" /> Mark as Done
+                        <CheckCircle2 size={16} className="me-2" />{" "}
+                        {t("markAsDone")}
                       </Button>
                     )}
                     {delivery.status === "delivered" && (
                       <span className="text-xs font-semibold text-[#1B3A2D] flex items-center gap-1">
-                        <CheckCircle2 size={13} /> Completed
+                        <CheckCircle2 size={13} /> {t("completed")}
                       </span>
                     )}
                   </div>
@@ -238,51 +285,67 @@ export default function DeliveriesPage() {
 
       {totalPages > 1 && (
         <div className="bg-white rounded-xl border border-[#E5DDD5]">
-          <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            limit={limit}
+            onPageChange={setPage}
+          />
         </div>
       )}
 
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Complete Delivery Assignment"
+        title={t("completeDeliveryAssignment")}
         size="md"
         footer={
           <>
-            <Button variant="outline" onClick={() => setModalOpen(false)} disabled={finishing}>Cancel</Button>
-            <Button onClick={handleConfirmDelivery} loading={finishing} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              Confirm Delivery Completed
+            <Button
+              variant="outline"
+              onClick={() => setModalOpen(false)}
+              disabled={finishing}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              onClick={handleConfirmDelivery}
+              loading={finishing}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {t("confirmDeliveryCompleted")}
             </Button>
           </>
         }
       >
         <div className="space-y-4 py-2">
           <p className="text-sm text-[#7A6055]">
-            Please enter or verify the delivery details below to finalize the shipment dispatch.
+            {t("pleaseEnterOrVerifyThe")}
           </p>
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-semibold text-[#7A6055] mb-1">
-                Driver Name *
+                {t("driverName")}
               </label>
               <input
                 type="text"
-                placeholder="e.g. John Doe, Salim Al-Farsi..."
+                placeholder={t("egJohnDoeSalimAlfarsi")}
                 value={driverName}
-                onChange={e => setDriverName(e.target.value)}
+                onChange={(e) => setDriverName(e.target.value)}
                 className="w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 font-medium"
                 required
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-[#7A6055] mb-1">
-                Driver Contact / Mobile Number *
+                {t("driverContactMobileNumber")}
               </label>
               <input
                 type="text"
-                placeholder="e.g. +968 9123 4567..."
+                placeholder={t("eg96891234567")}
                 value={driverContact}
-                onChange={e => setDriverContact(e.target.value)}
+                onChange={(e) => setDriverContact(e.target.value)}
                 className="w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 font-medium"
                 required
               />

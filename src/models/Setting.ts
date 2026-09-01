@@ -27,7 +27,7 @@ const SettingSchema = new Schema<ISettingDocument>(
     taxRate: { type: Number, default: 18 },
     currencySymbol: { type: String, default: "₹" },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 if (process.env.NODE_ENV === "development") {
@@ -35,6 +35,7 @@ if (process.env.NODE_ENV === "development") {
 }
 
 const Setting: Model<ISettingDocument> =
-  mongoose.models.Setting ?? mongoose.model<ISettingDocument>("Setting", SettingSchema);
+  mongoose.models.Setting ??
+  mongoose.model<ISettingDocument>("Setting", SettingSchema);
 
 export default Setting;

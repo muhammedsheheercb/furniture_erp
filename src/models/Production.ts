@@ -5,42 +5,42 @@ export interface IProductionDocument extends Document {
   saleNumber: string;
   customerId: mongoose.Types.ObjectId;
   customerName: string;
-    items: {
-      itemName: string;
+  items: {
+    itemName: string;
+    quantity: number;
+    color?: string;
+    material?: string;
+    size?: string;
+    status: "pending" | "processing" | "finished";
+    dimensions?: {
+      width?: number;
+      height?: number;
+      depth?: number;
+      weight?: number;
+      unit?: string;
+    };
+    bom?: {
+      materialId: string;
+      materialName: string;
+      materialCode: string;
+      unit: string;
       quantity: number;
-      color?: string;
-      material?: string;
-      size?: string;
-      status: "pending" | "processing" | "finished";
-      dimensions?: {
-        width?: number;
-        height?: number;
-        depth?: number;
-        weight?: number;
-        unit?: string;
-      };
-      bom?: {
-        materialId: string;
-        materialName: string;
-        materialCode: string;
-        unit: string;
-        quantity: number;
-      }[];
-      variants?: {
-        colors: string[];
-        sizes: string[];
-        finishes: string[];
-      };
-      pricing?: {
-        materialCost: number;
-        laborCost: number;
-        extraCost: number;
-        totalCost: number;
-        profitMargin: number;
-        sellingPrice: number;
-        discountPrice?: number;
-      };
     }[];
+    variants?: {
+      colors: string[];
+      sizes: string[];
+      finishes: string[];
+    };
+    pricing?: {
+      materialCost: number;
+      laborCost: number;
+      extraCost: number;
+      totalCost: number;
+      profitMargin: number;
+      sellingPrice: number;
+      discountPrice?: number;
+    };
+  }[];
   status: "pending" | "processing" | "finished";
   remarks?: string;
   deliveryDate?: Date;
@@ -55,7 +55,11 @@ const ProductionSchema = new Schema<IProductionDocument>(
   {
     saleId: { type: Schema.Types.ObjectId, ref: "Sale", required: true },
     saleNumber: { type: String, required: true },
-    customerId: { type: Schema.Types.ObjectId, ref: "Customer", required: true },
+    customerId: {
+      type: Schema.Types.ObjectId,
+      ref: "Customer",
+      required: true,
+    },
     customerName: { type: String, required: true },
     items: [
       {
@@ -64,13 +68,17 @@ const ProductionSchema = new Schema<IProductionDocument>(
         color: String,
         material: String,
         size: String,
-        status: { type: String, enum: ["pending", "processing", "finished"], default: "pending" },
+        status: {
+          type: String,
+          enum: ["pending", "processing", "finished"],
+          default: "pending",
+        },
         dimensions: {
           width: Number,
           height: Number,
           depth: Number,
           weight: Number,
-          unit: String
+          unit: String,
         },
         bom: [
           {
@@ -81,13 +89,13 @@ const ProductionSchema = new Schema<IProductionDocument>(
             batchNumber: String,
             pricePerUnit: Number,
             quantity: Number,
-            subtotal: Number
-          }
+            subtotal: Number,
+          },
         ],
         variants: {
           colors: [String],
           sizes: [String],
-          finishes: [String]
+          finishes: [String],
         },
         pricing: {
           materialCost: Number,
@@ -96,18 +104,22 @@ const ProductionSchema = new Schema<IProductionDocument>(
           totalCost: Number,
           profitMargin: Number,
           sellingPrice: Number,
-          discountPrice: Number
-        }
+          discountPrice: Number,
+        },
       },
     ],
-    status: { type: String, enum: ["pending", "processing", "finished"], default: "pending" },
+    status: {
+      type: String,
+      enum: ["pending", "processing", "finished"],
+      default: "pending",
+    },
     remarks: String,
     deliveryDate: Date,
     workerId: { type: Schema.Types.ObjectId, ref: "Worker" },
     workerName: String,
     workerContact: String,
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 if (mongoose.models.Production) {

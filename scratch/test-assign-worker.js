@@ -16,7 +16,10 @@ async function main() {
   // Get a worker
   let worker = await Worker.findOne({});
   if (!worker) {
-    worker = await Worker.create({ name: "Test Worker", contactNumber: "+968 1234 5678" });
+    worker = await Worker.create({
+      name: "Test Worker",
+      contactNumber: "+968 1234 5678",
+    });
     console.log("Created test worker:", worker);
   } else {
     console.log("Using existing worker:", worker);
@@ -34,7 +37,7 @@ async function main() {
     _id: prod._id,
     workerId: prod.workerId,
     workerName: prod.workerName,
-    workerContact: prod.workerContact
+    workerContact: prod.workerContact,
   });
 
   // Assign
@@ -52,7 +55,7 @@ async function main() {
     _id: rawDoc._id,
     workerId: rawDoc.workerId,
     workerName: rawDoc.workerName,
-    workerContact: rawDoc.workerContact
+    workerContact: rawDoc.workerContact,
   });
 
   await mongoose.disconnect();

@@ -54,8 +54,15 @@ const CustomerSchema = new Schema<ICustomerDocument>(
       {
         date: { type: Date, default: Date.now },
         amount: { type: Number, required: true },
-        type: { type: String, enum: ["payment", "adjustment"], default: "payment" },
-        paymentMethod: { type: String, enum: ["cash", "bank", "credit", "return", "other"] },
+        type: {
+          type: String,
+          enum: ["payment", "adjustment"],
+          default: "payment",
+        },
+        paymentMethod: {
+          type: String,
+          enum: ["cash", "bank", "credit", "return", "other"],
+        },
         note: { type: String },
       },
     ],
@@ -68,7 +75,7 @@ const CustomerSchema = new Schema<ICustomerDocument>(
       ref: "User",
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 CustomerSchema.index({ name: "text", customerNumber: "text", mobile: "text" });

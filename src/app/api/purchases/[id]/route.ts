@@ -13,7 +13,11 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
@@ -21,12 +25,19 @@ export async function GET(_req: NextRequest, { params }: Params) {
       .populate("createdBy", "name")
       .populate("updatedBy", "name")
       .lean();
-    if (!purchase) return NextResponse.json({ success: false, error: "Purchase not found" }, { status: 404 });
+    if (!purchase)
+      return NextResponse.json(
+        { success: false, error: "Purchase not found" },
+        { status: 404 },
+      );
 
     return NextResponse.json({ success: true, data: purchase });
   } catch (err) {
     console.error("[GET /api/purchases/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -34,26 +45,41 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
     const body = await req.json();
 
     const oldPurchase = await Purchase.findById(id);
-    if (!oldPurchase) return NextResponse.json({ success: false, error: "Purchase not found" }, { status: 404 });
+    if (!oldPurchase)
+      return NextResponse.json(
+        { success: false, error: "Purchase not found" },
+        { status: 404 },
+      );
 
     // Reverse old stock impact
     for (const item of oldPurchase.items) {
       if (item.itemType === "material" && item.materialId) {
-        await Material.findByIdAndUpdate(item.materialId, { $inc: { currentStock: -item.quantity } });
+        await Material.findByIdAndUpdate(item.materialId, {
+          $inc: { currentStock: -item.quantity },
+        });
       } else if (item.itemId) {
-        await Item.findByIdAndUpdate(item.itemId, { $inc: { quantity: -item.quantity } });
+        await Item.findByIdAndUpdate(item.itemId, {
+          $inc: { quantity: -item.quantity },
+        });
       }
     }
 
     body.updatedBy = session.user.id;
-    const purchase = await Purchase.findByIdAndUpdate(id, body, { new: true, runValidators: true });
+    const purchase = await Purchase.findByIdAndUpdate(id, body, {
+      new: true,
+      runValidators: true,
+    });
 
     // Apply new stock impact
     if (purchase) {
@@ -67,10 +93,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
           await Item.findByIdAndUpdate(item.itemId, {
             $inc: { quantity: item.quantity },
             $set: {
-              purchaseAmount:   item.price,
-              salesAmount:      item.sellingPrice || item.price,
+              purchaseAmount: item.price,
+              salesAmount: item.sellingPrice || item.price,
               manufacturingDate: item.manufacturingDate,
-              expiryDate:       item.expiryDate,
+              expiryDate: item.expiryDate,
             },
           });
         }
@@ -89,20 +115,32 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
 
     const purchase = await Purchase.findById(id);
-    if (!purchase) return NextResponse.json({ success: false, error: "Purchase not found" }, { status: 404 });
+    if (!purchase)
+      return NextResponse.json(
+        { success: false, error: "Purchase not found" },
+        { status: 404 },
+      );
 
     // Reverse stock impact
     for (const item of purchase.items) {
       if (item.itemType === "material" && item.materialId) {
-        await Material.findByIdAndUpdate(item.materialId, { $inc: { currentStock: -item.quantity } });
+        await Material.findByIdAndUpdate(item.materialId, {
+          $inc: { currentStock: -item.quantity },
+        });
       } else if (item.itemId) {
-        await Item.findByIdAndUpdate(item.itemId, { $inc: { quantity: -item.quantity } });
+        await Item.findByIdAndUpdate(item.itemId, {
+          $inc: { quantity: -item.quantity },
+        });
       }
     }
 
@@ -112,10 +150,10 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
         $inc: { creditBalance: -purchase.total },
         $push: {
           balanceHistory: {
-            date:   new Date(),
+            date: new Date(),
             amount: purchase.total,
-            type:   "payment",
-            note:   `CANCELLED Purchase #${purchase.purchaseNumber}`,
+            type: "payment",
+            note: `CANCELLED Purchase #${purchase.purchaseNumber}`,
           },
         },
       });
@@ -125,6 +163,9 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     return NextResponse.json({ success: true, message: "Purchase deleted" });
   } catch (err) {
     console.error("[DELETE /api/purchases/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }

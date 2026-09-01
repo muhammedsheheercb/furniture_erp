@@ -7,7 +7,11 @@ import { authOptions } from "@/lib/auth";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
 
@@ -25,7 +29,7 @@ export async function GET(req: NextRequest) {
       query.$or = [
         { customerName: { $regex: search, $options: "i" } },
         { returnNumber: { $regex: search, $options: "i" } },
-        { "items.itemName": { $regex: search, $options: "i" } }
+        { "items.itemName": { $regex: search, $options: "i" } },
       ];
     }
     if (startDate || endDate) {
@@ -38,14 +42,13 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const returns = await SaleReturn.find(query)
-      .sort({ date: -1 })
-      .lean();
+    const returns = await SaleReturn.find(query).sort({ date: -1 }).lean();
 
     const returnedItems: any[] = [];
     returns.forEach((ret: any) => {
       ret.items.forEach((item: any) => {
-        const matchesSearch = !search || 
+        const matchesSearch =
+          !search ||
           ret.customerName.toLowerCase().includes(search.toLowerCase()) ||
           ret.returnNumber.toLowerCase().includes(search.toLowerCase()) ||
           item.itemName.toLowerCase().includes(search.toLowerCase());
@@ -62,7 +65,7 @@ export async function GET(req: NextRequest) {
             price: item.price,
             batch: item.batch || "—",
             reason: item.reason || ret.reason || "—",
-            total: item.total
+            total: item.total,
           });
         }
       });
@@ -78,11 +81,14 @@ export async function GET(req: NextRequest) {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (err: any) {
     console.error("[GET /api/items/returned]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }

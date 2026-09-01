@@ -21,15 +21,19 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     await connectDB();
     const { id } = await params;
-    
+
     // 1 — Get the existing return record
     const saleReturn = await SaleReturn.findById(id).session(dbSession);
     if (!saleReturn) {
-      return NextResponse.json({ error: "Return record not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Return record not found" },
+        { status: 404 },
+      );
     }
 
     // 2 — Reverse inventory (Decrease item quantity - Revert the return increase)
@@ -37,31 +41,34 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
       await Item.findByIdAndUpdate(
         item.itemId,
         { $inc: { quantity: -item.quantity } },
-        { session: dbSession }
+        { session: dbSession },
       );
     }
 
     // 3 — Revert customer balance (Add back the refund amount to their debt only if the sale was a credit sale)
     const sale = await Sale.findById(saleReturn.saleId).session(dbSession);
-    const isCreditSale = sale && (sale.paymentType === "credit" || (sale.total - (sale.advancePaid || 0) > 0));
+    const isCreditSale =
+      sale &&
+      (sale.paymentType === "credit" ||
+        sale.total - (sale.advancePaid || 0) > 0);
 
     if (isCreditSale) {
       const refundAmount = Number(saleReturn.totalAmount || 0);
       await Customer.findByIdAndUpdate(
         saleReturn.customerId,
-        { 
+        {
           $inc: { creditBalance: refundAmount },
-          $push: { 
+          $push: {
             balanceHistory: {
               date: new Date(),
               amount: refundAmount,
               type: "adjustment", // Deleting a return is an adjustment (debt restored)
               paymentMethod: "credit",
-              note: `Reversed Sale Return #${saleReturn.returnNumber}`
-            }
-          }
+              note: `Reversed Sale Return #${saleReturn.returnNumber}`,
+            },
+          },
         },
-        { session: dbSession }
+        { session: dbSession },
       );
     }
 
@@ -85,7 +92,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     await connectDB();
     const { id } = await params;
@@ -93,48 +101,75 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
     // 1 — Revert OLD return impact
     const oldReturn = await SaleReturn.findById(id).session(dbSession);
-    if (!oldReturn) return NextResponse.json({ error: "Return record not found" }, { status: 404 });
+    if (!oldReturn)
+      return NextResponse.json(
+        { error: "Return record not found" },
+        { status: 404 },
+      );
 
     // Reverse old inventory impact
     for (const item of oldReturn.items) {
-      await Item.findByIdAndUpdate(item.itemId, { $inc: { quantity: -item.quantity } }, { session: dbSession });
+      await Item.findByIdAndUpdate(
+        item.itemId,
+        { $inc: { quantity: -item.quantity } },
+        { session: dbSession },
+      );
     }
     // Load original sale to see if it was credit
     const sale = await Sale.findById(oldReturn.saleId).session(dbSession);
-    const isCreditSale = sale && (sale.paymentType === "credit" || (sale.total - (sale.advancePaid || 0) > 0));
+    const isCreditSale =
+      sale &&
+      (sale.paymentType === "credit" ||
+        sale.total - (sale.advancePaid || 0) > 0);
 
     if (isCreditSale) {
       // Reverse old customer balance impact
-      await Customer.findByIdAndUpdate(oldReturn.customerId, { $inc: { creditBalance: oldReturn.totalAmount } }, { session: dbSession });
+      await Customer.findByIdAndUpdate(
+        oldReturn.customerId,
+        { $inc: { creditBalance: oldReturn.totalAmount } },
+        { session: dbSession },
+      );
     }
 
     // 2 — Apply NEW return impact
     // Update inventory for new items
     for (const item of body.items) {
-      await Item.findByIdAndUpdate(item.itemId, { $inc: { quantity: item.quantity } }, { session: dbSession });
+      await Item.findByIdAndUpdate(
+        item.itemId,
+        { $inc: { quantity: item.quantity } },
+        { session: dbSession },
+      );
     }
-    
+
     if (isCreditSale) {
       // Update customer balance for new total
       const newRefundAmount = Number(body.totalAmount || 0);
-      await Customer.findByIdAndUpdate(body.customerId, { 
-        $inc: { creditBalance: -newRefundAmount },
-        $push: { 
-          balanceHistory: {
-            date: new Date(),
-            amount: newRefundAmount,
-            type: "payment",
-            note: `Updated Sales Return #${oldReturn.returnNumber}`
-          }
-        }
-      }, { session: dbSession });
+      await Customer.findByIdAndUpdate(
+        body.customerId,
+        {
+          $inc: { creditBalance: -newRefundAmount },
+          $push: {
+            balanceHistory: {
+              date: new Date(),
+              amount: newRefundAmount,
+              type: "payment",
+              note: `Updated Sales Return #${oldReturn.returnNumber}`,
+            },
+          },
+        },
+        { session: dbSession },
+      );
     }
 
     // 3 — Update the record
-    const updated = await SaleReturn.findByIdAndUpdate(id, {
-      ...body,
-      updatedBy: session.user.id
-    }, { session: dbSession, new: true });
+    const updated = await SaleReturn.findByIdAndUpdate(
+      id,
+      {
+        ...body,
+        updatedBy: session.user.id,
+      },
+      { session: dbSession, new: true },
+    );
 
     await dbSession.commitTransaction();
     return NextResponse.json(updated);

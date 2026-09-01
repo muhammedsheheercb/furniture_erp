@@ -9,8 +9,8 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email:    { label: "Name or Email", type: "text" },
-        password: { label: "Password",      type: "password" },
+        email: { label: "Name or Email", type: "text" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -20,14 +20,17 @@ export const authOptions: NextAuthOptions = {
         try {
           await dbConnect();
           const identifier = credentials.email.trim();
-          
+
           // Search by name (case-insensitive) OR email
-          const user = await (User as any).findOne({
-            $or: [
-              { email: identifier.toLowerCase() },
-              { name:  { $regex: new RegExp(`^${identifier}$`, "i") } }
-            ]
-          }).select("+passwordHash +password").lean();
+          const user = await (User as any)
+            .findOne({
+              $or: [
+                { email: identifier.toLowerCase() },
+                { name: { $regex: new RegExp(`^${identifier}$`, "i") } },
+              ],
+            })
+            .select("+passwordHash +password")
+            .lean();
 
           if (!user) {
             console.warn(`[authorize] No user found: ${identifier}`);
@@ -36,7 +39,7 @@ export const authOptions: NextAuthOptions = {
 
           const isValid = await bcrypt.compare(
             credentials.password,
-            user.passwordHash || user.password
+            user.passwordHash || user.password,
           );
 
           if (!isValid) {
@@ -82,7 +85,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
-    error:  "/login",
+    error: "/login",
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

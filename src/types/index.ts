@@ -1,6 +1,14 @@
 export type PaymentType = "cash" | "bank" | "credit";
 export type UserRole = "admin" | "staff";
-export type UnitType = "pcs" | "meters" | "sq.meters" | "kg" | "liters" | "box" | "set" | "roll";
+export type UnitType =
+  | "pcs"
+  | "meters"
+  | "sq.meters"
+  | "kg"
+  | "liters"
+  | "box"
+  | "set"
+  | "roll";
 export type QuotationStatus = "quote" | "sale" | "reject";
 export type DeliveryStatus = "pending" | "delivered" | "partial";
 

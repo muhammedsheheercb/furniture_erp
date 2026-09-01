@@ -13,7 +13,11 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
@@ -21,11 +25,15 @@ export async function GET(_req: NextRequest, { params }: Params) {
       .populate("createdBy", "name")
       .populate("updatedBy", "name")
       .lean();
-    if (!customer) return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
+    if (!customer)
+      return NextResponse.json(
+        { success: false, error: "Customer not found" },
+        { status: 404 },
+      );
 
     // For safety, initialize fields if they missing
     const history = customer.balanceHistory || [];
-    const credit  = customer.creditBalance || 0;
+    const credit = customer.creditBalance || 0;
     const opening = customer.openingBalance || 0;
 
     // AUTO-POPULATE FIX: Ensure history contains records if there is a balance.
@@ -36,22 +44,25 @@ export async function GET(_req: NextRequest, { params }: Params) {
         amount: Math.abs(opening !== 0 ? opening : credit),
         type: (opening !== 0 ? opening : credit) > 0 ? "adjustment" : "payment",
         note: opening !== 0 ? "Opening Balance" : "Legacy Balance Adjustment",
-        paymentMethod: "credit" 
+        paymentMethod: "credit",
       } as any);
     }
 
-    return NextResponse.json({ 
-        success: true, 
-        data: {
-          ...customer,
-          openingBalance: opening,
-          creditBalance: credit,
-          balanceHistory: history.length > 0 ? history : [] 
-        } 
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...customer,
+        openingBalance: opening,
+        creditBalance: credit,
+        balanceHistory: history.length > 0 ? history : [],
+      },
     });
   } catch (err) {
     console.error("[GET /api/customers/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -59,7 +70,11 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
@@ -71,12 +86,17 @@ export async function PUT(req: NextRequest, { params }: Params) {
       const amount = Number(adjustAmount);
 
       const customer = await Customer.findById(id);
-      if (!customer) return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
+      if (!customer)
+        return NextResponse.json(
+          { success: false, error: "Customer not found" },
+          { status: 404 },
+        );
 
       if (!customer.balanceHistory) customer.balanceHistory = [];
 
       const prevCredit = customer.creditBalance || 0;
-      customer.creditBalance = adjustType === "add" ? prevCredit + amount : prevCredit - amount;
+      customer.creditBalance =
+        adjustType === "add" ? prevCredit + amount : prevCredit - amount;
 
       customer.balanceHistory.push({
         date: date ? new Date(date) : new Date(),
@@ -103,39 +123,54 @@ export async function PUT(req: NextRequest, { params }: Params) {
       return NextResponse.json({ success: true, data: customer });
     }
 
-    const { creditBalance, balanceHistory: _bh, openingBalance, ...updates } = body;
-    
+    const {
+      creditBalance,
+      balanceHistory: _bh,
+      openingBalance,
+      ...updates
+    } = body;
+
     const customer = await Customer.findById(id);
-    if (!customer) return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
+    if (!customer)
+      return NextResponse.json(
+        { success: false, error: "Customer not found" },
+        { status: 404 },
+      );
 
     // 1. Handle Opening Balance Correction
-    if (openingBalance !== undefined && openingBalance !== customer.openingBalance) {
+    if (
+      openingBalance !== undefined &&
+      openingBalance !== customer.openingBalance
+    ) {
       const diff = openingBalance - (customer.openingBalance || 0);
       customer.openingBalance = openingBalance;
       customer.creditBalance = (customer.creditBalance || 0) + diff;
-      
+
       if (!customer.balanceHistory) customer.balanceHistory = [];
       customer.balanceHistory.push({
         date: new Date(),
         amount: Math.abs(diff),
         type: diff > 0 ? "adjustment" : "payment",
         paymentMethod: "credit",
-        note: "Opening Balance Correction"
+        note: "Opening Balance Correction",
       });
     }
 
     // 2. Handle Current Balance Update (if specifically provided)
-    if (creditBalance !== undefined && creditBalance !== customer.creditBalance) {
+    if (
+      creditBalance !== undefined &&
+      creditBalance !== customer.creditBalance
+    ) {
       const diff = Number(creditBalance) - (customer.creditBalance || 0);
       customer.creditBalance = Number(creditBalance);
-      
+
       if (!customer.balanceHistory) customer.balanceHistory = [];
       customer.balanceHistory.push({
         date: new Date(),
         amount: Math.abs(diff),
         type: diff > 0 ? "adjustment" : "payment",
         paymentMethod: "credit",
-        note: "Balance Update (Edit Profile)"
+        note: "Balance Update (Edit Profile)",
       });
     }
 
@@ -155,16 +190,27 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
     const customer = await Customer.findByIdAndDelete(id);
-    if (!customer) return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
+    if (!customer)
+      return NextResponse.json(
+        { success: false, error: "Customer not found" },
+        { status: 404 },
+      );
 
     return NextResponse.json({ success: true, message: "Customer deleted" });
   } catch (err) {
     console.error("[DELETE /api/customers/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }

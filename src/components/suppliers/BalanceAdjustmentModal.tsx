@@ -4,6 +4,7 @@ import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { toast } from "react-hot-toast";
+import { useLanguage } from "../../context/LanguageContext";
 
 interface BalanceAdjustmentModalProps {
   open: boolean;
@@ -14,9 +15,15 @@ interface BalanceAdjustmentModalProps {
   onSuccess: () => void;
 }
 
-export default function BalanceAdjustmentModal({ 
-  open, onClose, entityId, entityName, type, onSuccess 
+export default function BalanceAdjustmentModal({
+  open,
+  onClose,
+  entityId,
+  entityName,
+  type,
+  onSuccess,
 }: BalanceAdjustmentModalProps) {
+  const { t } = useLanguage();
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,15 +33,18 @@ export default function BalanceAdjustmentModal({
     setLoading(true);
 
     try {
-      const endpoint = type === "customer" ? `/api/customers/${entityId}` : `/api/suppliers/${entityId}`;
+      const endpoint =
+        type === "customer"
+          ? `/api/customers/${entityId}`
+          : `/api/suppliers/${entityId}`;
       const res = await fetch(endpoint, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           adjustment: {
             amount: parseFloat(amount),
-            note
-          }
+            note,
+          },
         }),
       });
 
@@ -56,28 +66,36 @@ export default function BalanceAdjustmentModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={`Adjust Balance: ${entityName}`}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Adjust Balance: ${entityName}`}
+    >
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
-          label="Amount (OMR)"
+          label={t("amountOmr")}
           type="number"
           step="0.001"
-          placeholder="e.g. 50.000 or -25.500"
+          placeholder={t("eg50000Or25500")}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           required
           hint="Use positive for credit increase, negative for payment/decrease"
         />
         <Input
-          label="Description / Note"
-          placeholder="Reason for adjustment..."
+          label={t("descriptionNote")}
+          placeholder={t("reasonForAdjustment")}
           value={note}
           onChange={(e) => setNote(e.target.value)}
           required
         />
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-          <Button type="submit" loading={loading}>Update Balance</Button>
+          <Button variant="outline" type="button" onClick={onClose}>
+            {t("cancel")}
+          </Button>
+          <Button type="submit" loading={loading}>
+            {t("updateBalance")}
+          </Button>
         </div>
       </form>
     </Modal>

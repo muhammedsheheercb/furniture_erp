@@ -26,7 +26,11 @@ const SalesReturnSchema = new Schema<ISalesReturnDocument>(
     returnNumber: { type: String, required: true, unique: true },
     saleId: { type: Schema.Types.ObjectId, ref: "Sale", required: true },
     saleNumber: { type: String, required: true },
-    customerId: { type: Schema.Types.ObjectId, ref: "Customer", required: true },
+    customerId: {
+      type: Schema.Types.ObjectId,
+      ref: "Customer",
+      required: true,
+    },
     customerName: { type: String, required: true },
     items: [
       {
@@ -34,18 +38,19 @@ const SalesReturnSchema = new Schema<ISalesReturnDocument>(
         itemName: { type: String, required: true },
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
-        total: { type: Number, required: true }
-      }
+        total: { type: Number, required: true },
+      },
     ],
     totalAmount: { type: Number, required: true },
     reason: { type: String, required: true },
     date: { type: Date, default: Date.now },
-    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true }
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const SalesReturn: Model<ISalesReturnDocument> =
-  mongoose.models.SalesReturn || mongoose.model<ISalesReturnDocument>("SalesReturn", SalesReturnSchema);
+  mongoose.models.SalesReturn ||
+  mongoose.model<ISalesReturnDocument>("SalesReturn", SalesReturnSchema);
 
 export default SalesReturn;

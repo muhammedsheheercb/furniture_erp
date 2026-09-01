@@ -1,0 +1,13 @@
+{
+  "areYouSureYouWant": "Are you sure you want to delete this customer? This action cannot be undone and will remove all history.",
+  "deleteThisRecordTheItem": "Delete this record? The item quantity will be restored to inventory.",
+  "delete": "Delete",
+  "trackAndManageCustomerProduct": "Track and manage customer product returns",
+  "thisWillReverseTheInventory": "This will reverse the inventory update and restore the customer's debt balance. This action cannot be easily undone.",
+  "addANewBusinessExpense": "Add a new business expense record",
+  "recordANewPurchaseFrom": "Record a new purchase from a supplier",
+  "createANewSalesInvoice": "Create a new sales invoice",
+  "attentionInventoryQuantitiesWillBe": "Attention: Inventory quantities will be recalculated based on your changes. Old quantities will be reversed and new ones applied. Continue?",
+  "confirmUpdate": "Confirm Update",
+  "inventoryQuantitiesWillBeReconciled": "Inventory quantities will be reconciled based on items and quantities changed. Continue?"
+}

@@ -55,7 +55,11 @@ const SupplierSchema = new Schema<ISupplierDocument>(
       {
         date: { type: Date, default: Date.now },
         amount: { type: Number, required: true },
-        type: { type: String, enum: ["payment", "adjustment"], default: "payment" },
+        type: {
+          type: String,
+          enum: ["payment", "adjustment"],
+          default: "payment",
+        },
         paymentMethod: { type: String, enum: ["cash", "bank", "credit"] },
         note: { type: String },
       },
@@ -63,7 +67,7 @@ const SupplierSchema = new Schema<ISupplierDocument>(
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 SupplierSchema.index({ name: "text", supplierNumber: "text" });

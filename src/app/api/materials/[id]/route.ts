@@ -10,14 +10,25 @@ type Params = { params: Promise<{ id: string }> };
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
     const body = await req.json();
 
-    const material = await Material.findByIdAndUpdate(id, body, { new: true, runValidators: true }).lean();
-    if (!material) return NextResponse.json({ success: false, error: "Material not found" }, { status: 404 });
+    const material = await Material.findByIdAndUpdate(id, body, {
+      new: true,
+      runValidators: true,
+    }).lean();
+    if (!material)
+      return NextResponse.json(
+        { success: false, error: "Material not found" },
+        { status: 404 },
+      );
 
     return NextResponse.json({ success: true, data: material });
   } catch (err: unknown) {
@@ -31,17 +42,28 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
 
     const material = await Material.findByIdAndDelete(id);
-    if (!material) return NextResponse.json({ success: false, error: "Material not found" }, { status: 404 });
+    if (!material)
+      return NextResponse.json(
+        { success: false, error: "Material not found" },
+        { status: 404 },
+      );
 
     return NextResponse.json({ success: true, message: "Material deleted" });
   } catch (err) {
     console.error("[DELETE /api/materials/:id]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }

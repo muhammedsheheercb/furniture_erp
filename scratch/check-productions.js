@@ -9,7 +9,12 @@ async function main() {
   await mongoose.connect(MONGODB_URI);
   console.log("Connected.");
   const db = mongoose.connection.db;
-  const productions = await db.collection("productions").find({}).sort({ updatedAt: -1 }).limit(3).toArray();
+  const productions = await db
+    .collection("productions")
+    .find({})
+    .sort({ updatedAt: -1 })
+    .limit(3)
+    .toArray();
   console.log("Latest Productions:", JSON.stringify(productions, null, 2));
   await mongoose.disconnect();
 }

@@ -4,15 +4,16 @@ import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/label";
-import { 
-  Receipt, 
-  DollarSign, 
-  Calendar as CalendarIcon, 
-  Tag, 
-  FileText, 
+import {
+  Receipt,
+  DollarSign,
+  Calendar as CalendarIcon,
+  Tag,
+  FileText,
   CreditCard,
-  Hash
+  Hash,
 } from "lucide-react";
+import { useLanguage } from "../../context/LanguageContext";
 
 interface ExpenseModalProps {
   open: boolean;
@@ -30,7 +31,7 @@ const CATEGORIES = [
   "Marketing",
   "Maintenance",
   "Office Supplies",
-  "Other"
+  "Other",
 ];
 
 const PAYMENT_TYPES = [
@@ -40,7 +41,14 @@ const PAYMENT_TYPES = [
   { value: "credit", label: "Credit Card" },
 ];
 
-export default function ExpenseModal({ open, onClose, onSubmit, expense, loading }: ExpenseModalProps) {
+export default function ExpenseModal({
+  open,
+  onClose,
+  onSubmit,
+  expense,
+  loading,
+}: ExpenseModalProps) {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     title: "",
     category: "Other",
@@ -59,7 +67,9 @@ export default function ExpenseModal({ open, onClose, onSubmit, expense, loading
         title: expense.title || "",
         category: expense.category || "Other",
         amount: String(expense.amount || ""),
-        date: expense.date ? new Date(expense.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+        date: expense.date
+          ? new Date(expense.date).toISOString().split("T")[0]
+          : new Date().toISOString().split("T")[0],
         reference: expense.reference || "",
         description: expense.description || "",
         paymentType: expense.paymentType || "cash",
@@ -109,11 +119,17 @@ export default function ExpenseModal({ open, onClose, onSubmit, expense, loading
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-xs font-bold text-[#7A6055] uppercase tracking-wider">
-              Expense Title *
+            <Label
+              htmlFor="title"
+              className="text-xs font-bold text-[#7A6055] uppercase tracking-wider"
+            >
+              {t("expenseTitle")}
             </Label>
             <div className="relative">
-              <Receipt className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89080]" size={18} />
+              <Receipt
+                className="absolute start-3 top-1/2 -translate-y-1/2 text-[#A89080]"
+                size={18}
+              />
               <Input
                 id="title"
                 value={formData.title}
@@ -122,19 +138,25 @@ export default function ExpenseModal({ open, onClose, onSubmit, expense, loading
                   if (errors.title) setErrors({ ...errors, title: "" });
                 }}
                 error={errors.title}
-                className="pl-10 border-[#E5DDD5] bg-[#FAF8F6] focus:ring-[#C9A84C]"
-                placeholder="e.g. Monthly Rent"
+                className="ps-10 border-[#E5DDD5] bg-[#FAF8F6] focus:ring-[#C9A84C]"
+                placeholder={t("egMonthlyRent")}
               />
             </div>
           </div>
 
           {/* Amount */}
           <div className="space-y-2">
-            <Label htmlFor="amount" className="text-xs font-bold text-[#7A6055] uppercase tracking-wider">
-              Amount *
+            <Label
+              htmlFor="amount"
+              className="text-xs font-bold text-[#7A6055] uppercase tracking-wider"
+            >
+              {t("amount")}
             </Label>
             <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89080]" size={18} />
+              <DollarSign
+                className="absolute start-3 top-1/2 -translate-y-1/2 text-[#A89080]"
+                size={18}
+              />
               <Input
                 id="amount"
                 type="number"
@@ -146,7 +168,7 @@ export default function ExpenseModal({ open, onClose, onSubmit, expense, loading
                   if (errors.amount) setErrors({ ...errors, amount: "" });
                 }}
                 error={errors.amount}
-                className="pl-10 border-[#E5DDD5] bg-[#FAF8F6] focus:ring-[#C9A84C]"
+                className="ps-10 border-[#E5DDD5] bg-[#FAF8F6] focus:ring-[#C9A84C]"
                 placeholder="0.00"
               />
             </div>
@@ -154,20 +176,30 @@ export default function ExpenseModal({ open, onClose, onSubmit, expense, loading
 
           {/* Category */}
           <div className="space-y-2">
-            <Label htmlFor="category" className="text-xs font-bold text-[#7A6055] uppercase tracking-wider">
-              Category *
+            <Label
+              htmlFor="category"
+              className="text-xs font-bold text-[#7A6055] uppercase tracking-wider"
+            >
+              {t("category")}
             </Label>
             <div className="relative">
-              <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89080]" size={18} />
+              <Tag
+                className="absolute start-3 top-1/2 -translate-y-1/2 text-[#A89080]"
+                size={18}
+              />
               <select
                 id="category"
                 required
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full h-10 pl-10 pr-4 rounded-md border border-[#E5DDD5] bg-[#FAF8F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/20"
+                onChange={(e) =>
+                  setFormData({ ...formData, category: e.target.value })
+                }
+                className="w-full h-10 ps-10 pe-4 rounded-md border border-[#E5DDD5] bg-[#FAF8F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/20"
               >
                 {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
                 ))}
               </select>
             </div>
@@ -175,38 +207,56 @@ export default function ExpenseModal({ open, onClose, onSubmit, expense, loading
 
           {/* Date */}
           <div className="space-y-2">
-            <Label htmlFor="date" className="text-xs font-bold text-[#7A6055] uppercase tracking-wider">
-              Date *
+            <Label
+              htmlFor="date"
+              className="text-xs font-bold text-[#7A6055] uppercase tracking-wider"
+            >
+              {t("date")}
             </Label>
             <div className="relative">
-              <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89080]" size={18} />
+              <CalendarIcon
+                className="absolute start-3 top-1/2 -translate-y-1/2 text-[#A89080]"
+                size={18}
+              />
               <Input
                 id="date"
                 type="date"
                 required
                 value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="pl-10 border-[#E5DDD5] bg-[#FAF8F6] focus:ring-[#C9A84C]"
+                onChange={(e) =>
+                  setFormData({ ...formData, date: e.target.value })
+                }
+                className="ps-10 border-[#E5DDD5] bg-[#FAF8F6] focus:ring-[#C9A84C]"
               />
             </div>
           </div>
 
           {/* Payment Type */}
           <div className="space-y-2">
-            <Label htmlFor="paymentType" className="text-xs font-bold text-[#7A6055] uppercase tracking-wider">
-              Payment Method *
+            <Label
+              htmlFor="paymentType"
+              className="text-xs font-bold text-[#7A6055] uppercase tracking-wider"
+            >
+              {t("paymentMethod")}
             </Label>
             <div className="relative">
-              <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89080]" size={18} />
+              <CreditCard
+                className="absolute start-3 top-1/2 -translate-y-1/2 text-[#A89080]"
+                size={18}
+              />
               <select
                 id="paymentType"
                 required
                 value={formData.paymentType}
-                onChange={(e) => setFormData({ ...formData, paymentType: e.target.value })}
-                className="w-full h-10 pl-10 pr-4 rounded-md border border-[#E5DDD5] bg-[#FAF8F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/20"
+                onChange={(e) =>
+                  setFormData({ ...formData, paymentType: e.target.value })
+                }
+                className="w-full h-10 ps-10 pe-4 rounded-md border border-[#E5DDD5] bg-[#FAF8F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/20"
               >
                 {PAYMENT_TYPES.map((type) => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -214,17 +264,25 @@ export default function ExpenseModal({ open, onClose, onSubmit, expense, loading
 
           {/* Reference */}
           <div className="space-y-2">
-            <Label htmlFor="reference" className="text-xs font-bold text-[#7A6055] uppercase tracking-wider">
-              Reference / Bill #
+            <Label
+              htmlFor="reference"
+              className="text-xs font-bold text-[#7A6055] uppercase tracking-wider"
+            >
+              {t("referenceBill")}
             </Label>
             <div className="relative">
-              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A89080]" size={18} />
+              <Hash
+                className="absolute start-3 top-1/2 -translate-y-1/2 text-[#A89080]"
+                size={18}
+              />
               <Input
                 id="reference"
                 value={formData.reference}
-                onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                className="pl-10 border-[#E5DDD5] bg-[#FAF8F6] focus:ring-[#C9A84C]"
-                placeholder="Optional"
+                onChange={(e) =>
+                  setFormData({ ...formData, reference: e.target.value })
+                }
+                className="ps-10 border-[#E5DDD5] bg-[#FAF8F6] focus:ring-[#C9A84C]"
+                placeholder={t("optional")}
               />
             </div>
           </div>
@@ -232,18 +290,26 @@ export default function ExpenseModal({ open, onClose, onSubmit, expense, loading
 
         {/* Description */}
         <div className="space-y-2">
-          <Label htmlFor="description" className="text-xs font-bold text-[#7A6055] uppercase tracking-wider">
-            Description
+          <Label
+            htmlFor="description"
+            className="text-xs font-bold text-[#7A6055] uppercase tracking-wider"
+          >
+            {t("description")}
           </Label>
           <div className="relative">
-            <FileText className="absolute left-3 top-3 text-[#A89080]" size={18} />
+            <FileText
+              className="absolute start-3 top-3 text-[#A89080]"
+              size={18}
+            />
             <textarea
               id="description"
               rows={3}
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full pl-10 pr-4 py-2 rounded-md border border-[#E5DDD5] bg-[#FAF8F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/20 transition-all resize-none"
-              placeholder="Additional details..."
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              className="w-full ps-10 pe-4 py-2 rounded-md border border-[#E5DDD5] bg-[#FAF8F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/20 transition-all resize-none"
+              placeholder={t("additionalDetails")}
             />
           </div>
         </div>
@@ -256,14 +322,18 @@ export default function ExpenseModal({ open, onClose, onSubmit, expense, loading
             className="border-[#E5DDD5] text-[#7A6055] hover:bg-[#FAF8F6]"
             disabled={loading}
           >
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             type="submit"
             className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white px-8"
             disabled={loading}
           >
-            {loading ? "Processing..." : expense ? "Update Expense" : "Record Expense"}
+            {loading
+              ? "Processing..."
+              : expense
+                ? "Update Expense"
+                : "Record Expense"}
           </Button>
         </div>
       </form>

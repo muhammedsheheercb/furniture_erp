@@ -2,22 +2,34 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { 
-  Undo2, Plus, Search, Calendar, User, Hash, 
-  ChevronRight, RefreshCcw, AlertCircle, Trash2,
-  FileText, MessageSquare
+import {
+  Undo2,
+  Plus,
+  Search,
+  Calendar,
+  User,
+  Hash,
+  ChevronRight,
+  RefreshCcw,
+  AlertCircle,
+  Trash2,
+  FileText,
+  MessageSquare,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
 import { useDateFilter } from "@/context/DateFilterContext";
 import { useSession } from "next-auth/react";
 import Pagination from "@/components/ui/Pagination";
+import { useLanguage } from "../../../../context/LanguageContext";
 
 export default function SalesReturnsPage() {
+  const { t } = useLanguage();
   const { startDate, endDate } = useDateFilter();
   const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "admin" || session?.user?.role === "owner";
-  
+  const isAdmin =
+    session?.user?.role === "admin" || session?.user?.role === "owner";
+
   const [returns, setReturns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -88,7 +100,7 @@ export default function SalesReturnsPage() {
     try {
       const res = await axios.get(`/api/sales/returns?saleId=${sale._id}`);
       const existingReturns = res.data.success ? res.data.data : [];
-      
+
       const returnedQtyMap: Record<string, number> = {};
       existingReturns.forEach((ret: any) => {
         ret.items.forEach((item: any) => {
@@ -108,22 +120,24 @@ export default function SalesReturnsPage() {
           purchasedQty: it.quantity,
           alreadyReturned: alreadyReturned,
           maxQty: maxQty,
-          quantity: 0
+          quantity: 0,
         };
       });
 
       setReturnItems(itemsWithRemaining);
     } catch (err) {
       console.error("Failed to load return history for sale", err);
-      setReturnItems(sale.items.map((it: any) => ({
-        itemId: it.itemId,
-        itemName: it.itemName,
-        price: it.price,
-        purchasedQty: it.quantity,
-        alreadyReturned: 0,
-        maxQty: it.quantity,
-        quantity: 0
-      })));
+      setReturnItems(
+        sale.items.map((it: any) => ({
+          itemId: it.itemId,
+          itemName: it.itemName,
+          price: it.price,
+          purchasedQty: it.quantity,
+          alreadyReturned: 0,
+          maxQty: it.quantity,
+          quantity: 0,
+        })),
+      );
     }
   };
 
@@ -134,7 +148,7 @@ export default function SalesReturnsPage() {
   };
 
   const handleSubmitReturn = async () => {
-    const itemsToReturn = returnItems.filter(it => it.quantity > 0);
+    const itemsToReturn = returnItems.filter((it) => it.quantity > 0);
     if (itemsToReturn.length === 0) {
       alert("Please specify quantity for at least one item");
       return;
@@ -156,14 +170,14 @@ export default function SalesReturnsPage() {
       const combinedReason = notes.trim() ? `${reason}: ${notes}` : reason;
       const res = await axios.post("/api/sales/returns", {
         saleId: selectedSale._id,
-        items: itemsToReturn.map(it => ({
+        items: itemsToReturn.map((it) => ({
           itemId: it.itemId,
           itemName: it.itemName,
           quantity: it.quantity,
           price: it.price,
-          total: it.quantity * it.price
+          total: it.quantity * it.price,
         })),
-        reason: combinedReason
+        reason: combinedReason,
       });
 
       if (res.data.success) {
@@ -193,15 +207,17 @@ export default function SalesReturnsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-[#1A1210] flex items-center gap-3">
-            <Undo2 className="text-[#8B5E3C]" /> Sales Returns
+            <Undo2 className="text-[#8B5E3C]" /> {t("salesReturns")}
           </h1>
-          <p className="text-[#7A6055]">Manage product returns and refunds</p>
+          <p className="text-[#7A6055]">
+            {t("manageProductReturnsAndRefunds")}
+          </p>
         </div>
-        <button 
+        <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 px-6 py-3 bg-[#2C1810] text-[#F7F4F0] rounded-xl hover:bg-[#1A1210] transition-all shadow-lg hover:shadow-xl active:scale-95 font-semibold"
         >
-          <Plus size={20} /> New Return
+          <Plus size={20} /> {t("newReturn")}
         </button>
       </div>
 
@@ -213,20 +229,23 @@ export default function SalesReturnsPage() {
               <RefreshCcw size={24} />
             </div>
             <div>
-              <p className="text-sm text-[#7A6055]">Total Returns</p>
+              <p className="text-sm text-[#7A6055]">{t("totalReturns")}</p>
               <h3 className="text-2xl font-bold text-[#1A1210]">{total}</h3>
             </div>
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#E5DDD5] md:col-span-2">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A89080]" size={20} />
-            <input 
-              type="text" 
-              placeholder="Search by customer, sale # or return #..."
+            <Search
+              className="absolute start-4 top-1/2 -translate-y-1/2 text-[#A89080]"
+              size={20}
+            />
+            <input
+              type="text"
+              placeholder={t("searchByCustomerSaleOr")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-[#F7F4F0] border-none rounded-xl focus:ring-2 focus:ring-[#8B5E3C] text-[#1A1210]"
+              className="w-full ps-12 pe-4 py-3 bg-[#F7F4F0] border-none rounded-xl focus:ring-2 focus:ring-[#8B5E3C] text-[#1A1210]"
             />
           </div>
         </div>
@@ -238,50 +257,89 @@ export default function SalesReturnsPage() {
           <table className="w-full">
             <thead className="bg-[#FAF8F6] border-b border-[#E5DDD5]">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-[#8B5E3C] uppercase tracking-wider">Return Details</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-[#8B5E3C] uppercase tracking-wider">Customer</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-[#8B5E3C] uppercase tracking-wider">Original Sale</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-[#8B5E3C] uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-[#8B5E3C] uppercase tracking-wider">Reason</th>
+                <th className="px-6 py-4 text-start text-xs font-bold text-[#8B5E3C] uppercase tracking-wider">
+                  {t("returnDetails")}
+                </th>
+                <th className="px-6 py-4 text-start text-xs font-bold text-[#8B5E3C] uppercase tracking-wider">
+                  {t("customer")}
+                </th>
+                <th className="px-6 py-4 text-start text-xs font-bold text-[#8B5E3C] uppercase tracking-wider">
+                  {t("originalSale")}
+                </th>
+                <th className="px-6 py-4 text-start text-xs font-bold text-[#8B5E3C] uppercase tracking-wider">
+                  {t("amount")}
+                </th>
+                <th className="px-6 py-4 text-start text-xs font-bold text-[#8B5E3C] uppercase tracking-wider">
+                  {t("reason")}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E5DDD5]">
               {loading ? (
-                Array(5).fill(0).map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    <td colSpan={5} className="px-6 py-4 h-16 bg-[#F7F4F0]/50"></td>
-                  </tr>
-                ))
+                Array(5)
+                  .fill(0)
+                  .map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td
+                        colSpan={5}
+                        className="px-6 py-4 h-16 bg-[#F7F4F0]/50"
+                      ></td>
+                    </tr>
+                  ))
               ) : returns.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-[#A89080]">No returns found</td>
-                </tr>
-              ) : returns.map((ret) => (
-                <tr key={ret._id} className="hover:bg-[#FAF8F6] transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="font-bold text-[#1A1210]">{ret.returnNumber}</div>
-                    <div className="text-xs text-[#A89080] flex items-center gap-1 mt-1">
-                      <Calendar size={12} /> {formatDate(ret.date)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-[#1A1210] font-medium">{ret.customerName}</td>
-                  <td className="px-6 py-4">
-                    <span className="text-xs font-mono bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md">
-                      {ret.saleNumber}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 font-bold text-rose-600">{formatCurrency(ret.totalAmount)}</td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm text-[#7A6055] italic max-w-xs truncate">{ret.reason}</p>
+                  <td
+                    colSpan={5}
+                    className="px-6 py-12 text-center text-[#A89080]"
+                  >
+                    {t("noReturnsFound")}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                returns.map((ret) => (
+                  <tr
+                    key={ret._id}
+                    className="hover:bg-[#FAF8F6] transition-colors group"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="font-bold text-[#1A1210]">
+                        {ret.returnNumber}
+                      </div>
+                      <div className="text-xs text-[#A89080] flex items-center gap-1 mt-1">
+                        <Calendar size={12} /> {formatDate(ret.date)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-[#1A1210] font-medium">
+                      {ret.customerName}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-xs font-mono bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md">
+                        {ret.saleNumber}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 font-bold text-rose-600">
+                      {formatCurrency(ret.totalAmount)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm text-[#7A6055] italic max-w-xs truncate">
+                        {ret.reason}
+                      </p>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
         {!loading && totalPages > 1 && (
           <div className="border-t border-[#E5DDD5] px-2 py-4">
-            <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              limit={limit}
+              onPageChange={setPage}
+            />
           </div>
         )}
       </div>
@@ -292,9 +350,16 @@ export default function SalesReturnsPage() {
           <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col border border-[#E5DDD5]">
             <div className="p-6 border-b border-[#E5DDD5] flex justify-between items-center bg-[#FAF8F6]">
               <h2 className="text-xl font-bold text-[#1A1210] flex items-center gap-2">
-                <Undo2 size={24} className="text-[#8B5E3C]" /> Create Sales Return
+                <Undo2 size={24} className="text-[#8B5E3C]" />{" "}
+                {t("createSalesReturn")}
               </h2>
-              <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="text-[#A89080] hover:text-[#1A1210] p-2 hover:bg-[#F7F4F0] rounded-full transition-colors">
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  resetForm();
+                }}
+                className="text-[#A89080] hover:text-[#1A1210] p-2 hover:bg-[#F7F4F0] rounded-full transition-colors"
+              >
                 <Plus className="rotate-45" size={24} />
               </button>
             </div>
@@ -302,20 +367,27 @@ export default function SalesReturnsPage() {
             <div className="p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
               {!selectedSale ? (
                 <div className="space-y-4">
-                  <label className="text-sm font-bold text-[#8B5E3C] uppercase tracking-wider block">Find Sale Record</label>
+                  <label className="text-sm font-bold text-[#8B5E3C] uppercase tracking-wider block">
+                    {t("findSaleRecord")}
+                  </label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A89080]" size={20} />
-                      <input 
-                        type="text" 
-                        placeholder="Enter Sale # or Customer Name..."
+                      <Search
+                        className="absolute start-4 top-1/2 -translate-y-1/2 text-[#A89080]"
+                        size={20}
+                      />
+                      <input
+                        type="text"
+                        placeholder={t("enterSaleOrCustomerName")}
                         value={salesSearch}
                         onChange={(e) => setSalesSearch(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleSearchSales()}
-                        className="w-full pl-12 pr-4 py-3 bg-[#F7F4F0] border border-[#E5DDD5] rounded-xl focus:ring-2 focus:ring-[#8B5E3C] text-[#1A1210]"
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && handleSearchSales()
+                        }
+                        className="w-full ps-12 pe-4 py-3 bg-[#F7F4F0] border border-[#E5DDD5] rounded-xl focus:ring-2 focus:ring-[#8B5E3C] text-[#1A1210]"
                       />
                     </div>
-                    <button 
+                    <button
                       onClick={handleSearchSales}
                       disabled={searchingSales}
                       className="px-6 py-3 bg-[#8B5E3C] text-white rounded-xl hover:bg-[#704A2F] disabled:opacity-50 transition-colors"
@@ -325,25 +397,38 @@ export default function SalesReturnsPage() {
                   </div>
 
                   <div className="space-y-2 mt-4">
-                    {searchResults.map(sale => (
-                      <div 
+                    {searchResults.map((sale) => (
+                      <div
                         key={sale._id}
                         onClick={() => selectSale(sale)}
                         className="p-4 bg-white border border-[#E5DDD5] rounded-xl hover:border-[#8B5E3C] hover:bg-[#FAF8F6] cursor-pointer transition-all flex justify-between items-center group shadow-sm"
                       >
                         <div>
-                          <div className="font-bold text-[#1A1210]">{sale.saleNumber}</div>
-                          <div className="text-sm text-[#7A6055]">{sale.customerName} • {formatDate(sale.date)}</div>
+                          <div className="font-bold text-[#1A1210]">
+                            {sale.saleNumber}
+                          </div>
+                          <div className="text-sm text-[#7A6055]">
+                            {sale.customerName} • {formatDate(sale.date)}
+                          </div>
                         </div>
-                        <div className="text-right flex items-center gap-4">
-                          <span className="font-bold text-[#1A1210]">{formatCurrency(sale.total)}</span>
-                          <ChevronRight size={20} className="text-[#A89080] group-hover:translate-x-1 transition-transform" />
+                        <div className="text-end flex items-center gap-4">
+                          <span className="font-bold text-[#1A1210]">
+                            {formatCurrency(sale.total)}
+                          </span>
+                          <ChevronRight
+                            size={20}
+                            className="text-[#A89080] group-hover:translate-x-1 transition-transform"
+                          />
                         </div>
                       </div>
                     ))}
-                    {salesSearch && searchResults.length === 0 && !searchingSales && (
-                      <div className="text-center py-8 text-[#A89080]">No matching sales found</div>
-                    )}
+                    {salesSearch &&
+                      searchResults.length === 0 &&
+                      !searchingSales && (
+                        <div className="text-center py-8 text-[#A89080]">
+                          {t("noMatchingSalesFound")}
+                        </div>
+                      )}
                   </div>
                 </div>
               ) : (
@@ -351,59 +436,106 @@ export default function SalesReturnsPage() {
                   {/* Selected Sale Info */}
                   <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex justify-between items-center">
                     <div>
-                      <p className="text-xs text-indigo-400 uppercase font-bold">Selected Sale</p>
-                      <h4 className="font-bold text-indigo-900">{selectedSale.saleNumber} — {selectedSale.customerName}</h4>
+                      <p className="text-xs text-indigo-400 uppercase font-bold">
+                        {t("selectedSale")}
+                      </p>
+                      <h4 className="font-bold text-indigo-900">
+                        {selectedSale.saleNumber} — {selectedSale.customerName}
+                      </h4>
                     </div>
-                    <button onClick={() => setSelectedSale(null)} className="text-indigo-600 hover:text-indigo-800 text-sm font-semibold underline">Change</button>
+                    <button
+                      onClick={() => setSelectedSale(null)}
+                      className="text-indigo-600 hover:text-indigo-800 text-sm font-semibold underline"
+                    >
+                      {t("change")}
+                    </button>
                   </div>
 
                   {/* Return Items Selection */}
                   <div className="space-y-3">
-                    <label className="text-sm font-bold text-[#8B5E3C] uppercase tracking-wider block">Select Items to Return</label>
+                    <label className="text-sm font-bold text-[#8B5E3C] uppercase tracking-wider block">
+                      {t("selectItemsToReturn")}
+                    </label>
                     <div className="bg-[#FAF8F6] rounded-2xl overflow-hidden border border-[#E5DDD5]">
                       <table className="w-full text-sm">
                         <thead className="bg-[#F2EBE5] text-[#8B5E3C]">
                           <tr>
-                            <th className="px-4 py-3 text-left">Item</th>
-                            <th className="px-4 py-3 text-center">Purchased</th>
-                            <th className="px-4 py-3 text-center">Already Returned</th>
-                            <th className="px-4 py-3 text-center">Available</th>
-                            <th className="px-4 py-3 text-center">Return Qty</th>
-                            <th className="px-4 py-3 text-right">Price</th>
-                            <th className="px-4 py-3 text-right">Total</th>
+                            <th className="px-4 py-3 text-start">{t("item")}</th>
+                            <th className="px-4 py-3 text-center">
+                              {t("purchased")}
+                            </th>
+                            <th className="px-4 py-3 text-center">
+                              {t("alreadyReturned")}
+                            </th>
+                            <th className="px-4 py-3 text-center">
+                              {t("available")}
+                            </th>
+                            <th className="px-4 py-3 text-center">
+                              {t("returnQty")}
+                            </th>
+                            <th className="px-4 py-3 text-end">
+                              {t("price")}
+                            </th>
+                            <th className="px-4 py-3 text-end">
+                              {t("total")}
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#E5DDD5]">
-                          {returnItems.filter(it => it.maxQty > 0).length === 0 ? (
+                          {returnItems.filter((it) => it.maxQty > 0).length ===
+                          0 ? (
                             <tr>
-                              <td colSpan={7} className="px-4 py-8 text-center text-[#A89080] font-semibold">
-                                All items in this sale have already been fully returned.
+                              <td
+                                colSpan={7}
+                                className="px-4 py-8 text-center text-[#A89080] font-semibold"
+                              >
+                                {t("allItemsInThisSale")}
                               </td>
                             </tr>
                           ) : (
                             returnItems
                               .map((it, idx) => ({ ...it, originalIdx: idx }))
-                              .filter(it => it.maxQty > 0)
+                              .filter((it) => it.maxQty > 0)
                               .map((it) => {
                                 const idx = it.originalIdx;
                                 return (
-                                  <tr key={idx} className={it.quantity > 0 ? "bg-white" : ""}>
-                                    <td className="px-4 py-3 font-medium text-[#1A1210]">{it.itemName}</td>
-                                    <td className="px-4 py-3 text-center text-[#7A6055]">{it.purchasedQty}</td>
-                                    <td className="px-4 py-3 text-center text-rose-600 font-semibold">{it.alreadyReturned}</td>
-                                    <td className="px-4 py-3 text-center text-indigo-600 font-semibold">{it.maxQty}</td>
+                                  <tr
+                                    key={idx}
+                                    className={
+                                      it.quantity > 0 ? "bg-white" : ""
+                                    }
+                                  >
+                                    <td className="px-4 py-3 font-medium text-[#1A1210]">
+                                      {it.itemName}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-[#7A6055]">
+                                      {it.purchasedQty}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-rose-600 font-semibold">
+                                      {it.alreadyReturned}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-indigo-600 font-semibold">
+                                      {it.maxQty}
+                                    </td>
                                     <td className="px-4 py-3 text-center">
-                                      <input 
+                                      <input
                                         type="number"
                                         min="0"
                                         max={it.maxQty}
                                         value={it.quantity}
-                                        onChange={(e) => handleReturnQtyChange(idx, parseInt(e.target.value) || 0)}
+                                        onChange={(e) =>
+                                          handleReturnQtyChange(
+                                            idx,
+                                            parseInt(e.target.value) || 0,
+                                          )
+                                        }
                                         className="w-16 px-2 py-1 bg-white border border-[#E5DDD5] rounded-md text-center focus:ring-1 focus:ring-[#8B5E3C] outline-none"
                                       />
                                     </td>
-                                    <td className="px-4 py-3 text-right text-[#1A1210]">{formatCurrency(it.price)}</td>
-                                    <td className="px-4 py-3 text-right font-bold text-[#1A1210]">
+                                    <td className="px-4 py-3 text-end text-[#1A1210]">
+                                      {formatCurrency(it.price)}
+                                    </td>
+                                    <td className="px-4 py-3 text-end font-bold text-[#1A1210]">
                                       {formatCurrency(it.quantity * it.price)}
                                     </td>
                                   </tr>
@@ -413,9 +545,19 @@ export default function SalesReturnsPage() {
                         </tbody>
                         <tfoot className="bg-[#F2EBE5]">
                           <tr>
-                            <td colSpan={6} className="px-4 py-3 font-bold text-[#8B5E3C]">Total Return Amount</td>
-                            <td className="px-4 py-3 text-right font-black text-[#1A1210] text-lg">
-                              {formatCurrency(returnItems.reduce((acc, it) => acc + (it.quantity * it.price), 0))}
+                            <td
+                              colSpan={6}
+                              className="px-4 py-3 font-bold text-[#8B5E3C]"
+                            >
+                              {t("totalReturnAmount")}
+                            </td>
+                            <td className="px-4 py-3 text-end font-black text-[#1A1210] text-lg">
+                              {formatCurrency(
+                                returnItems.reduce(
+                                  (acc, it) => acc + it.quantity * it.price,
+                                  0,
+                                ),
+                              )}
                             </td>
                           </tr>
                         </tfoot>
@@ -427,28 +569,28 @@ export default function SalesReturnsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-[#8B5E3C] uppercase tracking-wider flex items-center gap-2">
-                        <RefreshCcw size={16} /> Return Reason
+                        <RefreshCcw size={16} /> {t("returnReason")}
                       </label>
-                      <select 
+                      <select
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
                         className="w-full px-4 py-3 bg-[#F7F4F0] border border-[#E5DDD5] rounded-xl focus:ring-2 focus:ring-[#8B5E3C] text-[#1A1210] outline-none"
                       >
-                        <option value="">Select a reason...</option>
-                        <option value="Damaged">Damaged</option>
-                        <option value="Other">Other</option>
+                        <option value="">{t("selectAReason")}</option>
+                        <option value="Damaged">{t("damaged")}</option>
+                        <option value="Other">{t("other")}</option>
                       </select>
                     </div>
 
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-[#8B5E3C] uppercase tracking-wider flex items-center gap-2">
-                        <MessageSquare size={16} /> Additional Notes
+                        <MessageSquare size={16} /> {t("additionalNotes")}
                       </label>
-                      <input 
+                      <input
                         type="text"
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Additional details here..."
+                        placeholder={t("additionalDetailsHere")}
                         className="w-full px-4 py-3 bg-[#F7F4F0] border border-[#E5DDD5] rounded-xl focus:ring-2 focus:ring-[#8B5E3C] text-[#1A1210] outline-none"
                       />
                     </div>
@@ -459,13 +601,16 @@ export default function SalesReturnsPage() {
 
             {selectedSale && (
               <div className="p-6 bg-[#FAF8F6] border-t border-[#E5DDD5] flex gap-3">
-                <button 
-                  onClick={() => { setIsModalOpen(false); resetForm(); }}
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    resetForm();
+                  }}
                   className="flex-1 px-6 py-4 border border-[#E5DDD5] text-[#7A6055] rounded-2xl hover:bg-[#F2EBE5] transition-colors font-bold"
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
-                <button 
+                <button
                   onClick={handleSubmitReturn}
                   disabled={submitting}
                   className="flex-[2] px-6 py-4 bg-rose-600 text-white rounded-2xl hover:bg-rose-700 disabled:opacity-50 transition-all font-bold shadow-lg shadow-rose-200"

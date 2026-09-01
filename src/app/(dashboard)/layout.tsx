@@ -4,7 +4,11 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -29,13 +33,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex flex-col min-h-screen bg-[var(--bg)] font-sans">
       <Navbar />
-      
+
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Main Content Area */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 scroll-smooth overflow-y-auto">
-          <div className="max-w-[1600px] mx-auto">
-            {children}
-          </div>
+          <div className="max-w-[1600px] mx-auto">{children}</div>
         </main>
       </div>
     </div>

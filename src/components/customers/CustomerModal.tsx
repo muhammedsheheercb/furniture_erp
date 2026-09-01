@@ -9,11 +9,15 @@ import Button from "@/components/ui/Button";
 import { ICustomer } from "@/types";
 
 import { generateCustomerID } from "@/lib/utils";
+import { useLanguage } from "../../context/LanguageContext";
 
 const schema = z.object({
   customerNumber: z.string().trim().min(1, "Customer number is required"),
   name: z.string().trim().min(1, "Name is required"),
-  mobile: z.string().trim().regex(/^\d{8,12}$/, "Mobile must be between 8 and 12 digits"),
+  mobile: z
+    .string()
+    .trim()
+    .regex(/^\d{8,12}$/, "Mobile must be between 8 and 12 digits"),
   address: z.string().trim().optional(),
   balance: z.coerce.number().min(0, "Balance cannot be negative").default(0),
 });
@@ -34,6 +38,7 @@ export default function CustomerModal({
   customer,
   loading,
 }: CustomerModalProps) {
+  const { t } = useLanguage();
   const isEdit = !!customer;
   const {
     register,
@@ -49,19 +54,19 @@ export default function CustomerModal({
       reset(
         customer
           ? {
-            customerNumber: customer.customerNumber,
-            name: customer.name,
-            mobile: customer.mobile,
-            address: customer.address || "",
-            balance: customer.creditBalance ?? customer.openingBalance ?? 0,
-          }
+              customerNumber: customer.customerNumber,
+              name: customer.name,
+              mobile: customer.mobile,
+              address: customer.address || "",
+              balance: customer.creditBalance ?? customer.openingBalance ?? 0,
+            }
           : {
-            customerNumber: generateCustomerID(),
-            name: "",
-            mobile: "",
-            address: "",
-            balance: 0
-          },
+              customerNumber: generateCustomerID(),
+              name: "",
+              mobile: "",
+              address: "",
+              balance: 0,
+            },
       );
     }
   }, [open, customer, reset]);
@@ -86,7 +91,7 @@ export default function CustomerModal({
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button form="customer-form" type="submit" loading={loading}>
             {isEdit ? "Save Changes" : "Create Customer"}
@@ -101,8 +106,8 @@ export default function CustomerModal({
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="Customer number"
-            placeholder="CUST-001"
+            label={t("customerNumber")}
+            placeholder={t("cust001")}
             required
             readOnly
             disabled
@@ -110,8 +115,8 @@ export default function CustomerModal({
             {...register("customerNumber")}
           />
           <Input
-            label="Full name"
-            placeholder="Customer name"
+            label={t("fullName")}
+            placeholder={t("customerName")}
             required
             error={errors.name?.message}
             {...register("name")}
@@ -119,15 +124,15 @@ export default function CustomerModal({
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="Mobile number"
+            label={t("mobileNumber")}
             placeholder="9876543210"
             required
             error={errors.mobile?.message}
             {...register("mobile")}
           />
           <Input
-            label="Address"
-            placeholder="Customer address"
+            label={t("address")}
+            placeholder={t("customerAddress")}
             error={errors.address?.message}
             {...register("address")}
           />
@@ -144,7 +149,7 @@ export default function CustomerModal({
         </div>
         {isEdit && (
           <p className="text-xs text-blue-600 bg-blue-50 px-4 py-2 rounded-lg">
-            This is the current outstanding balance. Adjusting this will record a manual balance update.
+            {t("thisIsTheCurrentOutstanding")}
           </p>
         )}
       </form>

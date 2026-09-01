@@ -12,14 +12,16 @@ const WorkerSchema = new Schema<IWorkerDocument>(
     name: { type: String, required: true, trim: true },
     contactNumber: { type: String, required: true, trim: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 if (mongoose.models.Worker) {
   delete (mongoose.models as any).Worker;
 }
 
-const Worker: Model<IWorkerDocument> =
-  mongoose.model<IWorkerDocument>("Worker", WorkerSchema);
+const Worker: Model<IWorkerDocument> = mongoose.model<IWorkerDocument>(
+  "Worker",
+  WorkerSchema,
+);
 
 export default Worker;

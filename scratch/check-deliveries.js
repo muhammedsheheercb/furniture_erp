@@ -13,15 +13,25 @@ const DeliverySchema = new mongoose.Schema(
     driverContact: String,
     status: String,
   },
-  { strict: false }
+  { strict: false },
 );
 
-const Delivery = mongoose.models.Delivery || mongoose.model("Delivery", DeliverySchema);
+const Delivery =
+  mongoose.models.Delivery || mongoose.model("Delivery", DeliverySchema);
 
 async function main() {
   await mongoose.connect(MONGODB_URI);
   console.log("Connected to MongoDB.");
-  const deliveries = await Delivery.find({}, { saleNumber: 1, customerName: 1, driverName: 1, driverContact: 1, status: 1 });
+  const deliveries = await Delivery.find(
+    {},
+    {
+      saleNumber: 1,
+      customerName: 1,
+      driverName: 1,
+      driverContact: 1,
+      status: 1,
+    },
+  );
   console.log("Deliveries in DB:", JSON.stringify(deliveries, null, 2));
   await mongoose.disconnect();
 }

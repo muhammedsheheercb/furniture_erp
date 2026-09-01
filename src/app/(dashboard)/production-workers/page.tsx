@@ -3,16 +3,27 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
-import { 
-  Users, Plus, Phone, Search, Hammer, Clock, 
-  PlayCircle, CheckCircle2, UserCheck, RefreshCw,
-  ChevronLeft, ChevronRight, Calendar
+import {
+  Users,
+  Plus,
+  Phone,
+  Search,
+  Hammer,
+  Clock,
+  PlayCircle,
+  CheckCircle2,
+  UserCheck,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 
 import { useDateFilter } from "@/context/DateFilterContext";
 import Pagination from "@/components/ui/Pagination";
+import { useLanguage } from "../../../context/LanguageContext";
 
 interface WorkerStats {
   pending: number;
@@ -30,6 +41,7 @@ interface IWorker {
 }
 
 export default function ProductionWorkersPage() {
+  const { t } = useLanguage();
   const { startDate, endDate } = useDateFilter();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
@@ -40,8 +52,10 @@ export default function ProductionWorkersPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "processing" | "finished">("all");
-  
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "pending" | "processing" | "finished"
+  >("all");
+
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -58,7 +72,8 @@ export default function ProductionWorkersPage() {
 
   // Details Modal
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-  const [selectedDetailsWorker, setSelectedDetailsWorker] = useState<IWorker | null>(null);
+  const [selectedDetailsWorker, setSelectedDetailsWorker] =
+    useState<IWorker | null>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobsPage, setJobsPage] = useState(1);
@@ -124,8 +139,12 @@ export default function ProductionWorkersPage() {
     }
   };
 
-  useEffect(() => { setPage(1); }, [debouncedSearch, startDate, endDate]);
-  useEffect(() => { fetchWorkers(); }, [debouncedSearch, startDate, endDate, page]);
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, startDate, endDate]);
+  useEffect(() => {
+    fetchWorkers();
+  }, [debouncedSearch, startDate, endDate, page]);
 
   // Handle form submission with proper validation
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,10 +196,11 @@ export default function ProductionWorkersPage() {
   };
 
   // Filter local state based on work status
-  const filteredWorkers = workers.filter(worker => {
+  const filteredWorkers = workers.filter((worker) => {
     if (statusFilter === "all") return true;
     if (statusFilter === "pending") return (worker.stats?.pending || 0) > 0;
-    if (statusFilter === "processing") return (worker.stats?.processing || 0) > 0;
+    if (statusFilter === "processing")
+      return (worker.stats?.processing || 0) > 0;
     if (statusFilter === "finished") return (worker.stats?.finished || 0) > 0;
     return true;
   });
@@ -190,8 +210,12 @@ export default function ProductionWorkersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-[#1A1210]">Production Workers</h2>
-          <p className="text-[#7A6055]">Manage manufacturing staff and track their work assignments.</p>
+          <h2 className="text-3xl font-extrabold text-[#1A1210]">
+            {t("productionWorkers")}
+          </h2>
+          <p className="text-[#7A6055]">
+            {t("manageManufacturingStaffAndTrack")}
+          </p>
         </div>
         {canCreate && (
           <Button
@@ -204,7 +228,7 @@ export default function ProductionWorkersPage() {
             }}
             className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white flex items-center gap-2 self-start sm:self-auto"
           >
-            <Plus size={18} /> New Worker
+            <Plus size={18} /> {t("newWorker")}
           </Button>
         )}
       </div>
@@ -213,15 +237,15 @@ export default function ProductionWorkersPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
         {/* Search */}
         <div className="relative md:col-span-2">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#A89080]">
+          <span className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-[#A89080]">
             <Search size={18} />
           </span>
           <input
             type="text"
-            placeholder="Search workers by name or contact number..."
+            placeholder={t("searchWorkersByNameOr")}
             value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full border border-[#E5DDD5] rounded-xl pl-10 pr-4 py-2.5 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 placeholder-[#A89080] font-medium"
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full border border-[#E5DDD5] rounded-xl ps-10 pe-4 py-2.5 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 placeholder-[#A89080] font-medium"
           />
         </div>
 
@@ -230,7 +254,7 @@ export default function ProductionWorkersPage() {
           <button
             onClick={fetchWorkers}
             className="p-2.5 rounded-xl border border-[#E5DDD5] bg-white text-[#7A6055] hover:text-[#1A1210] hover:border-[#C9A84C] transition-colors"
-            title="Refresh list"
+            title={t("refreshList")}
           >
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
           </button>
@@ -239,8 +263,8 @@ export default function ProductionWorkersPage() {
 
       {/* Tabs for Work Status Filter */}
       <div className="flex bg-[#F5F2EA] p-1 rounded-xl gap-1 overflow-x-auto">
-        {(["all", "pending", "processing", "finished"] as const).map(f => {
-          const count = workers.filter(w => {
+        {(["all", "pending", "processing", "finished"] as const).map((f) => {
+          const count = workers.filter((w) => {
             if (f === "all") return true;
             if (f === "pending") return (w.stats?.pending || 0) > 0;
             if (f === "processing") return (w.stats?.processing || 0) > 0;
@@ -257,7 +281,12 @@ export default function ProductionWorkersPage() {
                   : "text-[#7A6055] hover:text-[#1A1210]"
               }`}
             >
-              {f === "all" ? "All Workers" : f === "processing" ? "Active Work" : `${f} Work`} ({count})
+              {f === "all"
+                ? "All Workers"
+                : f === "processing"
+                  ? "Active Work"
+                  : `${f} Work`}{" "}
+              ({count})
             </button>
           );
         })}
@@ -273,13 +302,15 @@ export default function ProductionWorkersPage() {
           {filteredWorkers.length === 0 ? (
             <div className="bg-white rounded-2xl border border-[#E5DDD5] py-20 text-center">
               <Users size={48} className="mx-auto text-[#E5DDD5] mb-4" />
-              <p className="text-[#A89080] font-medium">No workers found matching selected filter.</p>
+              <p className="text-[#A89080] font-medium">
+                {t("noWorkersFoundMatchingSelected")}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredWorkers.map(worker => (
-                <div 
-                  key={worker._id} 
+              {filteredWorkers.map((worker) => (
+                <div
+                  key={worker._id}
                   onClick={() => {
                     setSelectedDetailsWorker(worker);
                     setJobsPage(1);
@@ -294,12 +325,17 @@ export default function ProductionWorkersPage() {
                         <UserCheck size={24} />
                       </div>
                       <div className="space-y-1 min-w-0">
-                        <h4 className="font-bold text-[#1A1210] text-lg truncate" title={worker.name}>
+                        <h4
+                          className="font-bold text-[#1A1210] text-lg truncate"
+                          title={worker.name}
+                        >
                           {worker.name}
                         </h4>
                         <div className="flex items-center gap-1.5 text-sm text-[#7A6055]">
                           <Phone size={14} className="text-[#A89080]" />
-                          <span className="font-mono">{worker.contactNumber}</span>
+                          <span className="font-mono">
+                            {worker.contactNumber}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -309,41 +345,66 @@ export default function ProductionWorkersPage() {
                       <div className="text-center">
                         <div className="flex items-center justify-center gap-1 text-[#7A6055] mb-0.5">
                           <Clock size={12} className="text-gray-400" />
-                          <span className="text-[10px] font-bold uppercase tracking-wider">Pending</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider">
+                            {t("pending")}
+                          </span>
                         </div>
-                        <p className="text-lg font-extrabold text-[#1A1210]">{worker.stats?.pending || 0}</p>
+                        <p className="text-lg font-extrabold text-[#1A1210]">
+                          {worker.stats?.pending || 0}
+                        </p>
                       </div>
                       <div className="text-center border-x border-[#E5DDD5]">
                         <div className="flex items-center justify-center gap-1 text-[#7A6055] mb-0.5">
                           <PlayCircle size={12} className="text-amber-500" />
-                          <span className="text-[10px] font-bold uppercase tracking-wider">Active</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider">
+                            {t("active")}
+                          </span>
                         </div>
-                        <p className="text-lg font-extrabold text-[#1A1210]">{worker.stats?.processing || 0}</p>
+                        <p className="text-lg font-extrabold text-[#1A1210]">
+                          {worker.stats?.processing || 0}
+                        </p>
                       </div>
                       <div className="text-center">
                         <div className="flex items-center justify-center gap-1 text-[#7A6055] mb-0.5">
-                          <CheckCircle2 size={12} className="text-emerald-500" />
-                          <span className="text-[10px] font-bold uppercase tracking-wider">Finished</span>
+                          <CheckCircle2
+                            size={12}
+                            className="text-emerald-500"
+                          />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">
+                            {t("finished")}
+                          </span>
                         </div>
-                        <p className="text-lg font-extrabold text-[#1A1210]">{worker.stats?.finished || 0}</p>
+                        <p className="text-lg font-extrabold text-[#1A1210]">
+                          {worker.stats?.finished || 0}
+                        </p>
                       </div>
                     </div>
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-[#F0EBE5] flex items-center justify-between text-xs text-[#A89080]">
-                    <span>Joined {new Date(worker.createdAt).toLocaleDateString()}</span>
+                    <span>
+                      {t("joined")}
+                      {new Date(worker.createdAt).toLocaleDateString()}
+                    </span>
                     <span className="font-bold text-[#8B5E3C] bg-[#FAF8F6] px-2.5 py-1 rounded-full border border-[#E5DDD5]">
-                      Total Jobs: {worker.stats?.total || 0}
+                      {t("totalJobs")}
+                      {worker.stats?.total || 0}
                     </span>
                   </div>
                 </div>
               ))}
             </div>
           )}
-          
+
           {!loading && totalPages > 1 && (
             <div className="mt-6 border-t border-[#E5DDD5] pt-4">
-              <Pagination page={page} totalPages={totalPages} total={total} limit={limit} onPageChange={setPage} />
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                total={total}
+                limit={limit}
+                onPageChange={setPage}
+              />
             </div>
           )}
         </>
@@ -353,57 +414,77 @@ export default function ProductionWorkersPage() {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Add New Production Worker"
+        title={t("addNewProductionWorker")}
         size="md"
         footer={
           <div className="flex gap-3 justify-end w-full">
-            <Button variant="outline" onClick={() => setModalOpen(false)} disabled={saving}>
-              Cancel
+            <Button
+              variant="outline"
+              onClick={() => setModalOpen(false)}
+              disabled={saving}
+            >
+              {t("cancel")}
             </Button>
-            <Button onClick={handleSubmit} loading={saving} className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white">
-              Create Worker
+            <Button
+              onClick={handleSubmit}
+              loading={saving}
+              className="bg-[#2C1810] hover:bg-[#1A0F0A] text-white"
+            >
+              {t("createWorker")}
             </Button>
           </div>
         }
       >
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
           <p className="text-sm text-[#7A6055]">
-            Add a craftsman or workshop worker to assign production orders and monitor manufacturing pipelines.
+            {t("addACraftsmanOrWorkshop")}
           </p>
 
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-semibold text-[#7A6055] mb-1">
-                Worker Name *
+                {t("workerName")}
               </label>
               <input
                 type="text"
-                placeholder="Enter worker's full name"
+                placeholder={t("enterWorkersFullName")}
                 value={name}
-                onChange={e => setName(e.target.value)}
+                onChange={(e) => setName(e.target.value)}
                 className={`w-full border rounded-lg px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 font-medium ${
-                  nameError ? "border-rose-500 ring-1 ring-rose-500/20" : "border-[#E5DDD5]"
+                  nameError
+                    ? "border-rose-500 ring-1 ring-rose-500/20"
+                    : "border-[#E5DDD5]"
                 }`}
                 required
               />
-              {nameError && <p className="text-xs text-rose-500 mt-1 font-medium">{nameError}</p>}
+              {nameError && (
+                <p className="text-xs text-rose-500 mt-1 font-medium">
+                  {nameError}
+                </p>
+              )}
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#7A6055] mb-1">
-                Contact / Mobile Number *
+                {t("contactMobileNumber")}
               </label>
               <input
                 type="text"
-                placeholder="e.g. +968 9123 4567"
+                placeholder={t("eg96891234567")}
                 value={contactNumber}
-                onChange={e => setContactNumber(e.target.value)}
+                onChange={(e) => setContactNumber(e.target.value)}
                 className={`w-full border rounded-lg px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 font-medium ${
-                  contactError ? "border-rose-500 ring-1 ring-rose-500/20" : "border-[#E5DDD5]"
+                  contactError
+                    ? "border-rose-500 ring-1 ring-rose-500/20"
+                    : "border-[#E5DDD5]"
                 }`}
                 required
               />
-              {contactError && <p className="text-xs text-rose-500 mt-1 font-medium">{contactError}</p>}
+              {contactError && (
+                <p className="text-xs text-rose-500 mt-1 font-medium">
+                  {contactError}
+                </p>
+              )}
             </div>
           </div>
         </form>
@@ -417,8 +498,11 @@ export default function ProductionWorkersPage() {
         size="lg"
         footer={
           <div className="flex justify-end w-full">
-            <Button variant="outline" onClick={() => setDetailsModalOpen(false)}>
-              Close
+            <Button
+              variant="outline"
+              onClick={() => setDetailsModalOpen(false)}
+            >
+              {t("close")}
             </Button>
           </div>
         }
@@ -428,24 +512,40 @@ export default function ProductionWorkersPage() {
           {selectedDetailsWorker && (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-[#FAF8F6] rounded-xl border border-[#E5DDD5] gap-4">
               <div>
-                <h3 className="text-lg font-bold text-[#1A1210]">{selectedDetailsWorker.name}</h3>
+                <h3 className="text-lg font-bold text-[#1A1210]">
+                  {selectedDetailsWorker.name}
+                </h3>
                 <p className="text-sm text-[#7A6055] flex items-center gap-1.5 mt-0.5">
                   <Phone size={14} className="text-[#A89080]" />
-                  <span className="font-mono">{selectedDetailsWorker.contactNumber}</span>
+                  <span className="font-mono">
+                    {selectedDetailsWorker.contactNumber}
+                  </span>
                 </p>
               </div>
               <div className="flex gap-4">
                 <div className="text-center bg-white px-3 py-1.5 rounded-lg border border-[#E5DDD5] min-w-[70px]">
-                  <p className="text-[10px] uppercase font-bold text-gray-400">Pending</p>
-                  <p className="text-sm font-extrabold text-[#1A1210]">{selectedDetailsWorker.stats?.pending || 0}</p>
+                  <p className="text-[10px] uppercase font-bold text-gray-400">
+                    {t("pending")}
+                  </p>
+                  <p className="text-sm font-extrabold text-[#1A1210]">
+                    {selectedDetailsWorker.stats?.pending || 0}
+                  </p>
                 </div>
                 <div className="text-center bg-white px-3 py-1.5 rounded-lg border border-[#E5DDD5] min-w-[70px]">
-                  <p className="text-[10px] uppercase font-bold text-amber-500">Active</p>
-                  <p className="text-sm font-extrabold text-[#1A1210]">{selectedDetailsWorker.stats?.processing || 0}</p>
+                  <p className="text-[10px] uppercase font-bold text-amber-500">
+                    {t("active")}
+                  </p>
+                  <p className="text-sm font-extrabold text-[#1A1210]">
+                    {selectedDetailsWorker.stats?.processing || 0}
+                  </p>
                 </div>
                 <div className="text-center bg-white px-3 py-1.5 rounded-lg border border-[#E5DDD5] min-w-[70px]">
-                  <p className="text-[10px] uppercase font-bold text-emerald-500">Finished</p>
-                  <p className="text-sm font-extrabold text-[#1A1210]">{selectedDetailsWorker.stats?.finished || 0}</p>
+                  <p className="text-[10px] uppercase font-bold text-emerald-500">
+                    {t("finished")}
+                  </p>
+                  <p className="text-sm font-extrabold text-[#1A1210]">
+                    {selectedDetailsWorker.stats?.finished || 0}
+                  </p>
                 </div>
               </div>
             </div>
@@ -455,7 +555,8 @@ export default function ProductionWorkersPage() {
           <div className="space-y-4">
             <h4 className="font-bold text-[#1A1210] text-sm uppercase tracking-wider flex items-center gap-2">
               <Hammer size={16} className="text-[#8B5E3C]" />
-              Assigned Production Jobs ({jobsTotalCount})
+              {t("assignedProductionJobs")}
+              {jobsTotalCount})
             </h4>
 
             {jobsLoading ? (
@@ -464,29 +565,39 @@ export default function ProductionWorkersPage() {
               </div>
             ) : jobs.length === 0 ? (
               <div className="text-center py-12 border border-dashed border-[#E5DDD5] rounded-xl bg-white">
-                <p className="text-[#A89080] text-sm">No production jobs assigned to this worker yet.</p>
+                <p className="text-[#A89080] text-sm">
+                  {t("noProductionJobsAssignedTo")}
+                </p>
               </div>
             ) : (
               <>
                 <div className="space-y-3">
                   {jobs.map((job) => (
-                    <div 
+                    <div
                       key={job._id}
                       className="p-4 bg-white rounded-xl border border-[#E5DDD5] hover:border-[#C9A84C]/50 transition-colors space-y-3"
                     >
                       <div className="flex justify-between items-start gap-2 flex-wrap">
                         <div>
-                          <span className="text-xs font-bold text-[#A89080] uppercase tracking-wider block">Order Reference</span>
-                          <span className="font-bold text-[#1A1210]">{job.saleNumber}</span>
-                          <span className="text-[#7A6055] text-xs ml-2">({job.customerName})</span>
+                          <span className="text-xs font-bold text-[#A89080] uppercase tracking-wider block">
+                            {t("orderReference")}
+                          </span>
+                          <span className="font-bold text-[#1A1210]">
+                            {job.saleNumber}
+                          </span>
+                          <span className="text-[#7A6055] text-xs ms-2">
+                            ({job.customerName})
+                          </span>
                         </div>
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                          job.status === "finished" 
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : job.status === "processing"
-                            ? "bg-amber-50 text-amber-700 border border-amber-200"
-                            : "bg-gray-50 text-gray-700 border border-gray-200"
-                        }`}>
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                            job.status === "finished"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : job.status === "processing"
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : "bg-gray-50 text-gray-700 border border-gray-200"
+                          }`}
+                        >
                           {job.status === "processing" ? "Active" : job.status}
                         </span>
                       </div>
@@ -494,11 +605,16 @@ export default function ProductionWorkersPage() {
                       {/* Items List */}
                       <div className="bg-[#FAF8F6] p-3 rounded-lg border border-[#F0EBE5] space-y-1">
                         {job.items?.map((it: any, idx: number) => (
-                          <div key={idx} className="flex justify-between text-xs text-[#1A1210]">
-                            <span className="font-semibold">{it.itemName || it.productName}</span>
+                          <div
+                            key={idx}
+                            className="flex justify-between text-xs text-[#1A1210]"
+                          >
+                            <span className="font-semibold">
+                              {it.itemName || it.productName}
+                            </span>
                             <span className="text-[#7A6055]">
-                              {it.color && `Color: ${it.color}`} 
-                              {it.size && ` | Size: ${it.size}`} 
+                              {it.color && `Color: ${it.color}`}
+                              {it.size && ` | Size: ${it.size}`}
                               {` | Qty: ${it.quantity}`}
                             </span>
                           </div>
@@ -508,9 +624,15 @@ export default function ProductionWorkersPage() {
                       <div className="flex justify-between items-center text-xs text-[#7A6055] pt-1">
                         <span className="flex items-center gap-1">
                           <Calendar size={12} className="text-[#A89080]" />
-                          Deadline: {job.deliveryDate ? new Date(job.deliveryDate).toLocaleDateString() : "—"}
+                          {t("deadline")}
+                          {job.deliveryDate
+                            ? new Date(job.deliveryDate).toLocaleDateString()
+                            : "—"}
                         </span>
-                        <span>Last updated {new Date(job.updatedAt).toLocaleDateString()}</span>
+                        <span>
+                          {t("lastUpdated")}
+                          {new Date(job.updatedAt).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -520,26 +642,40 @@ export default function ProductionWorkersPage() {
                 {jobsTotalPages > 1 && (
                   <div className="flex items-center justify-between pt-4 border-t border-[#F0EBE5]">
                     <span className="text-xs text-[#7A6055]">
-                      Showing page <span className="font-bold text-[#1A1210]">{jobsPage}</span> of <span className="font-bold text-[#1A1210]">{jobsTotalPages}</span>
+                      {t("showingPage")}
+                      <span className="font-bold text-[#1A1210]">
+                        {jobsPage}
+                      </span>{" "}
+                      {t("of")}
+                      <span className="font-bold text-[#1A1210]">
+                        {jobsTotalPages}
+                      </span>
                     </span>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="xs"
                         disabled={jobsPage === 1}
-                        onClick={() => setJobsPage(prev => Math.max(prev - 1, 1))}
+                        onClick={() =>
+                          setJobsPage((prev) => Math.max(prev - 1, 1))
+                        }
                         className="flex items-center gap-1 px-2.5 py-1 text-xs"
                       >
-                        <ChevronLeft size={14} /> Previous
+                        <ChevronLeft size={14} /> {t("previous")}
                       </Button>
                       <Button
                         variant="outline"
                         size="xs"
                         disabled={jobsPage === jobsTotalPages}
-                        onClick={() => setJobsPage(prev => Math.min(prev + 1, jobsTotalPages))}
+                        onClick={() =>
+                          setJobsPage((prev) =>
+                            Math.min(prev + 1, jobsTotalPages),
+                          )
+                        }
                         className="flex items-center gap-1 px-2.5 py-1 text-xs"
                       >
-                        Next <ChevronRight size={14} />
+                        {t("next")}
+                        <ChevronRight size={14} />
                       </Button>
                     </div>
                   </div>

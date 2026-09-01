@@ -11,125 +11,135 @@ import { authOptions } from "@/lib/auth";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(
-    req: Request,
-    { params }: Params
-) {
-    try {
-        const session = await getServerSession(authOptions);
-        if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(req: Request, { params }: Params) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await connectDB();
-        const { id } = await params;
-        const item = await DamagedItem.findOne({ _id: id })
-            .populate("createdBy", "name")
-            .populate("updatedBy", "name");
-        if (!item) return NextResponse.json({ error: "Damaged item not found" }, { status: 404 });
-        return NextResponse.json(item);
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    await connectDB();
+    const { id } = await params;
+    const item = await DamagedItem.findOne({ _id: id })
+      .populate("createdBy", "name")
+      .populate("updatedBy", "name");
+    if (!item)
+      return NextResponse.json(
+        { error: "Damaged item not found" },
+        { status: 404 },
+      );
+    return NextResponse.json(item);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }
 
-export async function PUT(
-    req: Request,
-    { params }: Params
-) {
-    const dbSession = await mongoose.startSession();
-    dbSession.startTransaction();
+export async function PUT(req: Request, { params }: Params) {
+  const dbSession = await mongoose.startSession();
+  dbSession.startTransaction();
 
-    try {
-        const session = await getServerSession(authOptions);
-        if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await connectDB();
-        const { id } = await params;
-        const body = await req.json();
-        const oldDamaged = await DamagedItem.findOne({ _id: id }).session(dbSession);
+    await connectDB();
+    const { id } = await params;
+    const body = await req.json();
+    const oldDamaged = await DamagedItem.findOne({ _id: id }).session(
+      dbSession,
+    );
 
-        if (!oldDamaged) {
-            return NextResponse.json({ error: "Damaged item record not found" }, { status: 404 });
-        }
-
-        const quantityDiff = body.quantity - oldDamaged.quantity;
-        
-        // 1 - Update record
-        const updated = await DamagedItem.findOneAndUpdate({ _id: id }, {
-            ...body,
-            updatedBy: session.user.id
-        }, { 
-            new: true,
-            session: dbSession 
-        });
-
-        // 2 - Adjust inventory if quantity changed or if item changed!
-        if (oldDamaged.itemId === body.itemId) {
-            if (quantityDiff !== 0) {
-                await Item.findOneAndUpdate(
-                    { _id: body.itemId },
-                    { $inc: { quantity: -quantityDiff } },
-                    { session: dbSession }
-                );
-            }
-        } else {
-            // Revert old item
-            await Item.findOneAndUpdate(
-                { _id: oldDamaged.itemId },
-                { $inc: { quantity: oldDamaged.quantity } },
-                { session: dbSession }
-            );
-            // Decrease from new item
-            await Item.findOneAndUpdate(
-                { _id: body.itemId },
-                { $inc: { quantity: -body.quantity } },
-                { session: dbSession }
-            );
-        }
-
-        await dbSession.commitTransaction();
-        return NextResponse.json(updated);
-    } catch (error: any) {
-        await dbSession.abortTransaction();
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    } finally {
-        dbSession.endSession();
+    if (!oldDamaged) {
+      return NextResponse.json(
+        { error: "Damaged item record not found" },
+        { status: 404 },
+      );
     }
-}
 
-export async function DELETE(
-    req: Request,
-    { params }: Params
-) {
-    const dbSession = await mongoose.startSession();
-    dbSession.startTransaction();
+    const quantityDiff = body.quantity - oldDamaged.quantity;
 
-    try {
-        const session = await getServerSession(authOptions);
-        if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // 1 - Update record
+    const updated = await DamagedItem.findOneAndUpdate(
+      { _id: id },
+      {
+        ...body,
+        updatedBy: session.user.id,
+      },
+      {
+        new: true,
+        session: dbSession,
+      },
+    );
 
-        await connectDB();
-        const { id } = await params;
-        const damaged = await DamagedItem.findOne({ _id: id }).session(dbSession);
-        if (!damaged) {
-            return NextResponse.json({ error: "Damaged record not found" }, { status: 404 });
-        }
-
-        // 1 - Restore quantity
+    // 2 - Adjust inventory if quantity changed or if item changed!
+    if (oldDamaged.itemId === body.itemId) {
+      if (quantityDiff !== 0) {
         await Item.findOneAndUpdate(
-            { _id: damaged.itemId },
-            { $inc: { quantity: damaged.quantity } },
-            { session: dbSession }
+          { _id: body.itemId },
+          { $inc: { quantity: -quantityDiff } },
+          { session: dbSession },
         );
-
-        // 2 - Delete record
-        await DamagedItem.findOneAndDelete({ _id: id }).session(dbSession);
-
-        await dbSession.commitTransaction();
-        return NextResponse.json({ message: "Damaged record deleted" });
-    } catch (error: any) {
-        await dbSession.abortTransaction();
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    } finally {
-        dbSession.endSession();
+      }
+    } else {
+      // Revert old item
+      await Item.findOneAndUpdate(
+        { _id: oldDamaged.itemId },
+        { $inc: { quantity: oldDamaged.quantity } },
+        { session: dbSession },
+      );
+      // Decrease from new item
+      await Item.findOneAndUpdate(
+        { _id: body.itemId },
+        { $inc: { quantity: -body.quantity } },
+        { session: dbSession },
+      );
     }
+
+    await dbSession.commitTransaction();
+    return NextResponse.json(updated);
+  } catch (error: any) {
+    await dbSession.abortTransaction();
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  } finally {
+    dbSession.endSession();
+  }
+}
+
+export async function DELETE(req: Request, { params }: Params) {
+  const dbSession = await mongoose.startSession();
+  dbSession.startTransaction();
+
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    await connectDB();
+    const { id } = await params;
+    const damaged = await DamagedItem.findOne({ _id: id }).session(dbSession);
+    if (!damaged) {
+      return NextResponse.json(
+        { error: "Damaged record not found" },
+        { status: 404 },
+      );
+    }
+
+    // 1 - Restore quantity
+    await Item.findOneAndUpdate(
+      { _id: damaged.itemId },
+      { $inc: { quantity: damaged.quantity } },
+      { session: dbSession },
+    );
+
+    // 2 - Delete record
+    await DamagedItem.findOneAndDelete({ _id: id }).session(dbSession);
+
+    await dbSession.commitTransaction();
+    return NextResponse.json({ message: "Damaged record deleted" });
+  } catch (error: any) {
+    await dbSession.abortTransaction();
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  } finally {
+    dbSession.endSession();
+  }
 }

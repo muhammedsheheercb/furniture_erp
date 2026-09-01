@@ -7,6 +7,7 @@ import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import axios from "axios";
 import { toast } from "sonner";
 import { Banknote, CreditCard, Landmark } from "lucide-react";
+import { useLanguage } from "../../context/LanguageContext";
 
 interface UpdateBalanceModalProps {
   open: boolean;
@@ -16,9 +17,9 @@ interface UpdateBalanceModalProps {
 }
 
 const PAYMENT_METHODS = [
-  { value: "cash",  label: "Cash",       icon: Banknote },
-  { value: "bank",  label: "Bank",        icon: Landmark },
-  { value: "credit", label: "Credit",    icon: CreditCard },
+  { value: "cash", label: "Cash", icon: Banknote },
+  { value: "bank", label: "Bank", icon: Landmark },
+  { value: "credit", label: "Credit", icon: CreditCard },
 ];
 
 export default function UpdateBalanceModal({
@@ -27,14 +28,17 @@ export default function UpdateBalanceModal({
   onSuccess,
   sale,
 }: UpdateBalanceModalProps) {
+  const { t } = useLanguage();
   const [amount, setAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank" | "credit">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "cash" | "bank" | "credit"
+  >("cash");
   const [loading, setLoading] = useState(false);
 
   if (!sale) return null;
 
-  const totalPaid   = sale.advancePaid || 0;
-  const balance     = sale.total - totalPaid;
+  const totalPaid = sale.advancePaid || 0;
+  const balance = sale.total - totalPaid;
   const afterPayment = balance - (Number(amount) || 0);
 
   const handleClose = () => {
@@ -52,7 +56,9 @@ export default function UpdateBalanceModal({
       return;
     }
     if (paymentAmount > balance) {
-      toast.error(`Amount cannot exceed remaining balance of ${balance.toLocaleString()}`);
+      toast.error(
+        `Amount cannot exceed remaining balance of ${balance.toLocaleString()}`,
+      );
       return;
     }
 
@@ -87,32 +93,41 @@ export default function UpdateBalanceModal({
       footer={
         <>
           <Button variant="outline" onClick={handleClose} disabled={loading}>
-            Cancel
+            {t("cancel")}
           </Button>
-          <Button onClick={handleSubmit} loading={loading} disabled={balance <= 0}>
-            Record Payment
+          <Button
+            onClick={handleSubmit}
+            loading={loading}
+            disabled={balance <= 0}
+          >
+            {t("recordPayment")}
           </Button>
         </>
       }
     >
       <div className="space-y-4 py-1">
-
         {/* Balance summary */}
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="p-3 rounded-xl bg-[#F0F5F2] border border-[#DDD8CE]">
-            <p className="text-[10px] font-semibold text-[#5A6B60] uppercase tracking-wider mb-1">Order Total</p>
+            <p className="text-[10px] font-semibold text-[#5A6B60] uppercase tracking-wider mb-1">
+              {t("orderTotal")}
+            </p>
             <p className="text-base font-bold text-[#1a1a1a]">
               <CurrencySymbol /> {sale.total.toLocaleString()}
             </p>
           </div>
           <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
-            <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider mb-1">Paid So Far</p>
+            <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider mb-1">
+              {t("paidSoFar")}
+            </p>
             <p className="text-base font-bold text-emerald-700">
               <CurrencySymbol /> {totalPaid.toLocaleString()}
             </p>
           </div>
           <div className="p-3 rounded-xl bg-rose-50 border border-rose-100">
-            <p className="text-[10px] font-semibold text-rose-500 uppercase tracking-wider mb-1">Outstanding</p>
+            <p className="text-[10px] font-semibold text-rose-500 uppercase tracking-wider mb-1">
+              {t("outstanding")}
+            </p>
             <p className="text-base font-bold text-rose-600">
               <CurrencySymbol /> {balance.toLocaleString()}
             </p>
@@ -121,13 +136,15 @@ export default function UpdateBalanceModal({
 
         {balance <= 0 ? (
           <div className="text-center py-4 text-emerald-600 font-semibold text-sm bg-emerald-50 rounded-xl border border-emerald-100">
-            ✓ This order is fully paid
+            {t("thisOrderIsFullyPaid")}
           </div>
         ) : (
           <>
             {/* Payment method */}
             <div>
-              <p className="text-xs font-semibold text-[#5A6B60] uppercase tracking-wider mb-2">Payment Method</p>
+              <p className="text-xs font-semibold text-[#5A6B60] uppercase tracking-wider mb-2">
+                {t("paymentMethod")}
+              </p>
               <div className="flex gap-2">
                 {PAYMENT_METHODS.map(({ value, label, icon: Icon }) => (
                   <button
@@ -161,7 +178,7 @@ export default function UpdateBalanceModal({
             {/* Amount */}
             <form onSubmit={handleSubmit}>
               <Input
-                label="Amount to Receive"
+                label={t("amountToReceive")}
                 type="number"
                 placeholder={`Max: ${balance.toLocaleString()}`}
                 value={amount}
@@ -175,16 +192,22 @@ export default function UpdateBalanceModal({
             {/* Preview after payment */}
             {Number(amount) > 0 && Number(amount) <= balance && (
               <div className="flex justify-between items-center p-3 rounded-xl bg-[#F0F5F2] border border-[#DDD8CE] text-sm">
-                <span className="text-[#5A6B60] font-medium">Remaining after payment</span>
-                <span className={`font-bold ${afterPayment <= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                  <CurrencySymbol /> {Math.max(0, afterPayment).toLocaleString()}
-                  {afterPayment <= 0 && <span className="ml-1 text-xs">✓ Fully Paid</span>}
+                <span className="text-[#5A6B60] font-medium">
+                  {t("remainingAfterPayment")}
+                </span>
+                <span
+                  className={`font-bold ${afterPayment <= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                >
+                  <CurrencySymbol />{" "}
+                  {Math.max(0, afterPayment).toLocaleString()}
+                  {afterPayment <= 0 && (
+                    <span className="ms-1 text-xs">{t("fullyPaid")}</span>
+                  )}
                 </span>
               </div>
             )}
           </>
         )}
-
       </div>
     </Modal>
   );

@@ -11,21 +11,28 @@ import { hasPermission } from "@/lib/permissions";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+
     const isWorker = (session.user as any).role === "worker";
 
     if (
       !isWorker &&
-      !(await hasPermission("customers", "view")) && 
-      !(await hasPermission("quotations", "view")) && 
+      !(await hasPermission("customers", "view")) &&
+      !(await hasPermission("quotations", "view")) &&
       !(await hasPermission("sales", "view")) &&
       !(await hasPermission("production", "view")) &&
       !(await hasPermission("production", "edit")) &&
       !(await hasPermission("quotations", "create")) &&
       !(await hasPermission("sales", "create"))
     ) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      return NextResponse.json(
+        { success: false, error: "Forbidden" },
+        { status: 403 },
+      );
     }
 
     await connectDB();
@@ -33,15 +40,15 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url, "http://localhost");
     const { searchParams } = url;
 
-    const search    = searchParams.get("search") || "";
-    const page      = parseInt(searchParams.get("page") || "1");
-    const limit     = parseInt(searchParams.get("limit") || "10");
-    const sortBy    = searchParams.get("sortBy") || "createdAt";
+    const search = searchParams.get("search") || "";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") === "asc" ? 1 : -1;
     const startDate = searchParams.get("startDate");
-    const endDate   = searchParams.get("endDate");
+    const endDate = searchParams.get("endDate");
     const purchaseFilter = searchParams.get("purchaseFilter"); // 'higher' or 'lower'
-    const skip      = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
     let matchQuery: any = {};
     if (search) {
@@ -55,7 +62,8 @@ export async function GET(req: NextRequest) {
     if (startDate || endDate) {
       matchQuery.createdAt = {};
       if (startDate) matchQuery.createdAt.$gte = new Date(startDate);
-      if (endDate) matchQuery.createdAt.$lte = new Date(`${endDate}T23:59:59.999Z`);
+      if (endDate)
+        matchQuery.createdAt.$lte = new Date(`${endDate}T23:59:59.999Z`);
     }
 
     // Default sortBy
@@ -75,29 +83,37 @@ export async function GET(req: NextRequest) {
             {
               $match: {
                 $expr: { $eq: ["$customerId", "$$customerId"] },
-                ...(startDate || endDate ? {
-                  date: {
-                    ...(startDate ? { $gte: new Date(startDate) } : {}),
-                    ...(endDate ? { $lte: new Date(`${endDate}T23:59:59.999Z`) } : {}),
-                  }
-                } : {})
-              }
+                ...(startDate || endDate
+                  ? {
+                      date: {
+                        ...(startDate ? { $gte: new Date(startDate) } : {}),
+                        ...(endDate
+                          ? { $lte: new Date(`${endDate}T23:59:59.999Z`) }
+                          : {}),
+                      },
+                    }
+                  : {}),
+              },
             },
-            { $group: { _id: null, total: { $sum: "$total" } } }
+            { $group: { _id: null, total: { $sum: "$total" } } },
           ],
-          as: "purchaseStats"
-        }
+          as: "purchaseStats",
+        },
       },
       {
         $addFields: {
-          totalPurchases: { $ifNull: [{ $arrayElemAt: ["$purchaseStats.total", 0] }, 0] }
-        }
+          totalPurchases: {
+            $ifNull: [{ $arrayElemAt: ["$purchaseStats.total", 0] }, 0],
+          },
+        },
       },
       { $sort: sortQuery },
       {
         $facet: {
           metadata: [{ $count: "total" }],
-          receivables: [{ $group: { _id: null, total: { $sum: "$creditBalance" } } }],
+          receivables: [
+            { $group: { _id: null, total: { $sum: "$creditBalance" } } },
+          ],
           data: [
             { $skip: skip },
             { $limit: limit },
@@ -106,26 +122,26 @@ export async function GET(req: NextRequest) {
                 from: "users",
                 localField: "createdBy",
                 foreignField: "_id",
-                as: "createdBy"
-              }
+                as: "createdBy",
+              },
             },
             {
               $lookup: {
                 from: "users",
                 localField: "updatedBy",
                 foreignField: "_id",
-                as: "updatedBy"
-              }
+                as: "updatedBy",
+              },
             },
             {
               $addFields: {
                 createdBy: { $arrayElemAt: ["$createdBy", 0] },
-                updatedBy: { $arrayElemAt: ["$updatedBy", 0] }
-              }
-            }
-          ]
-        }
-      }
+                updatedBy: { $arrayElemAt: ["$updatedBy", 0] },
+              },
+            },
+          ],
+        },
+      },
     ];
 
     if (!Customer) {
@@ -133,7 +149,7 @@ export async function GET(req: NextRequest) {
     }
 
     const results = await Customer.aggregate(pipeline);
-    
+
     if (!results || results.length === 0) {
       return NextResponse.json({
         success: true,
@@ -147,9 +163,14 @@ export async function GET(req: NextRequest) {
     }
 
     const customers = results[0].data || [];
-    const total = results[0].metadata && results[0].metadata[0] ? results[0].metadata[0].total : 0;
-    const totalReceivables = results[0].receivables && results[0].receivables[0] ? results[0].receivables[0].total : 0;
-
+    const total =
+      results[0].metadata && results[0].metadata[0]
+        ? results[0].metadata[0].total
+        : 0;
+    const totalReceivables =
+      results[0].receivables && results[0].receivables[0]
+        ? results[0].receivables[0].total
+        : 0;
 
     return NextResponse.json({
       success: true,
@@ -162,58 +183,76 @@ export async function GET(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("[GET /api/customers] FATAL ERROR:", err);
-    return NextResponse.json({ 
-      success: false, 
-      error: "Server error", 
-      details: err.message,
-      stack: process.env.NODE_ENV === "development" ? err.stack : undefined
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Server error",
+        details: err.message,
+        stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+      },
+      { status: 500 },
+    );
   }
-
 }
 
 // POST /api/customers
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
     const isWorker = (session.user as any).role === "worker";
 
     if (
       !isWorker &&
-      !(await hasPermission("customers", "create")) && 
-      !(await hasPermission("quotations", "create")) && 
+      !(await hasPermission("customers", "create")) &&
+      !(await hasPermission("quotations", "create")) &&
       !(await hasPermission("sales", "create")) &&
       !(await hasPermission("production", "edit"))
     ) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      return NextResponse.json(
+        { success: false, error: "Forbidden" },
+        { status: 403 },
+      );
     }
 
     await connectDB();
     const { creditBalance, balanceHistory, ...safeBody } = await req.json();
-    const customerNumber = safeBody.customerNumber || generateUniqueNumber("CUST");
+    const customerNumber =
+      safeBody.customerNumber || generateUniqueNumber("CUST");
     const openingBalance = Number(safeBody.openingBalance || 0);
 
-    const customer = await Customer.create({ 
-        ...safeBody, 
-        customerNumber,
-        openingBalance,
-        creditBalance: openingBalance,
-        createdBy: session.user.id,
-        updatedBy: session.user.id,
-        balanceHistory: openingBalance !== 0 ? [{
-            date: new Date(),
-            amount: openingBalance,
-            type: "adjustment",
-            paymentMethod: "credit",
-            note: "Opening Balance"
-        }] : []
+    const customer = await Customer.create({
+      ...safeBody,
+      customerNumber,
+      openingBalance,
+      creditBalance: openingBalance,
+      createdBy: session.user.id,
+      updatedBy: session.user.id,
+      balanceHistory:
+        openingBalance !== 0
+          ? [
+              {
+                date: new Date(),
+                amount: openingBalance,
+                type: "adjustment",
+                paymentMethod: "credit",
+                note: "Opening Balance",
+              },
+            ]
+          : [],
     });
 
     // Re-fetch to ensure the full document with schema defaults and historical updates is returned
     const fullCustomer = await Customer.findById(customer._id).lean();
 
-    return NextResponse.json({ success: true, data: fullCustomer }, { status: 201 });
+    return NextResponse.json(
+      { success: true, data: fullCustomer },
+      { status: 201 },
+    );
   } catch (err: unknown) {
     console.error("[POST /api/customers]", err);
     const msg = err instanceof Error ? err.message : "Server error";

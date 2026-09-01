@@ -33,18 +33,21 @@ const UserSchema = new Schema<IUserDocument>(
     },
     permissions: {
       type: Map,
-      of: new Schema({
-        view: { type: Boolean, default: false },
-        create: { type: Boolean, default: false },
-        edit: { type: Boolean, default: false },
-        delete: { type: Boolean, default: false },
-        approve: { type: Boolean, default: false },
-        export: { type: Boolean, default: false },
-      }, { _id: false }),
+      of: new Schema(
+        {
+          view: { type: Boolean, default: false },
+          create: { type: Boolean, default: false },
+          edit: { type: Boolean, default: false },
+          delete: { type: Boolean, default: false },
+          approve: { type: Boolean, default: false },
+          export: { type: Boolean, default: false },
+        },
+        { _id: false },
+      ),
       default: {},
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 UserSchema.pre("save", async function () {
@@ -57,7 +60,7 @@ UserSchema.pre("save", async function () {
 });
 
 UserSchema.methods.comparePassword = async function (
-  candidate: string
+  candidate: string,
 ): Promise<boolean> {
   return bcrypt.compare(candidate, this.password);
 };
@@ -68,7 +71,6 @@ if (process.env.NODE_ENV === "development") {
 }
 
 const User: Model<IUserDocument> =
-  mongoose.models.User ||
-  mongoose.model<IUserDocument>("User", UserSchema);
+  mongoose.models.User || mongoose.model<IUserDocument>("User", UserSchema);
 
 export default User;

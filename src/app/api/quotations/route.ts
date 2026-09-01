@@ -11,7 +11,11 @@ function genQuotationNumber(seq: number) {
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { searchParams } = new URL(req.url);
@@ -40,7 +44,11 @@ export async function GET(req: NextRequest) {
     if (startDate || endDate) {
       filter.date = {};
       if (startDate) filter.date.$gte = new Date(startDate);
-      if (endDate) { const ed = new Date(endDate); ed.setHours(23, 59, 59, 999); filter.date.$lte = ed; }
+      if (endDate) {
+        const ed = new Date(endDate);
+        ed.setHours(23, 59, 59, 999);
+        filter.date.$lte = ed;
+      }
     }
 
     const skip = (page - 1) * limit;
@@ -57,18 +65,29 @@ export async function GET(req: NextRequest) {
     ]);
 
     return NextResponse.json({
-      success: true, data, total,
-      page, limit, totalPages: Math.ceil(total / limit),
+      success: true,
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: err.message },
+      { status: 500 },
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const body = await req.json();
@@ -82,8 +101,14 @@ export async function POST(req: NextRequest) {
       createdBy: (session.user as any)?.id,
     });
 
-    return NextResponse.json({ success: true, data: quotation }, { status: 201 });
+    return NextResponse.json(
+      { success: true, data: quotation },
+      { status: 201 },
+    );
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: err.message },
+      { status: 500 },
+    );
   }
 }

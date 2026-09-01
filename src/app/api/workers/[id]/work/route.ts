@@ -10,7 +10,11 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
     const { id } = await params;
@@ -21,7 +25,10 @@ export async function GET(req: NextRequest, { params }: Params) {
     const skip = (page - 1) * limit;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ success: false, error: "Invalid worker ID" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Invalid worker ID" },
+        { status: 400 },
+      );
     }
 
     const workerObjectId = new mongoose.Types.ObjectId(id);
@@ -31,10 +38,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     // Find all production jobs assigned to this worker using $or to match either ObjectId or string form
     const query: any = {
-      $or: [
-        { workerId: workerObjectId },
-        { workerId: id }
-      ]
+      $or: [{ workerId: workerObjectId }, { workerId: id }],
     };
     if (startDate || endDate) {
       query.createdAt = {};
@@ -53,7 +57,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       .limit(limit)
       .populate({
         path: "saleId",
-        select: "customerMobile customerAddress deliveryAddress"
+        select: "customerMobile customerAddress deliveryAddress",
       })
       .lean();
 
@@ -64,11 +68,14 @@ export async function GET(req: NextRequest, { params }: Params) {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (err: any) {
     console.error("[GET /api/workers/:id/work]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }

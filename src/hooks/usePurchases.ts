@@ -17,19 +17,21 @@ interface PurchaseFilters {
 }
 
 export function usePurchases() {
-  const [purchases, setPurchases]   = useState<IPurchase[]>([]);
-  const [total, setTotal]           = useState(0);
+  const [purchases, setPurchases] = useState<IPurchase[]>([]);
+  const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [totalAmount, setTotalAmount] = useState(0);
-  const [loading, setLoading]       = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const fetchPurchases = useCallback(async (filters: PurchaseFilters = {}) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== "") params.set(k, String(v)); });
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v !== undefined && v !== "") params.set(k, String(v));
+      });
 
-      const res  = await fetch(`/api/purchases?${params}`);
+      const res = await fetch(`/api/purchases?${params}`);
       const data = await res.json();
       if (!data.success) throw new Error();
       setPurchases(data.data);
@@ -43,22 +45,31 @@ export function usePurchases() {
     }
   }, []);
 
-  const createPurchase = useCallback(async (form: IPurchaseForm): Promise<boolean> => {
-    try {
-      const res  = await fetch("/api/purchases", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
-      toast.success("Purchase created successfully");
-      return true;
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to create purchase");
-      return false;
-    }
-  }, []);
+  const createPurchase = useCallback(
+    async (form: IPurchaseForm): Promise<boolean> => {
+      try {
+        const res = await fetch("/api/purchases", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        toast.success("Purchase created successfully");
+        return true;
+      } catch (e: unknown) {
+        toast.error(
+          e instanceof Error ? e.message : "Failed to create purchase",
+        );
+        return false;
+      }
+    },
+    [],
+  );
 
   const deletePurchase = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const res  = await fetch(`/api/purchases/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/purchases/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
       toast.success("Purchase deleted");
@@ -69,18 +80,37 @@ export function usePurchases() {
     }
   }, []);
 
-  const updatePurchase = useCallback(async (id: string, form: Partial<IPurchaseForm>): Promise<boolean> => {
-    try {
-      const res  = await fetch(`/api/purchases/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
-      toast.success("Purchase updated");
-      return true;
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to update purchase");
-      return false;
-    }
-  }, []);
+  const updatePurchase = useCallback(
+    async (id: string, form: Partial<IPurchaseForm>): Promise<boolean> => {
+      try {
+        const res = await fetch(`/api/purchases/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        toast.success("Purchase updated");
+        return true;
+      } catch (e: unknown) {
+        toast.error(
+          e instanceof Error ? e.message : "Failed to update purchase",
+        );
+        return false;
+      }
+    },
+    [],
+  );
 
-  return { purchases, total, totalPages, totalAmount, loading, fetchPurchases, createPurchase, deletePurchase, updatePurchase };
+  return {
+    purchases,
+    total,
+    totalPages,
+    totalAmount,
+    loading,
+    fetchPurchases,
+    createPurchase,
+    deletePurchase,
+    updatePurchase,
+  };
 }

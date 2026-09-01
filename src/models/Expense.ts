@@ -37,7 +37,7 @@ const ExpenseSchema = new Schema<IExpenseDocument>(
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 ExpenseSchema.index({ date: -1 });

@@ -12,21 +12,29 @@ import { hasPermission } from "@/lib/permissions";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    if (!(await hasPermission("items", "view"))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    if (!(await hasPermission("items", "view")))
+      return NextResponse.json(
+        { success: false, error: "Forbidden" },
+        { status: 403 },
+      );
 
     await connectDB();
 
     const { searchParams } = new URL(req.url);
-    const search   = searchParams.get("search") || "";
-    const page     = parseInt(searchParams.get("page") || "1");
-    const limit    = parseInt(searchParams.get("limit") || "10");
-    const sortBy   = searchParams.get("sortBy") || "createdAt";
+    const search = searchParams.get("search") || "";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") === "asc" ? 1 : -1;
     const startDate = searchParams.get("startDate");
-    const endDate   = searchParams.get("endDate");
-    const category  = searchParams.get("category");
-    const skip     = (page - 1) * limit;
+    const endDate = searchParams.get("endDate");
+    const category = searchParams.get("category");
+    const skip = (page - 1) * limit;
 
     const query: any = {};
     if (search) {
@@ -59,8 +67,15 @@ export async function GET(req: NextRequest) {
       Item.countDocuments(query),
       Item.aggregate([
         { $match: query },
-        { $group: { _id: null, totalAmount: { $sum: { $multiply: ["$purchaseAmount", "$quantity"] } } } }
-      ])
+        {
+          $group: {
+            _id: null,
+            totalAmount: {
+              $sum: { $multiply: ["$purchaseAmount", "$quantity"] },
+            },
+          },
+        },
+      ]),
     ]);
 
     const totalAmount = summary[0]?.totalAmount || 0;
@@ -76,7 +91,10 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("[GET /api/items]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -84,16 +102,24 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    if (!(await hasPermission("items", "create"))) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    if (!(await hasPermission("items", "create")))
+      return NextResponse.json(
+        { success: false, error: "Forbidden" },
+        { status: 403 },
+      );
 
     await connectDB();
     const body = await req.json();
 
     const itemNumber = body.itemNumber || generateUniqueNumber("ITM");
 
-    const itemData = { 
-      ...body, 
+    const itemData = {
+      ...body,
       itemNumber,
       salesAmount: Number(body.salesAmount) || 0,
       purchaseAmount: Number(body.purchaseAmount) || 0,
@@ -107,23 +133,25 @@ export async function POST(req: NextRequest) {
     };
 
     if (itemData.quantity > 0) {
-      itemData.batches = [{
-        purchaseNumber: "OPENING",
-        batchNumber: body.batchNumber || "OPN-INT",
-        manufacturingDate: body.manufacturingDate,
-        expiryDate: body.expiryDate,
-        purchasePrice: body.purchaseAmount ?? 0,
-        salePrice: body.salesAmount ?? 0,
-        quantity: body.quantity ?? 0,
-        createdAt: body.batchDate ? new Date(body.batchDate) : new Date()
-      }];
+      itemData.batches = [
+        {
+          purchaseNumber: "OPENING",
+          batchNumber: body.batchNumber || "OPN-INT",
+          manufacturingDate: body.manufacturingDate,
+          expiryDate: body.expiryDate,
+          purchasePrice: body.purchaseAmount ?? 0,
+          salePrice: body.salesAmount ?? 0,
+          quantity: body.quantity ?? 0,
+          createdAt: body.batchDate ? new Date(body.batchDate) : new Date(),
+        },
+      ];
     }
 
     const item = await Item.create(itemData);
 
     // Deduct BOM quantities from material batch stock (only for manufactured products)
     const bomRows = (body.bom || []).filter(
-      (r: any) => r.materialId && r.batchNumber && Number(r.quantity) > 0
+      (r: any) => r.materialId && r.batchNumber && Number(r.quantity) > 0,
     );
     if (bomRows.length > 0) {
       await Promise.all(
@@ -135,9 +163,9 @@ export async function POST(req: NextRequest) {
                 currentStock: -Number(r.quantity),
                 "batches.$.quantity": -Number(r.quantity),
               },
-            }
-          )
-        )
+            },
+          ),
+        ),
       );
     }
 

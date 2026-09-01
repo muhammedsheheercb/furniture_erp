@@ -14,14 +14,20 @@ import { authOptions } from "@/lib/auth";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     await connectDB();
 
     const { searchParams } = new URL(req.url);
-    const year = parseInt(searchParams.get("year") || new Date().getFullYear().toString());
+    const year = parseInt(
+      searchParams.get("year") || new Date().getFullYear().toString(),
+    );
     const startDateParam = searchParams.get("startDate");
-    const endDateParam   = searchParams.get("endDate");
+    const endDateParam = searchParams.get("endDate");
 
     let matchRange: any = {
       date: {
@@ -41,13 +47,15 @@ export async function GET(req: NextRequest) {
     }
 
     const yearStart = new Date(year, 0, 1);
-    const yearEnd   = new Date(year, 11, 31, 23, 59, 59);
+    const yearEnd = new Date(year, 11, 31, 23, 59, 59);
     const chartStart = startDateParam ? new Date(startDateParam) : yearStart;
-    const chartEnd   = endDateParam ? (() => {
-      const d = new Date(endDateParam);
-      d.setHours(23, 59, 59, 999);
-      return d;
-    })() : yearEnd;
+    const chartEnd = endDateParam
+      ? (() => {
+          const d = new Date(endDateParam);
+          d.setHours(23, 59, 59, 999);
+          return d;
+        })()
+      : yearEnd;
 
     // ── KPI totals ──────────────────────────────────
     const [
@@ -73,16 +81,16 @@ export async function GET(req: NextRequest) {
             from: "sales",
             localField: "saleId",
             foreignField: "_id",
-            as: "saleInfo"
-          }
+            as: "saleInfo",
+          },
         },
         { $unwind: { path: "$saleInfo", preserveNullAndEmptyArrays: true } },
         {
           $group: {
             _id: "$saleInfo.paymentType",
-            total: { $sum: "$totalAmount" }
-          }
-        }
+            total: { $sum: "$totalAmount" },
+          },
+        },
       ]),
       Purchase.aggregate([
         { $match: matchRange },
@@ -94,15 +102,13 @@ export async function GET(req: NextRequest) {
       ]),
       Customer.countDocuments(),
       Item.countDocuments(),
-      Item.aggregate([
-        { $group: { _id: null, total: { $sum: "$quantity" } } }
-      ]),
+      Item.aggregate([{ $group: { _id: null, total: { $sum: "$quantity" } } }]),
       Supplier.countDocuments(),
       Customer.aggregate([
-        { $group: { _id: null, total: { $sum: "$creditBalance" } } }
+        { $group: { _id: null, total: { $sum: "$creditBalance" } } },
       ]),
       Supplier.aggregate([
-        { $group: { _id: null, total: { $sum: "$creditBalance" } } }
+        { $group: { _id: null, total: { $sum: "$creditBalance" } } },
       ]),
     ]);
 
@@ -113,86 +119,149 @@ export async function GET(req: NextRequest) {
       acc[pType] = (acc[pType] || 0) + curr.total;
       return acc;
     }, {});
-    const totalReturns = returnsAgg.reduce((sum: number, curr: any) => sum + curr.total, 0);
-    
+    const totalReturns = returnsAgg.reduce(
+      (sum: number, curr: any) => sum + curr.total,
+      0,
+    );
+
     // Aggregate by payment type
     const salesByPayment = salesAgg.reduce((acc: any, curr: any) => {
       acc[curr._id] = curr.total;
       return acc;
     }, {});
-    
-    const cashSales = Math.max(0, (salesByPayment["cash"] || 0) - (returnsByPayment["cash"] || 0));
-    const bankSales = Math.max(0, (salesByPayment["bank"] || 0) - (returnsByPayment["bank"] || 0));
-    const creditSales = Math.max(0, (salesByPayment["credit"] || 0) - (returnsByPayment["credit"] || 0));
+
+    const cashSales = Math.max(
+      0,
+      (salesByPayment["cash"] || 0) - (returnsByPayment["cash"] || 0),
+    );
+    const bankSales = Math.max(
+      0,
+      (salesByPayment["bank"] || 0) - (returnsByPayment["bank"] || 0),
+    );
+    const creditSales = Math.max(
+      0,
+      (salesByPayment["credit"] || 0) - (returnsByPayment["credit"] || 0),
+    );
     const totalSales = cashSales + bankSales + creditSales;
-    
+
     const purchasesByPayment = purchasesAgg.reduce((acc: any, curr: any) => {
       acc[curr._id] = curr.total;
       return acc;
     }, {});
-    const totalPurchases = Object.values(purchasesByPayment).reduce((sum: any, val: any) => sum + val, 0) as number;
+    const totalPurchases = Object.values(purchasesByPayment).reduce(
+      (sum: any, val: any) => sum + val,
+      0,
+    ) as number;
     const cashPurchases = purchasesByPayment["cash"] || 0;
     const bankPurchases = purchasesByPayment["bank"] || 0;
     const creditPurchases = purchasesByPayment["credit"] || 0;
-    const totalExpenses  = expensesAgg[0]?.total ?? 0;
-    const totalRevenue   = totalSales - totalPurchases - totalExpenses;
+    const totalExpenses = expensesAgg[0]?.total ?? 0;
+    const totalRevenue = totalSales - totalPurchases - totalExpenses;
     const totalReceivable = receivableAgg[0]?.total ?? 0;
-    const totalPayable    = payableAgg[0]?.total ?? 0;
+    const totalPayable = payableAgg[0]?.total ?? 0;
 
     // ── Monthly chart data ───────────────────────────
-    const [monthlySales, monthlyReturns, monthlyPurchases, monthlyExpenses] = await Promise.all([
-      Sale.aggregate([
-        { $match: { date: { $gte: chartStart, $lte: chartEnd } } },
-        { $group: {
-          _id: { month: { $month: "$date" } },
-          total: { $sum: "$total" },
-        }},
-        { $sort: { "_id.month": 1 } },
-      ]),
-      SalesReturn.aggregate([
-        { $match: { date: { $gte: chartStart, $lte: chartEnd } } },
-        { $group: {
-          _id: { month: { $month: "$date" } },
-          total: { $sum: "$totalAmount" },
-        }},
-        { $sort: { "_id.month": 1 } },
-      ]),
-      Purchase.aggregate([
-        { $match: { date: { $gte: chartStart, $lte: chartEnd } } },
-        { $group: {
-          _id: { month: { $month: "$date" } },
-          total: { $sum: "$total" },
-        }},
-        { $sort: { "_id.month": 1 } },
-      ]),
-      Expense.aggregate([
-        { $match: { date: { $gte: chartStart, $lte: chartEnd } } },
-        { $group: {
-          _id: { month: { $month: "$date" } },
-          total: { $sum: "$amount" },
-        }},
-        { $sort: { "_id.month": 1 } },
-      ]),
-    ]);
+    const [monthlySales, monthlyReturns, monthlyPurchases, monthlyExpenses] =
+      await Promise.all([
+        Sale.aggregate([
+          { $match: { date: { $gte: chartStart, $lte: chartEnd } } },
+          {
+            $group: {
+              _id: { month: { $month: "$date" } },
+              total: { $sum: "$total" },
+            },
+          },
+          { $sort: { "_id.month": 1 } },
+        ]),
+        SalesReturn.aggregate([
+          { $match: { date: { $gte: chartStart, $lte: chartEnd } } },
+          {
+            $group: {
+              _id: { month: { $month: "$date" } },
+              total: { $sum: "$totalAmount" },
+            },
+          },
+          { $sort: { "_id.month": 1 } },
+        ]),
+        Purchase.aggregate([
+          { $match: { date: { $gte: chartStart, $lte: chartEnd } } },
+          {
+            $group: {
+              _id: { month: { $month: "$date" } },
+              total: { $sum: "$total" },
+            },
+          },
+          { $sort: { "_id.month": 1 } },
+        ]),
+        Expense.aggregate([
+          { $match: { date: { $gte: chartStart, $lte: chartEnd } } },
+          {
+            $group: {
+              _id: { month: { $month: "$date" } },
+              total: { $sum: "$amount" },
+            },
+          },
+          { $sort: { "_id.month": 1 } },
+        ]),
+      ]);
 
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
     const chartData = months.map((month, i) => {
-      const m      = i + 1;
-      const rawS   = monthlySales.find(s => s._id.month === m)?.total ?? 0;
-      const retS   = monthlyReturns.find(r => r._id.month === m)?.total ?? 0;
-      const sales  = rawS - retS;
-      const purch  = monthlyPurchases.find(p => p._id.month === m)?.total ?? 0;
-      const expens = monthlyExpenses.find(e => e._id.month === m)?.total ?? 0;
-      return { month, sales, purchases: purch, expenses: expens, revenue: sales - purch - expens };
+      const m = i + 1;
+      const rawS = monthlySales.find((s) => s._id.month === m)?.total ?? 0;
+      const retS = monthlyReturns.find((r) => r._id.month === m)?.total ?? 0;
+      const sales = rawS - retS;
+      const purch = monthlyPurchases.find((p) => p._id.month === m)?.total ?? 0;
+      const expens = monthlyExpenses.find((e) => e._id.month === m)?.total ?? 0;
+      return {
+        month,
+        sales,
+        purchases: purch,
+        expenses: expens,
+        revenue: sales - purch - expens,
+      };
     });
 
     return NextResponse.json({
       success: true,
-      kpi: { totalSales, totalPurchases, totalExpenses, totalRevenue, totalCustomers, totalItems, totalStock: stockSum, totalSuppliers, totalReceivable, totalPayable, cashSales, bankSales, creditSales, cashPurchases, bankPurchases, creditPurchases },
+      kpi: {
+        totalSales,
+        totalPurchases,
+        totalExpenses,
+        totalRevenue,
+        totalCustomers,
+        totalItems,
+        totalStock: stockSum,
+        totalSuppliers,
+        totalReceivable,
+        totalPayable,
+        cashSales,
+        bankSales,
+        creditSales,
+        cashPurchases,
+        bankPurchases,
+        creditPurchases,
+      },
       chartData,
     });
   } catch (err) {
     console.error("[GET /api/dashboard]", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }
