@@ -402,7 +402,9 @@ export default function QuotationItemModal({
       quantity: form.quantity,
       price: form.pricing.sellingPrice,
       discount: 0,
-      total: form.pricing.sellingPrice * form.quantity,
+      subtotal: form.pricing.sellingPrice * form.quantity,
+      taxAmount: form.pricing.sellingPrice * form.quantity * 0.05,
+      total: form.pricing.sellingPrice * form.quantity * 1.05,
       dimensions: {
         width: form.dimensions.width
           ? Number(form.dimensions.width)

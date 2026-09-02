@@ -18,6 +18,8 @@ const PurchaseItemSchema = new Schema(
     manufacturingDate: { type: Date },
     expiryDate: { type: Date },
     batch: { type: String },
+    subtotal: { type: Number, required: true, min: 0 },
+    taxAmount: { type: Number, required: true, min: 0 },
     total: { type: Number, required: true, min: 0 },
   },
   { _id: false },
@@ -43,6 +45,8 @@ export interface IPurchaseDocument extends Document {
     manufacturingDate?: Date;
     expiryDate?: Date;
     batch?: string;
+    subtotal: number;
+    taxAmount: number;
     total: number;
   }[];
   subtotal: number;

@@ -371,6 +371,8 @@ export default function SalesPage() {
                                           color: it.color,
                                           material: it.material,
                                           size: it.size,
+                                          subtotal: it.subtotal,
+                                          taxAmount: it.taxAmount,
                                           total: it.total,
                                           dimensions: it.dimensions,
                                           bom: it.bom,

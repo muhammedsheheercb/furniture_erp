@@ -20,6 +20,8 @@ interface LineItem {
   price: number;
   sellingPrice: number;
   batchNumber: string;
+  subtotal: number;
+  taxAmount: number;
   total: number;
 }
 
@@ -48,6 +50,8 @@ function newProductRow(): LineItem {
     price: 0,
     sellingPrice: 0,
     batchNumber: "",
+    subtotal: 0,
+    taxAmount: 0,
     total: 0,
   };
 }
@@ -63,6 +67,8 @@ function newMaterialRow(): LineItem {
     price: 0,
     sellingPrice: 0,
     batchNumber: "",
+    subtotal: 0,
+    taxAmount: 0,
     total: 0,
   };
 }
@@ -143,7 +149,11 @@ export default function PurchaseModal({
           price: item.price,
           sellingPrice: item.sellingPrice || 0,
           batchNumber: item.batch || "",
-          total: item.total,
+          subtotal: item.subtotal || item.price * item.quantity,
+          taxAmount: item.taxAmount || item.price * item.quantity * 0.05,
+          total:
+            item.total ||
+            item.price * item.quantity + item.price * item.quantity * 0.05,
         })),
       );
     } else {
@@ -177,7 +187,9 @@ export default function PurchaseModal({
               unit: p.unit || "Piece",
               price: p.purchaseAmount || 0,
               sellingPrice: p.salesAmount || 0,
-              total: (p.purchaseAmount || 0) * i.qty,
+              subtotal: (p.purchaseAmount || 0) * i.qty,
+              taxAmount: ((p.purchaseAmount || 0) * i.qty) * 0.05,
+              total: ((p.purchaseAmount || 0) * i.qty) * 1.05,
             },
       ),
     );
@@ -197,7 +209,9 @@ export default function PurchaseModal({
               code: m.code,
               unit: m.unit || "Sheet",
               price: m.lastPurchasePrice || 0,
-              total: (m.lastPurchasePrice || 0) * i.qty,
+              subtotal: (m.lastPurchasePrice || 0) * i.qty,
+              taxAmount: ((m.lastPurchasePrice || 0) * i.qty) * 0.05,
+              total: ((m.lastPurchasePrice || 0) * i.qty) * 1.05,
             },
       ),
     );
@@ -212,7 +226,9 @@ export default function PurchaseModal({
       prev.map((i) => {
         if (i.id !== lineId) return i;
         const updated = { ...i, [field]: value };
-        updated.total = updated.qty * updated.price;
+        updated.subtotal = updated.qty * updated.price;
+        updated.taxAmount = updated.subtotal * 0.05;
+        updated.total = updated.subtotal + updated.taxAmount;
         return updated;
       }),
     );
@@ -274,7 +290,8 @@ export default function PurchaseModal({
       note,
       paidAmount,
       total: grandTotal,
-      subtotal: grandTotal,
+      subtotal: grandTotal - lineItems.reduce((s, i) => s + i.taxAmount, 0),
+      tax: lineItems.reduce((s, i) => s + i.taxAmount, 0),
       items: lineItems.map((i, idx) => ({
         itemType: i.type,
         itemId: i.type === "product" ? i.refId : undefined,
@@ -285,6 +302,8 @@ export default function PurchaseModal({
         quantity: i.qty,
         price: i.price,
         sellingPrice: i.sellingPrice,
+        subtotal: i.subtotal,
+        taxAmount: i.taxAmount,
         total: i.total,
         batch: i.batchNumber.trim() || `B${Date.now()}${idx}`,
       })),
@@ -303,7 +322,7 @@ export default function PurchaseModal({
       open={open}
       onClose={onClose}
       title={purchase ? "Edit Purchase Order" : "New Purchase Order"}
-      size="xl"
+      size="screen"
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={loading}>
@@ -438,6 +457,14 @@ export default function PurchaseModal({
                   </th>
                   <th className="py-2.5 px-3 text-start text-xs font-bold text-[#7A6055] uppercase w-28">
                     {t("batchNo")}
+                  </th>
+                  <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-28">
+                    {t("subtotal")}
+                    <CurrencySymbol className="w-3 h-3" />
+                  </th>
+                  <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-28">
+                    VAT (5%)
+                    <CurrencySymbol className="w-3 h-3" />
                   </th>
                   <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-28">
                     {t("total")}
@@ -596,10 +623,22 @@ export default function PurchaseModal({
                         </span>
                       </td>
 
+                      {/* Subtotal */}
+                      <td className="px-3 py-2 text-end text-[#7A6055]">
+                        <CurrencySymbol className="w-3 h-3 me-1" />
+                        {item.subtotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+                      </td>
+
+                      {/* VAT */}
+                      <td className="px-3 py-2 text-end text-[#7A6055]">
+                        <CurrencySymbol className="w-3 h-3 me-1" />
+                        {item.taxAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+                      </td>
+
                       {/* Total */}
                       <td className="px-3 py-2 text-end font-semibold text-[#1A1210]">
                         <CurrencySymbol className="w-3 h-3 me-1" />
-                        {item.total.toLocaleString("en-IN")}
+                        {item.total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
                       </td>
 
                       {/* Remove */}

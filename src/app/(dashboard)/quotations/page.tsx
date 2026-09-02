@@ -169,13 +169,21 @@ const emptyForm = (): IQuotationForm => ({
 });
 
 function calcTotals(items: IQuotationItem[], taxPct: number, discPct: number) {
-  const subtotal = items.reduce((s, i) => {
-    const after = i.price * i.quantity * (1 - (i.discount || 0) / 100);
-    return s + after;
-  }, 0);
-  const taxAmt = subtotal * (taxPct / 100);
+  const subtotal = items.reduce(
+    (s, i) =>
+      s +
+      (i.subtotal || i.price * i.quantity * (1 - (i.discount || 0) / 100)),
+    0,
+  );
+  const taxAmt = items.reduce(
+    (s, i) =>
+      s +
+      (i.taxAmount ||
+        i.price * i.quantity * (1 - (i.discount || 0) / 100) * 0.05),
+    0,
+  );
   const discAmt = subtotal * (discPct / 100);
-  return { subtotal, total: subtotal + taxAmt - discAmt };
+  return { subtotal, taxAmt, total: subtotal + taxAmt - discAmt };
 }
 
 export default function QuotationsPage() {
@@ -304,8 +312,8 @@ export default function QuotationsPage() {
   }, [search, statusFilter, deliveryFilter]);
 
   const recalc = (items: IQuotationItem[], tp: number, dp: number) => {
-    const { subtotal, total } = calcTotals(items, tp, dp);
-    setForm((f) => ({ ...f, items, subtotal, total, tax: tp, discount: dp }));
+    const { subtotal, taxAmt, total } = calcTotals(items, tp, dp);
+    setForm((f) => ({ ...f, items, subtotal, total, tax: taxAmt, discount: dp }));
   };
 
   const updateItem = (
@@ -315,9 +323,10 @@ export default function QuotationsPage() {
   ) => {
     const items = form.items.map((it, i) => {
       if (i !== idx) return it;
-      const updated = { ...it, [key]: val };
-      updated.total =
-        updated.price * updated.quantity * (1 - (updated.discount || 0) / 100);
+      const updated = { ...it, [key]: val } as any;
+      updated.subtotal = updated.price * updated.quantity * (1 - (updated.discount || 0) / 100);
+      updated.taxAmount = updated.subtotal * 0.05;
+      updated.total = updated.subtotal + updated.taxAmount;
       return updated;
     });
     recalc(items, taxPct, discPct);
@@ -339,6 +348,8 @@ export default function QuotationsPage() {
       color: "",
       material: "",
       size: "",
+      subtotal: 0,
+      taxAmount: 0,
       total: 0,
     };
     recalc([...form.items, newItem], taxPct, discPct);
@@ -395,7 +406,18 @@ export default function QuotationsPage() {
       customerName: q.customerName || foundCust?.name || "",
       customerMobile: q.customerMobile || foundCust?.mobile || "",
       customerAddress: q.customerAddress || foundCust?.address || "",
-      items: q.items,
+      items: q.items.map((it: any) => ({
+        ...it,
+        subtotal:
+          it.subtotal ||
+          it.price * it.quantity * (1 - (it.discount || 0) / 100),
+        taxAmount:
+          it.taxAmount ||
+          it.price * it.quantity * (1 - (it.discount || 0) / 100) * 0.05,
+        total:
+          it.total ||
+          it.price * it.quantity * (1 - (it.discount || 0) / 100) * 1.05,
+      })),
       subtotal: q.subtotal,
       tax: q.tax,
       discount: q.discount,
@@ -1122,7 +1144,7 @@ export default function QuotationsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editingQuotation ? "Edit Quotation" : "New Quotation"}
-        size="xl"
+        size="screen"
       >
         <form
           onSubmit={handleSubmit}
@@ -1538,13 +1560,13 @@ export default function QuotationsPage() {
             <div
               className="hidden md:grid"
               style={{
-                gridTemplateColumns: "1.5fr 1fr 80px 80px 80px 80px 30px",
+                gridTemplateColumns: "1.5fr 1fr 80px 80px 80px 80px 80px 80px 30px",
                 gap: 8,
                 marginBottom: 6,
                 padding: "0 4px",
               }}
             >
-              {["Product", "Color", "Qty", "Price", "Disc%", "Total", ""].map(
+              {["Product", "Color", "Qty", "Price", "Disc%", "Subtotal", "VAT(5%)", "Total", ""].map(
                 (h) => (
                   <div
                     key={h}
@@ -1554,7 +1576,7 @@ export default function QuotationsPage() {
                       color: "#A89080",
                       textTransform: "uppercase",
                       letterSpacing: "0.06em",
-                      textAlign: ["Qty", "Price", "Disc%", "Total"].includes(h)
+                      textAlign: ["Qty", "Price", "Disc%", "Subtotal", "VAT(5%)", "Total"].includes(h)
                         ? "right"
                         : "left",
                     }}
@@ -1581,7 +1603,7 @@ export default function QuotationsPage() {
                   border: "1px solid #E5DDD5",
                   position: "relative",
                 }}
-                className="md:!grid md:!grid-cols-[1.5fr_1fr_80px_80px_80px_80px_30px] md:!bg-transparent md:!border-none md:!p-0 md:!gap-2 md:!mb-2"
+                className="md:!grid md:!grid-cols-[1.5fr_1fr_80px_80px_80px_80px_80px_80px_30px] md:!bg-transparent md:!border-none md:!p-0 md:!gap-2 md:!mb-2"
               >
                 <div
                   style={{
@@ -1690,6 +1712,54 @@ export default function QuotationsPage() {
                     />
                   </div>
                 ))}
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                >
+                  <label
+                    className="md:hidden"
+                    style={{ fontSize: 10, fontWeight: 700, color: "#A89080" }}
+                  >
+                    {t("subtotal")}
+                  </label>
+                  <div
+                    style={{
+                      height: 36,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#7A6055",
+                      paddingRight: 4,
+                    }}
+                  >
+                    {item.subtotal?.toFixed(3)}
+                  </div>
+                </div>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                >
+                  <label
+                    className="md:hidden"
+                    style={{ fontSize: 10, fontWeight: 700, color: "#A89080" }}
+                  >
+                    VAT (5%)
+                  </label>
+                  <div
+                    style={{
+                      height: 36,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#7A6055",
+                      paddingRight: 4,
+                    }}
+                  >
+                    {item.taxAmount?.toFixed(3)}
+                  </div>
+                </div>
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 4 }}
                 >
@@ -1813,34 +1883,6 @@ export default function QuotationsPage() {
                 <label
                   style={{ fontSize: 12, fontWeight: 600, color: "#7A6055" }}
                 >
-                  {t("tax")}
-                </label>
-                <input
-                  type="number"
-                  value={taxPct}
-                  onChange={(e) => {
-                    const v = parseFloat(e.target.value) || 0;
-                    setTaxPct(v);
-                    recalc(form.items, v, discPct);
-                  }}
-                  min={0}
-                  max={100}
-                  style={{
-                    width: 60,
-                    height: 32,
-                    border: "1.5px solid #E5DDD5",
-                    borderRadius: 7,
-                    padding: "0 8px",
-                    fontSize: 12,
-                    outline: "none",
-                    background: "#fff",
-                  }}
-                />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <label
-                  style={{ fontSize: 12, fontWeight: 600, color: "#7A6055" }}
-                >
                   {t("disc")}
                 </label>
                 <input
@@ -1877,7 +1919,7 @@ export default function QuotationsPage() {
               );
               const globalDiscountAmt = form.subtotal * (discPct / 100);
               const totalDiscount = itemDiscountTotal + globalDiscountAmt;
-              const taxAmt = form.subtotal * (taxPct / 100);
+              const taxAmt = form.items.reduce((s, i) => s + (i.taxAmount || 0), 0);
 
               return (
                 <div
@@ -1945,7 +1987,7 @@ export default function QuotationsPage() {
                     {formatCurrency(form.subtotal)}
                   </span>
 
-                  {taxPct > 0 && (
+                  {taxAmt > 0 && (
                     <>
                       <span
                         style={{
@@ -1954,8 +1996,7 @@ export default function QuotationsPage() {
                           fontWeight: 500,
                         }}
                       >
-                        {t("tax")}
-                        {taxPct}%)
+                        VAT (5%)
                       </span>
                       <span
                         style={{
@@ -2144,7 +2185,7 @@ export default function QuotationsPage() {
         open={viewModalOpen}
         onClose={() => setViewModalOpen(false)}
         title={`Quotation ${viewingQuotation?.quotationNumber}`}
-        size="xl"
+        size="screen"
       >
         {viewingQuotation && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -2280,7 +2321,7 @@ export default function QuotationsPage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "#F7F4F0" }}>
-                    {["Item", "Color", "Qty", "Price", "Disc%", "Total"].map(
+                    {["Item", "Color", "Qty", "Price", "Disc%", "Subtotal", "VAT (5%)", "Total"].map(
                       (h) => (
                         <th
                           key={h}
@@ -2360,6 +2401,27 @@ export default function QuotationsPage() {
                           padding: "10px 12px",
                           textAlign: "right",
                           fontSize: 13,
+                          fontWeight: 600,
+                          color: "#1A1210",
+                        }}
+                      >
+                        {formatCurrency(item.subtotal || 0)}
+                      </td>
+                      <td
+                        style={{
+                          padding: "10px 12px",
+                          textAlign: "right",
+                          fontSize: 12,
+                          color: "#7A6055",
+                        }}
+                      >
+                        {formatCurrency(item.taxAmount || 0)}
+                      </td>
+                      <td
+                        style={{
+                          padding: "10px 12px",
+                          textAlign: "right",
+                          fontSize: 13,
                           fontWeight: 700,
                           color: "#2C1810",
                         }}
@@ -2377,7 +2439,7 @@ export default function QuotationsPage() {
                     }}
                   >
                     <td
-                      colSpan={5}
+                      colSpan={7}
                       style={{
                         padding: "10px 12px",
                         textAlign: "right",

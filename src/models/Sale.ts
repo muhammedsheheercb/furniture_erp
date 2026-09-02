@@ -15,6 +15,8 @@ const SaleItemSchema = new Schema(
     color: { type: String },
     material: { type: String },
     size: { type: String },
+    subtotal: { type: Number, required: true, min: 0 },
+    taxAmount: { type: Number, required: true, min: 0 },
     total: { type: Number, required: true, min: 0 },
     dimensions: {
       width: Number,
@@ -74,6 +76,8 @@ export interface ISaleDocument extends Document {
     color?: string;
     material?: string;
     size?: string;
+    subtotal: number;
+    taxAmount: number;
     total: number;
     dimensions?: {
       width?: number;

@@ -16,6 +16,8 @@ export interface InvoiceItem {
   quantity: number;
   price: number;
   discount?: number;
+  subtotal?: number;
+  taxAmount?: number;
   total: number;
   isFOC?: boolean;
   manufacturingDate?: string;
@@ -146,6 +148,8 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                         <th style="padding: 12px; text-align: center; border: 1px solid #3F51B5; width: 60px">${t("qty")}</th>
                         <th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 100px">${t("unitPrice")}</th>
                         ${hasDiscount ? `<th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 100px">${t("discPct")}</th>` : ""}
+                        <th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 100px">${t("subtotal")}</th>
+                        <th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 80px">${t("vat")} 5%</th>
                         <th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 120px">${t("total")}</th>
                     </tr>
                 </thead>
@@ -162,6 +166,8 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                             <td style="padding: 12px; text-align: center; border: 1px solid #DEE2E6; font-weight: 500">${item.quantity}</td>
                             <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6">${item.isFOC ? "0.00" : formatCurrency(item.price)}</td>
                             ${hasDiscount ? `<td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6; color: #DC3545">${item.discount || 0}%</td>` : ""}
+                            <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6">${formatCurrency(item.subtotal || item.total)}</td>
+                            <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6">${formatCurrency(item.taxAmount || 0)}</td>
                             <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6; font-weight: bold">${formatCurrency(item.total)}</td>
                         </tr>
                     `,
@@ -174,7 +180,7 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                 <div style="width: 250px">
                     <div style="display: flex; justify-content: space-between; padding: 5px 0">
                         <span style="color: #6C757D">${t("subtotal")}:</span>
-                        <span style="font-weight: 500">${formatCurrency(data.items.reduce((acc, it) => acc + it.price * it.quantity, 0))}</span>
+                        <span style="font-weight: 500">${formatCurrency(data.items.reduce((acc, it) => acc + (it.subtotal || it.total), 0))}</span>
                     </div>
                     ${
                       hasDiscount
@@ -194,15 +200,10 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                     </div>`
                         : ""
                     }
-                    ${
-                      data.tax
-                        ? `
                     <div style="display: flex; justify-content: space-between; padding: 5px 0">
-                        <span style="color: #6C757D">${t("tax")} (${data.tax}%):</span>
-                        <span style="font-weight: 500">${formatCurrency(data.subtotal * (data.tax / 100))}</span>
-                    </div>`
-                        : ""
-                    }
+                        <span style="color: #6C757D">${t("tax")} (VAT):</span>
+                        <span style="font-weight: 500">${formatCurrency(data.items.reduce((acc, it) => acc + (it.taxAmount || 0), 0))}</span>
+                    </div>
                     <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid #3F51B5; margin-top: 10px">
                         <span style="font-weight: bold; font-size: 18px; color: #212529">${t("grandTotal")}:</span>
                         <span style="font-weight: bold; font-size: 18px; color: #3F51B5">${formatCurrency(data.total)}</span>
@@ -301,6 +302,8 @@ export const generateQuotationPDF = (data: any) => {
                         <th style="padding: 12px; text-align: center; border: 1px solid #8B5E3C; width: 60px">${t("qty")}</th>
                         <th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 100px">${t("unitPrice")}</th>
                         ${totalItemDiscount > 0 ? `<th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 100px">${t("discPct")}</th>` : ""}
+                        <th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 100px">${t("subtotal")}</th>
+                        <th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 80px">${t("vat")} 5%</th>
                         <th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 120px">${t("total")}</th>
                     </tr>
                 </thead>
@@ -320,6 +323,8 @@ export const generateQuotationPDF = (data: any) => {
                             <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5; font-weight: 500">${item.quantity}</td>
                             <td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5">${formatCurrency(item.price)}</td>
                             ${totalItemDiscount > 0 ? `<td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5; color: #DC3545">${item.discount || 0}%</td>` : ""}
+                            <td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5">${formatCurrency(item.subtotal || item.total)}</td>
+                            <td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5">${formatCurrency(item.taxAmount || 0)}</td>
                             <td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5; font-weight: bold">${formatCurrency(item.total)}</td>
                         </tr>
                     `,
@@ -332,7 +337,7 @@ export const generateQuotationPDF = (data: any) => {
                 <div style="width: 250px">
                     <div style="display: flex; justify-content: space-between; padding: 5px 0">
                         <span style="color: #7A6055">${t("subtotal")}:</span>
-                        <span style="font-weight: 500">${formatCurrency(data.subtotal + totalItemDiscount)}</span>
+                        <span style="font-weight: 500">${formatCurrency(data.subtotal)}</span>
                     </div>
                     ${
                       hasAnyDiscount
@@ -344,8 +349,8 @@ export const generateQuotationPDF = (data: any) => {
                         : ""
                     }
                     <div style="display: flex; justify-content: space-between; padding: 5px 0">
-                        <span style="color: #7A6055">${t("vat")} (${data.tax || 0}%):</span>
-                        <span style="font-weight: 500">${formatCurrency((data.subtotal * (data.tax || 0)) / 100)}</span>
+                        <span style="color: #7A6055">${t("vat")}:</span>
+                        <span style="font-weight: 500">${formatCurrency(data.items.reduce((acc: number, it: any) => acc + (it.taxAmount || 0), 0))}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid #8B5E3C; margin-top: 10px">
                         <span style="font-weight: bold; font-size: 18px; color: #2C1810">${t("grandTotal")}:</span>

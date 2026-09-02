@@ -159,6 +159,8 @@ export interface IQuotationItem {
   color?: string;
   material?: string;
   size?: string;
+  subtotal?: number;
+  taxAmount?: number;
   total: number;
   dimensions?: {
     width?: number;
@@ -260,6 +262,8 @@ export interface ISaleItem {
   color?: string;
   material?: string;
   size?: string;
+  subtotal?: number;
+  taxAmount?: number;
   total: number;
   dimensions?: {
     width?: number;
@@ -350,6 +354,8 @@ export interface IPurchaseItem {
   manufacturingDate: string;
   expiryDate: string;
   batch?: string;
+  subtotal?: number;
+  taxAmount?: number;
   total: number;
 }
 

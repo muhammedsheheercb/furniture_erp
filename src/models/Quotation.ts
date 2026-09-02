@@ -18,6 +18,8 @@ export interface IQuotationDocument extends Document {
     color?: string;
     material?: string;
     size?: string;
+    subtotal: number;
+    taxAmount: number;
     total: number;
   }[];
   subtotal: number;
@@ -63,6 +65,8 @@ const QuotationSchema = new Schema<IQuotationDocument>(
         color: String,
         material: String,
         size: String,
+        subtotal: { type: Number, required: true },
+        taxAmount: { type: Number, required: true, default: 0 },
         total: { type: Number, required: true },
         dimensions: {
           width: Number,

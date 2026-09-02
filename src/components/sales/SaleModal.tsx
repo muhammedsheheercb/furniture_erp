@@ -24,6 +24,8 @@ interface LineItem {
   color: string;
   material: string;
   size: string;
+  subtotal: number;
+  taxAmount: number;
   total: number;
   dimensions?: any;
   bom?: any[];
@@ -56,6 +58,8 @@ function newRow(): LineItem {
     color: "",
     material: "",
     size: "",
+    subtotal: 0,
+    taxAmount: 0,
     total: 0,
   };
 }
@@ -100,12 +104,8 @@ export default function SaleModal({
   const [discAmt, setDiscAmt] = useState(0);
   const [formError, setFormError] = useState("");
 
-  const subtotalAfterItemDiscount = lineItems.reduce((s, i) => {
-    const itemTotal = i.qty * i.price * (1 - (i.discount || 0) / 100);
-    return s + itemTotal;
-  }, 0);
-
-  const taxAmount = subtotalAfterItemDiscount * (taxPct / 100);
+  const subtotalAfterItemDiscount = lineItems.reduce((s, i) => s + (i.subtotal || 0), 0);
+  const taxAmount = lineItems.reduce((s, i) => s + (i.taxAmount || 0), 0);
   const grandTotal = Math.max(
     0,
     subtotalAfterItemDiscount + taxAmount - discAmt,
@@ -171,7 +171,21 @@ export default function SaleModal({
           color: it.color || "",
           material: it.material || "",
           size: it.size || "",
-          total: it.total || 0,
+          subtotal:
+            it.subtotal ||
+            (it.price || 0) * (it.quantity || 1) * (1 - (it.discount || 0) / 100),
+          taxAmount:
+            it.taxAmount ||
+            (it.price || 0) *
+              (it.quantity || 1) *
+              (1 - (it.discount || 0) / 100) *
+              0.05,
+          total:
+            it.total ||
+            (it.price || 0) *
+              (it.quantity || 1) *
+              (1 - (it.discount || 0) / 100) *
+              1.05,
           dimensions: it.dimensions,
           bom: it.bom,
           pricing: it.pricing,
@@ -251,7 +265,9 @@ export default function SaleModal({
               color,
               material,
               size,
-              total: Math.max(0, price * i.qty * (1 - (i.discount || 0) / 100)),
+              subtotal: price * i.qty * (1 - (i.discount || 0) / 100),
+              taxAmount: (price * i.qty * (1 - (i.discount || 0) / 100)) * 0.05,
+              total: Math.max(0, (price * i.qty * (1 - (i.discount || 0) / 100)) * 1.05),
               dimensions: p.dimensions,
               bom: p.bom,
               pricing: p.pricing,
@@ -275,7 +291,9 @@ export default function SaleModal({
           ...i,
           batchNumber: batchNum,
           price,
-          total: Math.max(0, i.qty * price * (1 - (i.discount || 0) / 100)),
+          subtotal: i.qty * price * (1 - (i.discount || 0) / 100),
+          taxAmount: (i.qty * price * (1 - (i.discount || 0) / 100)) * 0.05,
+          total: Math.max(0, i.qty * price * (1 - (i.discount || 0) / 100) * 1.05),
         };
       }),
     );
@@ -296,7 +314,9 @@ export default function SaleModal({
           val = Math.min(Math.max(1, Number(val)), stock);
         }
         const u = { ...i, [field]: val };
-        u.total = Math.max(0, u.qty * u.price * (1 - (u.discount || 0) / 100));
+        u.subtotal = u.qty * u.price * (1 - (u.discount || 0) / 100);
+        u.taxAmount = u.subtotal * 0.05;
+        u.total = Math.max(0, u.subtotal + u.taxAmount);
         return u;
       }),
     );
@@ -336,6 +356,8 @@ export default function SaleModal({
                 color: itemData.color || "",
                 material: itemData.material || "",
                 size: itemData.size || "",
+                subtotal: itemData.subtotal || 0,
+                taxAmount: itemData.taxAmount || 0,
                 total: itemData.total,
                 dimensions: itemData.dimensions,
                 bom: itemData.bom,
@@ -359,6 +381,8 @@ export default function SaleModal({
           color: itemData.color || "",
           material: itemData.material || "",
           size: itemData.size || "",
+          subtotal: itemData.subtotal || 0,
+          taxAmount: itemData.taxAmount || 0,
           total: itemData.total,
           dimensions: itemData.dimensions,
           bom: itemData.bom,
@@ -406,7 +430,7 @@ export default function SaleModal({
       advancePaid,
       previousPaid: 0,
       subtotal: subtotalAfterItemDiscount,
-      tax: taxPct,
+      tax: taxAmount, // Uses the dynamically derived item tax sum
       discount:
         subtotalAfterItemDiscount > 0
           ? (discAmt / subtotalAfterItemDiscount) * 100
@@ -428,6 +452,8 @@ export default function SaleModal({
         color: i.color,
         material: i.material,
         size: i.size,
+        subtotal: i.subtotal,
+        taxAmount: i.taxAmount,
         total: i.total,
         dimensions: i.dimensions,
         bom: i.bom,
@@ -446,7 +472,7 @@ export default function SaleModal({
       open={open}
       onClose={onClose}
       title={isEdit ? "Edit Sale Order" : "New Sales Bill"}
-      size="xl"
+      size="screen"
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={loading}>
@@ -591,6 +617,12 @@ export default function SaleModal({
                   <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-20">
                     {t("disc")}
                   </th>
+                  <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-24">
+                    {t("subtotal")}
+                  </th>
+                  <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-24">
+                    VAT (5%)
+                  </th>
                   <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-28">
                     {t("total")}
                     <CurrencySymbol className="w-3 h-3" />)
@@ -698,9 +730,17 @@ export default function SaleModal({
                           placeholder="0"
                         />
                       </td>
-                      <td className="px-3 py-2 text-end font-semibold">
+                      <td className="px-2 py-2 text-end text-[#7A6055]">
                         <CurrencySymbol className="w-3 h-3 me-1" />
-                        {item.total.toLocaleString("en-IN")}
+                        {item.subtotal?.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+                      </td>
+                      <td className="px-2 py-2 text-end text-[#7A6055]">
+                        <CurrencySymbol className="w-3 h-3 me-1" />
+                        {item.taxAmount?.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+                      </td>
+                      <td className="px-3 py-2 text-end font-semibold text-[#1A1210]">
+                        <CurrencySymbol className="w-3 h-3 me-1" />
+                        {item.total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
                       </td>
                       <td className="px-2 py-2 text-center">
                         <div className="flex items-center justify-center gap-2">
@@ -776,13 +816,11 @@ export default function SaleModal({
               />
             </div>
             <div className="flex justify-between text-sm items-center">
-              <span className="text-[#7A6055]">{t("vat")}</span>
-              <input
-                type="number"
-                value={taxPct}
-                onChange={(e) => setTaxPct(Number(e.target.value))}
-                className="w-20 text-end border rounded px-1"
-              />
+              <span className="text-[#7A6055]">{t("vat")} (Total)</span>
+              <span className="font-semibold">
+                <CurrencySymbol className="w-3 h-3 me-1" />
+                {taxAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+              </span>
             </div>
             <div className="flex justify-between pt-2 border-t border-[#E5DDD5] font-black text-xl">
               <span>{t("grandTotal")}</span>
