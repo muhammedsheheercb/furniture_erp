@@ -237,6 +237,11 @@ export default function PurchasesPage() {
                         </td>
                         <td className="py-4 px-6 font-semibold text-[#1A1210]">
                           {po.supplierName}
+                          {po.purchaserName && (
+                            <div className="text-xs font-normal text-[#7A6055] mt-0.5">
+                              {t("purchaser") || "Purchaser"}: {po.purchaserName}
+                            </div>
+                          )}
                         </td>
                         <td className="py-4 px-6 text-sm text-[#7A6055]">
                           {format(new Date(po.date), "dd MMM yyyy")}

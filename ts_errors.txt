@@ -1,0 +1,15 @@
+.next/dev/types/validator.ts(513,31): error TS2344: Type 'typeof import("/home/sheheer/freelance/furniture_erp/src/app/api/purchasers/[id]/route")' does not satisfy the constraint 'RouteHandlerConfig<"/api/purchasers/[id]">'.
+  Types of property 'GET' are incompatible.
+    Type '(req: NextRequest, { params }: { params: { id: string; }; }) => Promise<NextResponse<{ success: boolean; error: string; }> | NextResponse<{ success: boolean; data: IPurchaserDocument & Required<...> & { ...; }; }>>' is not assignable to type '(request: NextRequest, context: { params: Promise<{ id: string; }>; }) => void | Response | Promise<void | Response>'.
+      Types of parameters '__1' and 'context' are incompatible.
+        Type '{ params: Promise<{ id: string; }>; }' is not assignable to type '{ params: { id: string; }; }'.
+          Types of property 'params' are incompatible.
+            Property 'id' is missing in type 'Promise<{ id: string; }>' but required in type '{ id: string; }'.
+scripts/i18n-extract.ts(71,30): error TS2532: Object is possibly 'undefined'.
+src/app/(dashboard)/purchases/edit/[id]/page.tsx(101,15): error TS2322: Type '{ _id: any; name: any; }' is not assignable to type 'IItem | ICustomer | ISupplier | undefined'.
+  Type '{ _id: any; name: any; }' is missing the following properties from type 'ISupplier': supplierNumber, itemsProvided, openingBalance, creditBalance, and 2 more.
+src/app/(dashboard)/purchases/edit/[id]/page.tsx(247,36): error TS18048: 'selPurchaser.data' is possibly 'undefined'.
+src/app/(dashboard)/purchases/new/page.tsx(242,36): error TS18048: 'selPurchaser.data' is possibly 'undefined'.
+src/app/api/purchasers/route.ts(48,7): error TS2322: Type '{ monthlyTotal: any; name: string; mobile: string; createdAt: Date; updatedAt: Date; _id: ObjectId; $locals: Record<string, unknown>; $op: "save" | "validate" | "remove" | null; ... 7 more ...; __v: number; }[]' is not assignable to type '(IPurchaserDocument & Required<{ _id: ObjectId; }> & { __v: number; })[]'.
+  Type '{ monthlyTotal: any; name: string; mobile: string; createdAt: Date; updatedAt: Date; _id: Types.ObjectId; $locals: Record<string, unknown>; $op: "save" | "validate" | "remove" | null; ... 7 more ...; __v: number; }' is not assignable to type 'IPurchaserDocument & Required<{ _id: ObjectId; }> & { __v: number; }'.
+    Type '{ monthlyTotal: any; name: string; mobile: string; createdAt: Date; updatedAt: Date; _id: ObjectId; $locals: Record<string, unknown>; $op: "save" | "validate" | "remove" | null; ... 7 more ...; __v: number; }' is missing the following properties from type 'IPurchaserDocument': $assertPopulated, $clearModifiedPaths, $clone, $createModifiedPathsSnapshot, and 44 more.

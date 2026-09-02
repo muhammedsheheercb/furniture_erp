@@ -761,5 +761,15 @@
   "paidInFull": "PAID IN FULL",
   "itemDescription": "Item Description",
   "driversSignature": "Driver's Signature",
-  "customerSignature": "Customer Signature (Acknowledge Receipt)"
+  "customerSignature": "Customer Signature (Acknowledge Receipt)",
+  "purchasers": "Purchasers",
+  "purchaser": "Purchaser",
+  "addPurchaser": "Add Purchaser",
+  "editPurchaser": "Edit Purchaser",
+  "deletePurchaser": "Delete Purchaser",
+  "managePurchasers": "Manage purchasers and view their purchase history",
+  "monthlyPurchases": "Monthly Purchases",
+  "totalPurchasers": "Total Purchasers",
+  "selectPurchaser": "Select Purchaser",
+  "enterPurchaserName": "Enter purchaser name"
 }

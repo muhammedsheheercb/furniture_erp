@@ -761,5 +761,15 @@
   "paidInFull": "مدفوع بالكامل",
   "itemDescription": "وصف العنصر",
   "driversSignature": "توقيع السائق",
-  "customerSignature": "توقيع العميل (إقرار الاستلام)"
+  "customerSignature": "توقيع العميل (إقرار الاستلام)",
+  "purchasers": "المشترين",
+  "purchaser": "المشتري",
+  "addPurchaser": "إضافة مشتري",
+  "editPurchaser": "تعديل المشتري",
+  "deletePurchaser": "حذف المشتري",
+  "managePurchasers": "إدارة المشترين وعرض سجل مشترياتهم",
+  "monthlyPurchases": "مشتريات الشهر",
+  "totalPurchasers": "إجمالي المشترين",
+  "selectPurchaser": "اختر المشتري (اختياري)",
+  "enterPurchaserName": "أدخل اسم المشتري"
 }

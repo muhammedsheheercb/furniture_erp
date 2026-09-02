@@ -56,8 +56,10 @@ export default function EditPurchasePage() {
   }, [session, status, router]);
 
   const [suppliers, setSuppliers] = useState<ISupplier[]>([]);
+  const [purchasers, setPurchasers] = useState<any[]>([]);
   const [items, setItems] = useState<IItem[]>([]);
   const [selSupplier, setSelSupplier] = useState<ISelectOption | null>(null);
+  const [selPurchaser, setSelPurchaser] = useState<ISelectOption | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentType, setPaymentType] = useState<PaymentType>("cash");
   const [tax, setTax] = useState(0);
@@ -70,15 +72,17 @@ export default function EditPurchasePage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [sr, ir, pr] = await Promise.all([
+        const [sr, ir, pr, pur] = await Promise.all([
           fetch("/api/suppliers?limit=500").then((r) => r.json()),
           fetch("/api/items?limit=500").then((r) => r.json()),
+          fetch("/api/purchasers").then((r) => r.json()),
           fetch(`/api/purchases/${id}`).then((r) => r.json()),
         ]);
         if (sr.success) setSuppliers(sr.data);
         if (ir.success) setItems(ir.data);
-        if (pr.success) {
-          const p = pr.data;
+        if (pr.success) setPurchasers(pr.data);
+        if (pur.success) {
+          const p = pur.data;
           const itemsInInv = ir.data || [];
           setSelSupplier({
             value: p.supplierId,
@@ -89,6 +93,14 @@ export default function EditPurchasePage() {
               supplierNumber: p.supplierNumber,
             } as ISupplier,
           });
+
+          if (p.purchaserId) {
+            setSelPurchaser({
+              value: p.purchaserId,
+              label: p.purchaserName,
+              data: { _id: p.purchaserId, name: p.purchaserName } as any,
+            });
+          }
 
           // Format dates and ensure sellingPrice is taken from record or inventory
           const formattedItems = p.items.map((pi: any) => {
@@ -123,6 +135,12 @@ export default function EditPurchasePage() {
     value: s._id,
     label: `${s.name} (${s.supplierNumber})`,
     data: s,
+  }));
+
+  const purchaserOptions: ISelectOption[] = purchasers.map((p) => ({
+    value: p._id,
+    label: `${p.name} ${p.mobile ? `(${p.mobile})` : ""}`,
+    data: p as any,
   }));
 
   const itemOptions: ISelectOption[] = items.map((i) => ({
@@ -212,7 +230,7 @@ export default function EditPurchasePage() {
     if (!selSupplier || cart.length === 0) return;
     setSaving(true);
     const supplier = selSupplier.data as ISupplier;
-    const purchaseData = {
+    const purchaseData: any = {
       supplierId: supplier._id,
       supplierName: supplier.name,
       supplierNumber: supplier.supplierNumber,
@@ -224,6 +242,13 @@ export default function EditPurchasePage() {
       date,
       isTaxInvoice,
     };
+    if (selPurchaser) {
+      purchaseData.purchaserId = selPurchaser.value;
+      purchaseData.purchaserName = (selPurchaser.data as any)?.name;
+    } else {
+      purchaseData.purchaserId = null;
+      purchaseData.purchaserName = "";
+    }
 
     const response = await fetch(`/api/purchases/${id}`, {
       method: "PUT",
@@ -271,13 +296,22 @@ export default function EditPurchasePage() {
 
       <div className="card p-6 flex flex-col gap-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2">
+          <div>
             <SearchSelect
               label={t("supplier")}
               options={supplierOptions}
               value={selSupplier}
               onChange={setSelSupplier}
               required
+            />
+          </div>
+          <div>
+            <SearchSelect
+              label={t("purchaser") || "Purchaser"}
+              placeholder={t("selectPurchaser") || "Select Purchaser (Optional)"}
+              options={purchaserOptions}
+              value={selPurchaser}
+              onChange={setSelPurchaser}
             />
           </div>
           <Input

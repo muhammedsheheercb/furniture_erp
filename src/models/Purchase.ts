@@ -27,6 +27,8 @@ export interface IPurchaseDocument extends Document {
   purchaseNumber: string;
   supplierId: mongoose.Types.ObjectId;
   supplierName: string;
+  purchaserId?: mongoose.Types.ObjectId;
+  purchaserName?: string;
   supplierNumber: string;
   items: {
     itemType: "product" | "material";
@@ -66,6 +68,8 @@ const PurchaseSchema = new Schema<IPurchaseDocument>(
       required: true,
     },
     supplierName: { type: String, required: true },
+    purchaserId: { type: Schema.Types.ObjectId, ref: "Purchaser" },
+    purchaserName: { type: String, default: "" },
     supplierNumber: { type: String, default: "" },
     items: { type: [PurchaseItemSchema], required: true },
     subtotal: { type: Number, default: 0 },

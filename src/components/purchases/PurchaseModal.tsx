@@ -77,6 +77,7 @@ export default function PurchaseModal({
 }: PurchaseModalProps) {
   const { t } = useLanguage();
   const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [purchasers, setPurchasers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
 
@@ -84,6 +85,8 @@ export default function PurchaseModal({
   const [supplierId, setSupplierId] = useState("");
   const [supplierName, setSupplierName] = useState("");
   const [supplierNo, setSupplierNo] = useState("");
+  const [purchaserId, setPurchaserId] = useState("");
+  const [purchaserName, setPurchaserName] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [paymentType, setPaymentType] = useState<"cash" | "bank" | "credit">(
     "cash",
@@ -104,11 +107,13 @@ export default function PurchaseModal({
       axios.get("/api/suppliers"),
       axios.get("/api/items?limit=500"),
       axios.get("/api/materials"),
+      axios.get("/api/purchasers"),
     ])
-      .then(([supRes, prodRes, matRes]) => {
+      .then(([supRes, prodRes, matRes, purRes]) => {
         setSuppliers(supRes.data.data || []);
         setProducts(prodRes.data.data || []);
         setMaterials(matRes.data.data || []);
+        setPurchasers(purRes.data.data || []);
       })
       .catch(() => toast.error("Failed to load reference data"));
   }, [open]);
@@ -120,6 +125,8 @@ export default function PurchaseModal({
       setSupplierId(purchase.supplierId?._id || purchase.supplierId || "");
       setSupplierName(purchase.supplierName || "");
       setSupplierNo(purchase.supplierNumber || "");
+      setPurchaserId(purchase.purchaserId || "");
+      setPurchaserName(purchase.purchaserName || "");
       setDate(new Date(purchase.date).toISOString().split("T")[0]);
       setPaymentType(purchase.paymentType || "cash");
       setNote(purchase.note || "");
@@ -143,6 +150,8 @@ export default function PurchaseModal({
       setSupplierId("");
       setSupplierName("");
       setSupplierNo("");
+      setPurchaserId("");
+      setPurchaserName("");
       setDate(new Date().toISOString().split("T")[0]);
       setPaymentType("cash");
       setNote("");
@@ -258,6 +267,8 @@ export default function PurchaseModal({
       supplierId,
       supplierName,
       supplierNumber: supplierNo,
+      purchaserId: purchaserId || null,
+      purchaserName: purchaserName || "",
       date,
       paymentType,
       note,
@@ -306,7 +317,7 @@ export default function PurchaseModal({
     >
       <form id="purchase-form" onSubmit={handleSubmit} className="space-y-6">
         {/* ── Header ─────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Supplier */}
           <div>
             <label className={labelCls}>{t("supplier")}</label>
@@ -324,6 +335,27 @@ export default function PurchaseModal({
               {suppliers.map((s) => (
                 <option key={s._id} value={s._id}>
                   {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Purchaser */}
+          <div>
+            <label className={labelCls}>{t("purchaser") || "Purchaser"}</label>
+            <select
+              value={purchaserId}
+              onChange={(e) => {
+                const p = purchasers.find((x) => x._id === e.target.value);
+                setPurchaserId(e.target.value);
+                setPurchaserName(p?.name || "");
+              }}
+              className={inputCls}
+            >
+              <option value="">{t("selectPurchaser") || "None (Optional)"}</option>
+              {purchasers.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {p.name}
                 </option>
               ))}
             </select>

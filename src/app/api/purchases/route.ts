@@ -31,9 +31,11 @@ export async function GET(req: NextRequest) {
     const month = searchParams.get("month");
     const year = searchParams.get("year");
     const paymentType = searchParams.get("paymentType");
+    const purchaserId = searchParams.get("purchaserId");
     const skip = (page - 1) * limit;
 
     const query: Record<string, any> = {};
+    if (purchaserId) query.purchaserId = purchaserId;
     if (search) {
       query.$or = [
         { supplierName: { $regex: search, $options: "i" } },

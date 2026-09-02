@@ -102,6 +102,12 @@ const navItems: NavItem[] = [
     permissionKey: "purchases",
   },
   {
+    href: "/purchasers",
+    label: "Purchasers",
+    icon: Users,
+    permissionKey: "purchases",
+  },
+  {
     href: "/expenses",
     label: "Expenses",
     icon: Receipt,
