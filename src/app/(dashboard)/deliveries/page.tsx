@@ -88,6 +88,10 @@ export default function DeliveriesPage() {
       toast.error("Driver Contact/Mobile is required");
       return;
     }
+    if (!/^\d+$/.test(driverContact.trim())) {
+      toast.error("Driver Contact/Mobile must contain only numbers");
+      return;
+    }
 
     setFinishing(true);
     try {
@@ -345,7 +349,7 @@ export default function DeliveriesPage() {
                 type="text"
                 placeholder={t("eg96891234567")}
                 value={driverContact}
-                onChange={(e) => setDriverContact(e.target.value)}
+                onChange={(e) => setDriverContact(e.target.value.replace(/\D/g, ""))}
                 className="w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 font-medium"
                 required
               />

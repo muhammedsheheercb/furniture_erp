@@ -217,6 +217,7 @@ export interface IQuotation {
   createdAt: Date;
   updatedAt: Date;
   convertedToSaleId?: string;
+  validationError?: string;
   createdBy?: { _id: string; name: string };
   updatedBy?: { _id: string; name: string };
 }

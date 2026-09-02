@@ -26,6 +26,7 @@ const MaterialSchema = new Schema(
     thickness: { type: String, default: "" },
     brand: { type: String, default: "" },
     currentStock: { type: Number, default: 0 },
+    reservedStock: { type: Number, default: 0 },
     reorderLevel: { type: Number, default: 10 },
     lastPurchasePrice: { type: Number, default: 0 },
     batches: [
@@ -36,6 +37,7 @@ const MaterialSchema = new Schema(
         purchaseDate: { type: Date },
         purchasePrice: { type: Number, required: true },
         quantity: { type: Number, required: true },
+        reservedQuantity: { type: Number, default: 0 },
         createdAt: { type: Date, default: Date.now },
       },
     ],

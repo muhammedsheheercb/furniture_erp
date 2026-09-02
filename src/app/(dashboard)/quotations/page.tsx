@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useDateFilter } from "@/context/DateFilterContext";
@@ -21,6 +21,7 @@ import {
   X,
   UserPlus,
   Download,
+  AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -395,7 +396,7 @@ export default function QuotationsPage() {
         (rawCustId && String(c._id) === String(rawCustId)) ||
         (q.customerName &&
           c.name?.toLowerCase().trim() ===
-            q.customerName.toLowerCase().trim()) ||
+          q.customerName.toLowerCase().trim()) ||
         (q.customerMobile && c.mobile?.trim() === q.customerMobile.trim()),
     );
     const resolvedCustomerId =
@@ -507,8 +508,11 @@ export default function QuotationsPage() {
       } else if (status === "sale") {
         const q = quotations.find((qt) => qt._id === id);
         if (q) {
-          setConvertingQuotation(q);
-          setSaleModalOpen(true);
+          const valRes = await axios.get(`/api/quotations/${id}/validate-stock`);
+          if (valRes.data.success) {
+            setConvertingQuotation(q);
+            setSaleModalOpen(true);
+          }
         }
       } else {
         const res = await fetch(`/api/quotations/${id}`, {
@@ -522,8 +526,10 @@ export default function QuotationsPage() {
         }
       }
       setStatusConfirm(null);
-    } catch (err) {
-      toast.error("Failed to update status");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to update status");
+      setStatusConfirm(null);
+      load();
     } finally {
       setUpdatingStatus(false);
     }
@@ -865,8 +871,8 @@ export default function QuotationsPage() {
               </tr>
             ) : (
               quotations.map((q, idx) => (
+                <React.Fragment key={q._id}>
                 <motion.tr
-                  key={q._id}
                   className="tr-hover"
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -994,23 +1000,35 @@ export default function QuotationsPage() {
                           color: "#7A6055",
                           display: "flex",
                           alignItems: "center",
+                          justifyContent: "center",
                           transition: "all 0.15s",
                         }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLElement).style.background =
-                            "#F7F4F0";
-                          (e.currentTarget as HTMLElement).style.color =
-                            "#2C1810";
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLElement).style.background =
-                            "#fff";
-                          (e.currentTarget as HTMLElement).style.color =
-                            "#7A6055";
-                        }}
+                        title="View Quotation"
                       >
-                        <Eye size={14} />
+                        <Eye size={16} />
                       </button>
+                      
+                      {canEdit && q.status === "quote" && (
+                        <button
+                          onClick={() => openEdit(q)}
+                          style={{
+                            padding: "6px",
+                            borderRadius: 8,
+                            border: "1px solid #E5DDD5",
+                            background: "#fff",
+                            cursor: "pointer",
+                            color: "#7A6055",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            transition: "all 0.15s",
+                          }}
+                          title="Edit Quotation"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      )}
+
                       {q.status === "quote" && (
                         <>
                           <button
@@ -1026,11 +1044,12 @@ export default function QuotationsPage() {
                               color: "#1E8449",
                               display: "flex",
                               alignItems: "center",
+                              justifyContent: "center",
                               transition: "all 0.15s",
                             }}
                             title={t("acceptConvert")}
                           >
-                            <Check size={14} />
+                            <Check size={16} />
                           </button>
                           <button
                             onClick={() =>
@@ -1045,47 +1064,14 @@ export default function QuotationsPage() {
                               color: "#C0392B",
                               display: "flex",
                               alignItems: "center",
+                              justifyContent: "center",
                               transition: "all 0.15s",
                             }}
                             title={t("rejectRemove")}
                           >
-                            <X size={14} />
+                            <X size={16} />
                           </button>
                         </>
-                      )}
-                      {canEdit && q.status === "quote" && (
-                        <button
-                          onClick={() => openEdit(q)}
-                          style={{
-                            padding: "6px",
-                            borderRadius: 8,
-                            border: "1px solid #E5DDD5",
-                            background: "#fff",
-                            cursor: "pointer",
-                            color: "#7A6055",
-                            display: "flex",
-                            alignItems: "center",
-                            transition: "all 0.15s",
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.background =
-                              "#EBF5FB";
-                            (e.currentTarget as HTMLElement).style.color =
-                              "#2980B9";
-                            (e.currentTarget as HTMLElement).style.borderColor =
-                              "#AED6F1";
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.background =
-                              "#fff";
-                            (e.currentTarget as HTMLElement).style.color =
-                              "#7A6055";
-                            (e.currentTarget as HTMLElement).style.borderColor =
-                              "#E5DDD5";
-                          }}
-                        >
-                          <Pencil size={14} />
-                        </button>
                       )}
                       {canDelete && (
                         <button
@@ -1124,6 +1110,28 @@ export default function QuotationsPage() {
                     </div>
                   </td>
                 </motion.tr>
+                {q.validationError && (
+                  <tr>
+                    <td colSpan={10} style={{ padding: 0 }}>
+                      <div
+                        style={{
+                          background: "#FEF2F2",
+                          color: "#B91C1C",
+                          padding: "8px 16px",
+                          fontSize: 12,
+                          borderBottom: "1px solid #FEE2E2",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6
+                        }}
+                      >
+                        <AlertTriangle size={14} />
+                        {q.validationError}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))
             )}
           </tbody>
@@ -1560,7 +1568,7 @@ export default function QuotationsPage() {
             <div
               className="hidden md:grid"
               style={{
-                gridTemplateColumns: "1.5fr 1fr 80px 80px 80px 80px 80px 80px 30px",
+                gridTemplateColumns: "1.5fr 1fr 90px 130px 80px 130px 130px 130px 40px",
                 gap: 8,
                 marginBottom: 6,
                 padding: "0 4px",
@@ -1603,7 +1611,7 @@ export default function QuotationsPage() {
                   border: "1px solid #E5DDD5",
                   position: "relative",
                 }}
-                className="md:!grid md:!grid-cols-[1.5fr_1fr_80px_80px_80px_80px_80px_80px_30px] md:!bg-transparent md:!border-none md:!p-0 md:!gap-2 md:!mb-2"
+                className="md:!grid md:!grid-cols-[1.5fr_1fr_90px_130px_80px_130px_130px_130px_40px] md:!bg-transparent md:!border-none md:!p-0 md:!gap-2 md:!mb-2"
               >
                 <div
                   style={{
@@ -2637,37 +2645,37 @@ export default function QuotationsPage() {
         sale={
           convertingQuotation
             ? {
-                customerId: convertingQuotation.customerId,
-                customerName: convertingQuotation.customerName,
-                customerNumber:
-                  customers.find(
-                    (c) =>
-                      c._id === (convertingQuotation.customerId as any)?._id ||
-                      convertingQuotation.customerId,
-                  )?.customerNumber || "",
-                customerMobile: convertingQuotation.customerMobile || "",
-                customerAddress: convertingQuotation.customerAddress || "",
-                items: convertingQuotation.items.map((it) => ({
-                  itemId: it.itemId,
-                  itemNumber: it.itemNumber,
-                  itemName: it.itemName,
-                  quantity: it.quantity,
-                  price: it.price,
-                  discount: it.discount,
-                  color: it.color,
-                  material: it.material,
-                  size: it.size,
-                  total: it.total,
-                  dimensions: it.dimensions,
-                  bom: it.bom,
-                  pricing: (it as any).pricing,
-                })),
-                subtotal: convertingQuotation.subtotal,
-                tax: convertingQuotation.tax,
-                discount: convertingQuotation.discount,
-                total: convertingQuotation.total,
-                isConversion: true,
-              }
+              customerId: convertingQuotation.customerId,
+              customerName: convertingQuotation.customerName,
+              customerNumber:
+                customers.find(
+                  (c) =>
+                    c._id === (convertingQuotation.customerId as any)?._id ||
+                    convertingQuotation.customerId,
+                )?.customerNumber || "",
+              customerMobile: convertingQuotation.customerMobile || "",
+              customerAddress: convertingQuotation.customerAddress || "",
+              items: convertingQuotation.items.map((it) => ({
+                itemId: it.itemId,
+                itemNumber: it.itemNumber,
+                itemName: it.itemName,
+                quantity: it.quantity,
+                price: it.price,
+                discount: it.discount,
+                color: it.color,
+                material: it.material,
+                size: it.size,
+                total: it.total,
+                dimensions: it.dimensions,
+                bom: it.bom,
+                pricing: (it as any).pricing,
+              })),
+              subtotal: convertingQuotation.subtotal,
+              tax: convertingQuotation.tax,
+              discount: convertingQuotation.discount,
+              total: convertingQuotation.total,
+              isConversion: true,
+            }
             : null
         }
       />

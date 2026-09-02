@@ -21,6 +21,16 @@ export interface IQuotationDocument extends Document {
     subtotal: number;
     taxAmount: number;
     total: number;
+    bom?: {
+      materialId?: mongoose.Types.ObjectId;
+      materialName?: string;
+      materialCode?: string;
+      unit?: string;
+      batchNumber?: string;
+      pricePerUnit?: number;
+      quantity?: number;
+      subtotal?: number;
+    }[];
   }[];
   subtotal: number;
   tax: number;
@@ -34,6 +44,7 @@ export interface IQuotationDocument extends Document {
   validUntil?: Date;
   date: Date;
   convertedToSaleId?: mongoose.Types.ObjectId;
+  validationError?: string;
   createdAt: Date;
   updatedAt: Date;
   createdBy?: mongoose.Types.ObjectId;
@@ -123,6 +134,7 @@ const QuotationSchema = new Schema<IQuotationDocument>(
     validUntil: { type: Date },
     date: { type: Date, required: true, default: Date.now },
     convertedToSaleId: { type: Schema.Types.ObjectId, ref: "Sale" },
+    validationError: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },

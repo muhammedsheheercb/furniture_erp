@@ -444,29 +444,29 @@ export default function PurchaseModal({
                   <th className="py-2.5 px-3 text-start text-xs font-bold text-[#7A6055] uppercase w-20">
                     {t("unit")}
                   </th>
-                  <th className="py-2.5 px-3 text-center text-xs font-bold text-[#7A6055] uppercase w-20">
+                  <th className="py-2.5 px-3 text-center text-xs font-bold text-[#7A6055] uppercase w-24">
                     {t("qty")}
                   </th>
-                  <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-28">
+                  <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-32">
                     {t("purchase")}
                     <CurrencySymbol className="w-3 h-3" />
                   </th>
-                  <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-28">
+                  <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-32">
                     {t("sales")}
                     <CurrencySymbol className="w-3 h-3" />
                   </th>
                   <th className="py-2.5 px-3 text-start text-xs font-bold text-[#7A6055] uppercase w-28">
                     {t("batchNo")}
                   </th>
-                  <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-28">
+                  <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-32">
                     {t("subtotal")}
                     <CurrencySymbol className="w-3 h-3" />
                   </th>
-                  <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-28">
+                  <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-32">
                     VAT (5%)
                     <CurrencySymbol className="w-3 h-3" />
                   </th>
-                  <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-28">
+                  <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-36">
                     {t("total")}
                     <CurrencySymbol className="w-3 h-3" />)
                   </th>
@@ -517,11 +517,13 @@ export default function PurchaseModal({
                             className="w-full rounded-lg border border-[#E5DDD5] px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
                           >
                             <option value="">{t("selectProduct")}</option>
-                            {products.map((p: any) => (
-                              <option key={p._id} value={p._id}>
-                                {p.name} ({p.itemNumber})
-                              </option>
-                            ))}
+                            {products
+                              .filter((p: any) => !p.isManufactured)
+                              .map((p: any) => (
+                                <option key={p._id} value={p._id}>
+                                  {p.name} ({p.itemNumber})
+                                </option>
+                              ))}
                           </select>
                         ) : (
                           <select

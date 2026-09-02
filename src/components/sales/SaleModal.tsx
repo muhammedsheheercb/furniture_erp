@@ -310,8 +310,19 @@ export default function SaleModal({
         let val = value;
         if (field === "qty") {
           const prod = products.find((p) => p._id === i.itemId);
-          const stock = prod?.quantity ?? Infinity;
-          val = Math.min(Math.max(1, Number(val)), stock);
+          if (prod) {
+            const stock = prod.quantity ?? 0;
+            if (Number(val) > stock) {
+              toast.error(
+                `Only ${stock} available in stock for ${prod.name}`,
+              );
+              val = stock;
+            } else {
+              val = Math.max(1, Number(val));
+            }
+          } else {
+            val = Math.max(1, Number(val));
+          }
         }
         const u = { ...i, [field]: val };
         u.subtotal = u.qty * u.price * (1 - (u.discount || 0) / 100);
@@ -607,23 +618,23 @@ export default function SaleModal({
                   <th className="py-2.5 px-2 text-start text-xs font-bold text-[#7A6055] uppercase w-24">
                     {t("color")}
                   </th>
-                  <th className="py-2.5 px-2 text-center text-xs font-bold text-[#7A6055] uppercase w-16">
+                  <th className="py-2.5 px-2 text-center text-xs font-bold text-[#7A6055] uppercase w-20">
                     {t("qty")}
                   </th>
-                  <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-28">
+                  <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-32">
                     {t("price")}
                     <CurrencySymbol className="w-3 h-3" />)
                   </th>
-                  <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-20">
+                  <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-24">
                     {t("disc")}
                   </th>
-                  <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-24">
+                  <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-32">
                     {t("subtotal")}
                   </th>
-                  <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-24">
+                  <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-32">
                     VAT (5%)
                   </th>
-                  <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-28">
+                  <th className="py-2.5 px-2 text-end text-xs font-bold text-[#7A6055] uppercase w-36">
                     {t("total")}
                     <CurrencySymbol className="w-3 h-3" />)
                   </th>
@@ -672,11 +683,13 @@ export default function SaleModal({
                             className={inp}
                           >
                             <option value="">{t("selectProduct")}</option>
-                            {products.map((p) => (
-                              <option key={p._id} value={p._id}>
-                                {p.name}
-                              </option>
-                            ))}
+                            {products
+                              .filter((p) => !p.isManufactured)
+                              .map((p) => (
+                                <option key={p._id} value={p._id}>
+                                  {p.name} (Stock: {p.quantity || 0})
+                                </option>
+                              ))}
                           </select>
                         )}
                       </td>

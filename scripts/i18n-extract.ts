@@ -68,7 +68,7 @@ for (const sf of sourceFiles) {
     }
 
     if (!body || !name) continue;
-    if (!name || name[0] !== name[0].toUpperCase()) continue; // Usually components start with uppercase
+    if (!name || name.charAt(0) !== name.charAt(0).toUpperCase()) continue; // Usually components start with uppercase
 
     // Check if it returns JSX
     const hasJsx = body

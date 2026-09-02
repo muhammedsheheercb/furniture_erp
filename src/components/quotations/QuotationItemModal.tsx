@@ -170,7 +170,7 @@ export default function QuotationItemModal({
         setProducts(ir.data.data || []);
         setMaterials(mr.data.data || []);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setFetching(false));
   }, [open]);
 
@@ -308,17 +308,17 @@ export default function QuotationItemModal({
         i !== idx
           ? r
           : {
-              ...r,
-              materialId: matId,
-              materialName: mat?.name || "",
-              materialCode: mat?.code || "",
-              unit: mat?.unit || "",
-              batchNumber: "",
-              pricePerUnit: 0,
-              availableQty: 0,
-              quantity: 1,
-              subtotal: 0,
-            },
+            ...r,
+            materialId: matId,
+            materialName: mat?.name || "",
+            materialCode: mat?.code || "",
+            unit: mat?.unit || "",
+            batchNumber: "",
+            pricePerUnit: 0,
+            availableQty: 0,
+            quantity: 1,
+            subtotal: 0,
+          },
       ),
     }));
   }
@@ -330,7 +330,7 @@ export default function QuotationItemModal({
       const updatedBom = prev.bom.map((r, i) => {
         if (i !== idx) return r;
         const price = batch?.purchasePrice || 0;
-        const avail = batch?.quantity || 0;
+        const avail = Math.max(0, (batch?.quantity || 0) - (batch?.reservedQuantity || 0));
         const qty = Math.min(r.quantity, avail) || 1;
         return {
           ...r,
@@ -494,11 +494,10 @@ export default function QuotationItemModal({
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors -mb-px ${
-              tab === t.id
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors -mb-px ${tab === t.id
                 ? "border-[#C9A84C] text-[#C9A84C]"
                 : "border-transparent text-[#7A6055] hover:text-[#1A1210]"
-            }`}
+              }`}
           >
             <t.icon size={15} />
             {t.label}
@@ -886,7 +885,9 @@ export default function QuotationItemModal({
                       const mat = materials.find(
                         (m) => m._id === row.materialId,
                       );
-                      const batches = mat?.batches || [];
+                      const batches = (mat?.batches || []).filter(
+                        (b: any) => Math.max(0, (b.quantity || 0) - (b.reservedQuantity || 0)) > 0 || b.batchNumber === row.batchNumber
+                      );
                       return (
                         <tr key={idx} className="hover:bg-[#FAF8F6]">
                           {/* Material */}
@@ -923,8 +924,7 @@ export default function QuotationItemModal({
                                     <option key={bi} value={b.batchNumber}>
                                       {b.batchNumber || `Batch ${bi + 1}`} —{" "}
                                       <CurrencySymbol plain />
-                                      {b.purchasePrice} | {b.quantity}{" "}
-                                      {row.unit}
+                                      {b.purchasePrice} | {Math.max(0, (b.quantity || 0) - (b.reservedQuantity || 0))} {row.unit}
                                     </option>
                                   ))}
                                 </select>
@@ -978,11 +978,10 @@ export default function QuotationItemModal({
                               onChange={(e) =>
                                 updateBomQty(idx, Number(e.target.value))
                               }
-                              className={`w-full rounded-lg border text-sm text-center px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 ${
-                                !row.batchNumber
+                              className={`w-full rounded-lg border text-sm text-center px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 ${!row.batchNumber
                                   ? "bg-[#F5F2EA] text-[#A89080] border-[#E5DDD5] cursor-not-allowed"
                                   : "bg-white border-[#E5DDD5]"
-                              }`}
+                                }`}
                             />
                           </td>
 
@@ -1036,11 +1035,11 @@ export default function QuotationItemModal({
             {form.bom.some(
               (r) => r.batchNumber && r.quantity >= r.availableQty,
             ) && (
-              <div className="flex gap-2 rounded-lg bg-rose-50 border border-rose-200 px-4 py-2.5 text-xs text-rose-700">
-                <Info size={14} className="shrink-0 mt-0.5" />
-                {t("someRowsAreUsingThe")}
-              </div>
-            )}
+                <div className="flex gap-2 rounded-lg bg-rose-50 border border-rose-200 px-4 py-2.5 text-xs text-rose-700">
+                  <Info size={14} className="shrink-0 mt-0.5" />
+                  {t("someRowsAreUsingThe")}
+                </div>
+              )}
           </div>
         )}
       </form>

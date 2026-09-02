@@ -64,7 +64,7 @@ export default function SalesPage() {
   const canEdit = isAdmin || perms?.edit;
   const canDelete = isAdmin || perms?.delete;
 
-  const [activeTab, setActiveTab] = useState("convert");
+  const [activeTab, setActiveTab] = useState("orders");
   const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -241,17 +241,12 @@ export default function SalesPage() {
 
       {/* Tabs */}
       <Tabs
-        defaultValue="convert"
+        defaultValue="orders"
         className="w-full"
         onValueChange={setActiveTab}
       >
         <TabsList className="bg-[#FAF8F6] border border-[#E5DDD5] p-1 h-12">
-          <TabsTrigger
-            value="convert"
-            className="data-[state=active]:bg-white data-[state=active]:text-[#C9A84C] data-[state=active]:shadow-sm px-6"
-          >
-            {t("readyToConvert")}
-          </TabsTrigger>
+
           <TabsTrigger
             value="orders"
             className="data-[state=active]:bg-white data-[state=active]:text-[#C9A84C] data-[state=active]:shadow-sm px-6"
@@ -288,116 +283,7 @@ export default function SalesPage() {
               </div>
             ) : (
               <>
-                {/* ── Ready to Convert ──────────────────────────────── */}
-                <TabsContent value="convert" className="m-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-start border-collapse">
-                      <thead>
-                        <tr className="bg-[#FAF8F6] border-b border-[#E5DDD5]">
-                          <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">
-                            {t("quote")}
-                          </th>
-                          <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">
-                            {t("customer")}
-                          </th>
-                          <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase">
-                            {t("total")}
-                          </th>
-                          <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-center">
-                            {t("status")}
-                          </th>
-                          <th className="py-4 px-6 text-xs font-bold text-[#7A6055] uppercase text-end">
-                            {t("actions")}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#F0EBE5]">
-                        {quotations.length === 0 ? (
-                          <tr>
-                            <td
-                              colSpan={5}
-                              className="py-10 text-center text-[#7A6055]"
-                            >
-                              {t("noQuotationsReadyForConversion")}
-                            </td>
-                          </tr>
-                        ) : (
-                          quotations.map((q) => (
-                            <tr
-                              key={q._id}
-                              className="hover:bg-[#FAF8F6] transition-colors"
-                            >
-                              <td className="py-4 px-6 font-mono text-sm text-[#1A1210]">
-                                {q.quotationNumber}
-                              </td>
-                              <td className="py-4 px-6">
-                                <div className="text-sm font-semibold text-[#1A1210]">
-                                  {q.customerName}
-                                </div>
-                                <div className="text-[10px] text-[#A89080]">
-                                  {format(new Date(q.date), "dd MMM yyyy")}
-                                </div>
-                              </td>
-                              <td className="py-4 px-6 text-sm font-bold text-[#1A1210]">
-                                <CurrencySymbol /> {q.total.toLocaleString()}
-                              </td>
-                              <td className="py-4 px-6 text-center">
-                                <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100 text-[10px] uppercase">
-                                  {t("quotation")}
-                                </Badge>
-                              </td>
-                              <td className="py-4 px-6 text-end">
-                                {canCreate && (
-                                  <Button
-                                    size="sm"
-                                    className="h-8 bg-[#2C1810] hover:bg-[#1A0F0A] text-white px-3 text-xs"
-                                    onClick={() => {
-                                      setEditSale({
-                                        customerId:
-                                          q.customerId?._id || q.customerId,
-                                        customerName: q.customerName,
-                                        customerNumber:
-                                          q.customerId?.customerNumber || "",
-                                        customerMobile: q.customerMobile || "",
-                                        customerAddress:
-                                          q.customerAddress || "",
-                                        items: q.items.map((it: any) => ({
-                                          itemId: it.itemId,
-                                          itemNumber: it.itemNumber,
-                                          itemName: it.itemName,
-                                          quantity: it.quantity,
-                                          price: it.price,
-                                          discount: it.discount,
-                                          color: it.color,
-                                          material: it.material,
-                                          size: it.size,
-                                          subtotal: it.subtotal,
-                                          taxAmount: it.taxAmount,
-                                          total: it.total,
-                                          dimensions: it.dimensions,
-                                          bom: it.bom,
-                                        })),
-                                        subtotal: q.subtotal,
-                                        tax: q.tax,
-                                        discount: q.discount,
-                                        total: q.total,
-                                        quotationId: q._id,
-                                        isConversion: true,
-                                      });
-                                      setModalOpen(true);
-                                    }}
-                                  >
-                                    {t("convertToSale")}
-                                  </Button>
-                                )}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </TabsContent>
+
 
                 {/* ── Active Sales Orders ───────────────────────────── */}
                 <TabsContent value="orders" className="m-0">
@@ -736,7 +622,7 @@ export default function SalesPage() {
               </>
             )}
 
-            {!loading && totalPages > 1 && activeTab !== "convert" && (
+            {!loading && totalPages > 1 && activeTab === "orders" && (
               <div className="border-t border-[#E5DDD5]">
                 <Pagination
                   page={page}

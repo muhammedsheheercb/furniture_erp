@@ -4,6 +4,8 @@ import SaleRaw from "@/models/Sale";
 const Sale = SaleRaw as any;
 import ItemRaw from "@/models/Item";
 const Item = ItemRaw as any;
+import MaterialRaw from "@/models/Material";
+const Material = MaterialRaw as any;
 import CustomerRaw from "@/models/Customer";
 const Customer = CustomerRaw as any;
 import ProductionRaw from "@/models/Production";
@@ -271,6 +273,25 @@ export async function POST(req: NextRequest) {
           note: `Sale Entry — ${saleNumber}`,
         });
         await customer.save({ session: dbSession });
+      }
+    }
+    
+    // 3.5 — Reserve materials for BOM
+    if (!body.isDirect) {
+      for (const saleItem of body.items) {
+        if (!saleItem.bom) continue;
+        for (const bomItem of saleItem.bom) {
+          if (!bomItem.materialId || !bomItem.batchNumber) continue;
+          const material = await Material.findById(bomItem.materialId).session(dbSession);
+          if (!material) continue;
+          
+          const batch = material.batches.find((b: any) => b.batchNumber === bomItem.batchNumber);
+          if (batch) {
+            batch.reservedQuantity = (batch.reservedQuantity || 0) + bomItem.quantity;
+            material.reservedStock = (material.reservedStock || 0) + bomItem.quantity;
+            await material.save({ session: dbSession });
+          }
+        }
       }
     }
 

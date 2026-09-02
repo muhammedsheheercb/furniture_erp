@@ -46,6 +46,11 @@ export async function GET(req: NextRequest) {
     if (category) {
       query.category = category;
     }
+    
+    const isManufactured = searchParams.get("isManufactured");
+    if (isManufactured !== null) {
+      query.isManufactured = isManufactured === "true";
+    }
     if (startDate || endDate) {
       query.createdAt = {};
       if (startDate) query.createdAt.$gte = new Date(startDate);

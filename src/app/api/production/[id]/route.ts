@@ -86,6 +86,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
           batch.quantity -= totalNeeded;
           material.currentStock -= totalNeeded;
+          batch.reservedQuantity = Math.max(0, (batch.reservedQuantity || 0) - totalNeeded);
+          material.reservedStock = Math.max(0, (material.reservedStock || 0) - totalNeeded);
           await material.save({ session: dbSession });
         }
       }
