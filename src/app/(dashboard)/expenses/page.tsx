@@ -210,12 +210,15 @@ export default function ExpensesPage() {
                 onChange={(e) => setCategory(e.target.value)}
               >
                 <option value="">{t("allCategories")}</option>
-                <option value="Labor">{t("labor")}</option>
-                <option value="Electricity">{t("electricity")}</option>
-                <option value="Transport">{t("transport")}</option>
-                <option value="Rent">{t("rent")}</option>
-                <option value="Marketing">{t("marketing")}</option>
-                <option value="Other">{t("other")}</option>
+                <option value="Labor">{t("labor") || "Labor"}</option>
+                <option value="Electricity">{t("electricity") || "Electricity"}</option>
+                <option value="Transport">{t("transport") || "Transport"}</option>
+                <option value="Rent">{t("rent") || "Rent"}</option>
+                <option value="Marketing">{t("marketing") || "Marketing"}</option>
+                <option value="Maintenance">{t("maintenance") || "Maintenance"}</option>
+                <option value="Office Supplies">{t("officeSupplies") || "Office Supplies"}</option>
+                <option value="Petrol Expense">{t("petrolExpense") || "Petrol Expense"}</option>
+                <option value="Other">{t("other") || "Other"}</option>
               </select>
             </div>
           </CardHeader>
@@ -278,6 +281,11 @@ export default function ExpensesPage() {
                           <div className="text-[10px] uppercase font-black text-[#C9A84C] mt-0.5">
                             {exp.category}
                           </div>
+                          {exp.purchaserName && (
+                            <div className="text-[10px] text-[#A89080] mt-0.5">
+                              {t("purchaser") || "Purchaser"}: {exp.purchaserName}
+                            </div>
+                          )}
                         </td>
                         <td className="py-4 px-6 text-end">
                           <div className="text-sm font-black text-rose-600">

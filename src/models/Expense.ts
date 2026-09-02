@@ -8,6 +8,8 @@ export interface IExpenseDocument extends Document {
   date: Date;
   reference?: string;
   description?: string;
+  purchaserId?: mongoose.Types.ObjectId;
+  purchaserName?: string;
   paymentType: "cash" | "credit" | "debit" | "bank";
   createdAt: Date;
   updatedAt: Date;
@@ -29,6 +31,8 @@ const ExpenseSchema = new Schema<IExpenseDocument>(
     date: { type: Date, default: Date.now },
     reference: { type: String },
     description: { type: String },
+    purchaserId: { type: Schema.Types.ObjectId, ref: "Purchaser" },
+    purchaserName: { type: String, default: "" },
     paymentType: {
       type: String,
       enum: ["cash", "credit", "debit", "bank"],

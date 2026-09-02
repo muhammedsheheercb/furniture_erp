@@ -4,6 +4,7 @@ import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/label";
+import axios from "axios";
 import {
   Receipt,
   DollarSign,
@@ -31,6 +32,7 @@ const CATEGORIES = [
   "Marketing",
   "Maintenance",
   "Office Supplies",
+  "Petrol Expense",
   "Other",
 ];
 
@@ -57,8 +59,19 @@ export default function ExpenseModal({
     reference: "",
     description: "",
     paymentType: "cash",
+    purchaserId: "",
+    purchaserName: "",
   });
+  const [purchasers, setPurchasers] = useState<any[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!open) return;
+    axios
+      .get("/api/purchasers")
+      .then((res) => setPurchasers(res.data.data || []))
+      .catch((err) => console.error("Failed to fetch purchasers", err));
+  }, [open]);
 
   useEffect(() => {
     setErrors({});
@@ -73,6 +86,8 @@ export default function ExpenseModal({
         reference: expense.reference || "",
         description: expense.description || "",
         paymentType: expense.paymentType || "cash",
+        purchaserId: expense.purchaserId?._id || expense.purchaserId || "",
+        purchaserName: expense.purchaserName || "",
       });
     } else {
       setFormData({
@@ -83,6 +98,8 @@ export default function ExpenseModal({
         reference: "",
         description: "",
         paymentType: "cash",
+        purchaserId: "",
+        purchaserName: "",
       });
     }
   }, [expense, open]);
@@ -284,6 +301,39 @@ export default function ExpenseModal({
                 className="ps-10 border-[#E5DDD5] bg-[#FAF8F6] focus:ring-[#C9A84C]"
                 placeholder={t("optional")}
               />
+            </div>
+          </div>
+
+          {/* Purchaser */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="purchaser"
+              className="text-xs font-bold text-[#7A6055] uppercase tracking-wider"
+            >
+              {t("purchaser") || "Purchaser"}
+            </Label>
+            <div className="relative">
+              <select
+                id="purchaser"
+                value={formData.purchaserId}
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+                  const p = purchasers.find((x) => x._id === selectedId);
+                  setFormData({
+                    ...formData,
+                    purchaserId: selectedId,
+                    purchaserName: p ? p.name : "",
+                  });
+                }}
+                className="w-full h-10 px-4 rounded-md border border-[#E5DDD5] bg-[#FAF8F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/20"
+              >
+                <option value="">{t("selectPurchaser") || "None (Optional)"}</option>
+                {purchasers.map((p) => (
+                  <option key={p._id} value={p._id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

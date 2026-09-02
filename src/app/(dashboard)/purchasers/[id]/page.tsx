@@ -16,10 +16,11 @@ export default function PurchaserDetailsPage(props: { params: Promise<{ id: stri
   const params = use(props.params);
   const { t } = useLanguage();
   const [purchaser, setPurchaser] = useState<any>(null);
-  const [purchases, setPurchases] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [filterType, setFilterType] = useState("all");
 
   const fetchPurchaser = async () => {
     try {
@@ -32,18 +33,40 @@ export default function PurchaserDetailsPage(props: { params: Promise<{ id: stri
     }
   };
 
-  const fetchPurchases = async () => {
+  const fetchTransactions = async () => {
     setLoading(true);
     try {
       const query = new URLSearchParams({ purchaserId: params.id });
       if (startDate) query.append("startDate", startDate);
       if (endDate) query.append("endDate", endDate);
-      query.append("limit", "1000"); // Get all for this purchaser
+      query.append("limit", "1000");
 
-      const res = await axios.get(`/api/purchases?${query.toString()}`);
-      if (res.data.success) {
-        setPurchases(res.data.data);
+      const [purRes, expRes] = await Promise.all([
+        axios.get(`/api/purchases?${query.toString()}`),
+        axios.get(`/api/expenses?${query.toString()}`),
+      ]);
+
+      let combined: any[] = [];
+      if (purRes.data.success) {
+        combined = [
+          ...combined,
+          ...purRes.data.data.map((p: any) => ({ ...p, _type: "purchase" })),
+        ];
       }
+      if (expRes.data.success) {
+        combined = [
+          ...combined,
+          ...expRes.data.data.map((e: any) => ({ ...e, _type: "expense" })),
+        ];
+      }
+
+      combined.sort(
+        (a, b) =>
+          new Date(b.date || b.createdAt).getTime() -
+          new Date(a.date || a.createdAt).getTime(),
+      );
+
+      setTransactions(combined);
     } catch (err) {
       console.error(err);
     } finally {
@@ -53,24 +76,32 @@ export default function PurchaserDetailsPage(props: { params: Promise<{ id: stri
 
   useEffect(() => {
     fetchPurchaser();
-    fetchPurchases();
+    fetchTransactions();
   }, [params.id]);
 
   const handleFilter = () => {
-    fetchPurchases();
+    fetchTransactions();
   };
 
   const handleReset = () => {
     setStartDate("");
     setEndDate("");
+    setFilterType("all");
     setTimeout(() => {
-      fetchPurchases();
+      fetchTransactions();
     }, 100);
   };
 
   if (!purchaser) return <div className="p-10 text-center">{t("loading")}...</div>;
 
-  const totalAmount = purchases.reduce((sum, p) => sum + p.total, 0);
+  const filteredTransactions = transactions.filter(
+    (t) => filterType === "all" || t._type === filterType
+  );
+
+  const totalAmount = filteredTransactions.reduce(
+    (sum, t) => sum + (t._type === "purchase" ? t.total : t.amount),
+    0
+  );
 
   return (
     <div className="space-y-6">
@@ -92,14 +123,14 @@ export default function PurchaserDetailsPage(props: { params: Promise<{ id: stri
         <Card className="border-[#E5DDD5] md:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-[#7A6055] uppercase">
-              {t("totalPurchases") || "Total Purchases Amount"}
+              {t("totalTransactions") || "Total Transactions Amount"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-[#1A1210]">
               <CurrencySymbol /> {totalAmount.toLocaleString()}
             </div>
-            <p className="text-xs text-[#A89080] mt-1">{purchases.length} {t("orders")}</p>
+            <p className="text-xs text-[#A89080] mt-1">{filteredTransactions.length} {t("transactions") || "Transactions"}</p>
           </CardContent>
         </Card>
 
@@ -123,6 +154,15 @@ export default function PurchaserDetailsPage(props: { params: Promise<{ id: stri
                 onChange={(e) => setEndDate(e.target.value)}
                 className="w-auto border-[#E5DDD5]"
               />
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="h-10 px-3 rounded-md border border-[#E5DDD5] bg-[#FAF8F6] text-sm text-[#1A1210] outline-none focus:ring-2 focus:ring-[#C9A84C]/20 transition-all"
+              >
+                <option value="all">{t("allTransactions") || "All Transactions"}</option>
+                <option value="purchase">{t("purchases") || "Purchases"}</option>
+                <option value="expense">{t("expenses") || "Expenses"}</option>
+              </select>
               <Button onClick={handleFilter} className="bg-[#2C1810] text-white hover:bg-[#1A0F0A]">
                 {t("apply")}
               </Button>
@@ -142,32 +182,49 @@ export default function PurchaserDetailsPage(props: { params: Promise<{ id: stri
                   <thead className="sticky top-0 bg-[#FAF8F6] z-10">
                     <tr className="border-b border-[#E5DDD5]">
                       <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">{t("date")}</th>
-                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">{t("purchaseOrder")}</th>
-                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">{t("supplier")}</th>
+                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">{t("type")}</th>
+                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">{t("reference")}</th>
+                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">{t("details")}</th>
                       <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase text-end">{t("amount")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#F0EBE5]">
-                    {purchases.length > 0 ? (
-                      purchases.map((purchase) => (
-                        <tr key={purchase._id} className="hover:bg-[#FAF8F6]">
+                    {filteredTransactions.length > 0 ? (
+                      filteredTransactions.map((txn) => (
+                        <tr key={txn._id} className="hover:bg-[#FAF8F6]">
                           <td className="py-3 px-4 text-sm">
-                            {format(new Date(purchase.date || purchase.createdAt), "dd MMM yyyy")}
-                          </td>
-                          <td className="py-3 px-4 text-sm font-mono text-[#1A1210]">
-                            {purchase.purchaseNumber}
+                            {format(new Date(txn.date || txn.createdAt), "dd MMM yyyy")}
                           </td>
                           <td className="py-3 px-4 text-sm font-semibold">
-                            {purchase.supplierName}
+                            {txn._type === "purchase" ? (
+                              <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs">
+                                {t("purchase")}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 bg-rose-50 text-rose-600 rounded-full text-xs">
+                                {t("expense")}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-sm font-mono text-[#1A1210]">
+                            {txn._type === "purchase" ? txn.purchaseNumber : txn.expenseNumber}
+                          </td>
+                          <td className="py-3 px-4 text-sm">
+                            <div className="font-semibold text-[#1A1210]">
+                              {txn._type === "purchase" ? txn.supplierName : txn.title}
+                            </div>
+                            <div className="text-xs text-[#7A6055] mt-0.5">
+                              {txn._type === "purchase" ? "Supplier" : txn.category}
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-sm font-bold text-[#1A1210] text-end">
-                            <CurrencySymbol /> {purchase.total.toLocaleString()}
+                            <CurrencySymbol /> {(txn._type === "purchase" ? txn.total : txn.amount).toLocaleString()}
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={4} className="py-10 text-center text-[#7A6055]">
+                        <td colSpan={5} className="py-10 text-center text-[#7A6055]">
                           {t("noData")}
                         </td>
                       </tr>

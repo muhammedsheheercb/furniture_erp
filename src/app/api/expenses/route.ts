@@ -27,8 +27,10 @@ export async function GET(req: NextRequest) {
     const endDate = searchParams.get("endDate");
     const month = searchParams.get("month");
     const year = searchParams.get("year");
+    const purchaserId = searchParams.get("purchaserId");
 
     const query: any = {};
+    if (purchaserId) query.purchaserId = purchaserId;
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: "i" } },

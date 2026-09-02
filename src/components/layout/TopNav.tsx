@@ -45,6 +45,12 @@ const navItems = [
     icon: ShoppingCart,
     permission: "purchases",
   },
+  {
+    href: "/purchasers",
+    label: "Purchasers",
+    icon: Users,
+    permission: "purchases",
+  },
   { href: "/items", label: "Inventory", icon: Package, permission: "items" },
   {
     href: "/customers",
