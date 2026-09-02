@@ -224,6 +224,7 @@ export default function SuppliersPage() {
         onClose={() => setBalanceModalOpen(false)}
         onSubmit={handleSubmitBalance}
         supplierName={selectedSupplier?.name || ""}
+        supplierBalance={selectedSupplier?.creditBalance || 0}
         loading={balanceUpdating}
       />
 
