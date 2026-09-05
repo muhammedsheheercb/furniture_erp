@@ -227,7 +227,7 @@
   "phone": "Phone",
   "products": "Products",
   "product": "Product",
-  "disc": "Disc %",
+  "disc": "Disc",
   "action": "Action",
   "addAProductToContinue": "Add a product to continue",
   "change": "change",
@@ -526,7 +526,7 @@
   "selectFromProducts": "SELECT FROM PRODUCTS",
   "grossTotal": "Gross Total",
   "itemDiscounts": "Item Discounts",
-  "extraDiscount": "Extra Discount (",
+  "extraDiscount": "Extra Discount",
   "totalDiscount": "TOTAL DISCOUNT",
   "notes": "NOTES",
   "dates": "Dates",
@@ -737,7 +737,7 @@
   "saleInvoice": "Sale Invoice",
   "invoiceNumber": "Invoice #",
   "supplierDetails": "Supplier Details",
-  "discPct": "Disc%",
+  "discPct": "Disc",
   "itemDiscount": "Item Discount",
   "printedOn": "Printed on",
   "authorizedSignature": "Authorized Signature",
@@ -771,5 +771,6 @@
   "monthlyPurchases": "Monthly Purchases",
   "totalPurchasers": "Total Purchasers",
   "selectPurchaser": "Select Purchaser",
-  "enterPurchaserName": "Enter purchaser name"
+  "enterPurchaserName": "Enter purchaser name",
+  "chooseAvailableProduct": "Choose Available Product"
 }

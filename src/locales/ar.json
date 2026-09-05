@@ -526,7 +526,7 @@
   "selectFromProducts": "تحديد من المنتجات",
   "grossTotal": "الإجمالي العام",
   "itemDiscounts": "خصومات العناصر",
-  "extraDiscount": "خصم إضافي (",
+  "extraDiscount": "خصم إضافي",
   "totalDiscount": "إجمالي الخصم",
   "notes": "ملاحظات",
   "dates": "تواريخ",
@@ -771,5 +771,6 @@
   "monthlyPurchases": "مشتريات الشهر",
   "totalPurchasers": "إجمالي المشترين",
   "selectPurchaser": "اختر المشتري (اختياري)",
-  "enterPurchaserName": "أدخل اسم المشتري"
+  "enterPurchaserName": "أدخل اسم المشتري",
+  "chooseAvailableProduct": "اختر المنتج المتاح"
 }

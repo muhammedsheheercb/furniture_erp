@@ -30,8 +30,6 @@ interface ProductionModalProps {
 
 const TABS = [
   { id: "basic", label: "Basic Info", icon: Package },
-  { id: "dimensions", label: "Dimensions", icon: Ruler },
-  { id: "pricing", label: "Pricing", icon: Tag },
   { id: "bom", label: "BOM", icon: Layers },
 ];
 
@@ -334,6 +332,7 @@ export default function ProductionModal({
     if (!deliveryDate) return toast.error("Please set a target delivery date");
     if (!selectedWorker)
       return toast.error("Please assign a production worker");
+    if (itemStates.some(it => !it.bom || it.bom.length === 0)) return toast.error("Please add materials to the BOM before starting work.");
 
     for (let i = 0; i < itemStates.length; i++) {
       const item = itemStates[i];
@@ -384,6 +383,7 @@ export default function ProductionModal({
   const hasStockError = itemStates.some((item) =>
     item.bom.some((b: any) => b.batchNumber && b.quantity > b.availableQty),
   );
+  const hasEmptyBOM = itemStates.some((item) => !item.bom || item.bom.length === 0);
   const currentItem = itemStates[activeItemIdx];
   const lbl = "block text-xs font-semibold text-[#7A6055] mb-1";
   const inp =
@@ -401,10 +401,17 @@ export default function ProductionModal({
           <Button variant="outline" onClick={onClose} disabled={loading}>
             {t("cancel")}
           </Button>
-          {!hasStockError ? (
+          {!hasStockError && !hasEmptyBOM ? (
             <Button onClick={handleFinalSubmit} loading={loading}>
               {t("startWorkDownloadJobCard")}
             </Button>
+          ) : hasEmptyBOM ? (
+            <div className="flex items-center gap-2 text-rose-500 bg-rose-50 px-4 py-2 rounded-lg border border-rose-100 animate-pulse">
+              <AlertCircle size={16} />
+              <span className="text-xs font-bold uppercase tracking-tight">
+                {t("bomRequired") || "BOM Required to Start Work"}
+              </span>
+            </div>
           ) : (
             <div className="flex items-center gap-2 text-rose-500 bg-rose-50 px-4 py-2 rounded-lg border border-rose-100 animate-pulse">
               <AlertCircle size={16} />
@@ -619,211 +626,6 @@ export default function ProductionModal({
                       readOnly
                       className={roInp}
                     />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Tab: Dimensions */}
-            {tab === "dimensions" && (
-              <div className="space-y-6">
-                <p className="text-sm text-[#7A6055]">
-                  {t("finalizeProductDimensionsAndWeight")}
-                </p>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="flex flex-col items-center justify-center bg-[#FAF8F6] rounded-2xl border border-[#E5DDD5] p-6 gap-4">
-                    <div className="flex justify-end w-full">
-                      <select
-                        value={currentItem.dimensions.unit}
-                        onChange={(e) =>
-                          updateItemState(activeItemIdx, {
-                            dimensions: {
-                              ...currentItem.dimensions,
-                              unit: e.target.value,
-                            },
-                          })
-                        }
-                        className="text-[10px] uppercase font-bold border border-[#E5DDD5] rounded px-1 py-0.5 bg-white outline-none focus:ring-1 focus:ring-[#C9A84C]/40"
-                      >
-                        {["cm", "inch", "mm", "ft"].map((u) => (
-                          <option key={u} value={u}>
-                            {u}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="w-32 h-22 border-2 border-[#C9A84C] rounded-xl relative flex items-center justify-center bg-white shadow-sm px-2">
-                      <span className="text-xs font-mono text-[#C9A84C] text-center leading-relaxed">
-                        {currentItem.dimensions.width || "W"} ×{" "}
-                        {currentItem.dimensions.height || "H"} ×{" "}
-                        {currentItem.dimensions.depth || "D"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[#A89080]">
-                      {t("wHD")}
-                      {currentItem.dimensions.unit})
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {(["width", "height", "depth"] as const).map((f) => (
-                      <div key={f}>
-                        <label className={lbl}>
-                          {f.charAt(0).toUpperCase() + f.slice(1)} (
-                          {currentItem.dimensions.unit})
-                        </label>
-                        <input
-                          type="number"
-                          value={currentItem.dimensions[f]}
-                          onChange={(e) =>
-                            updateItemState(activeItemIdx, {
-                              dimensions: {
-                                ...currentItem.dimensions,
-                                [f]: e.target.value,
-                              },
-                            })
-                          }
-                          className={inp}
-                        />
-                      </div>
-                    ))}
-                    <div>
-                      <label className={lbl}>{t("weightKg")}</label>
-                      <input
-                        type="number"
-                        value={currentItem.dimensions.weight}
-                        onChange={(e) =>
-                          updateItemState(activeItemIdx, {
-                            dimensions: {
-                              ...currentItem.dimensions,
-                              weight: e.target.value,
-                            },
-                          })
-                        }
-                        className={inp}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Tab: Pricing */}
-            {tab === "pricing" && (
-              <div className="space-y-5">
-                <div>
-                  <p className="text-xs font-bold text-[#7A6055] uppercase tracking-wide mb-3">
-                    {t("costBreakdown")}
-                  </p>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className={lbl}>
-                        {t("materialCost")}
-                        <CurrencySymbol className="w-3 h-3" />)
-                      </label>
-                      <input
-                        readOnly
-                        value={currentItem.pricing.materialCost}
-                        className={roInp}
-                      />
-                    </div>
-                    <div>
-                      <label className={lbl}>
-                        {t("labourCost")}
-                        <CurrencySymbol className="w-3 h-3" />)
-                      </label>
-                      <input
-                        type="number"
-                        value={currentItem.pricing.laborCost}
-                        onChange={(e) =>
-                          updatePricing(
-                            activeItemIdx,
-                            "laborCost",
-                            Number(e.target.value),
-                          )
-                        }
-                        className={inp}
-                      />
-                    </div>
-                    <div>
-                      <label className={lbl}>
-                        {t("overheadCost")}
-                        <CurrencySymbol className="w-3 h-3" />)
-                      </label>
-                      <input
-                        type="number"
-                        value={currentItem.pricing.extraCost}
-                        onChange={(e) =>
-                          updatePricing(
-                            activeItemIdx,
-                            "extraCost",
-                            Number(e.target.value),
-                          )
-                        }
-                        className={inp}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl bg-[#1B3A2D] px-5 py-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-white/60 uppercase tracking-wide">
-                      {t("totalManufacturingCost")}
-                    </p>
-                    <p className="text-2xl font-black text-white">
-                      <CurrencySymbol className="w-5 h-5 me-1" />{" "}
-                      {currentItem.pricing.totalCost.toLocaleString()}
-                    </p>
-                  </div>
-                  <p className="text-xs text-white/40">
-                    {currentItem.pricing.materialCost} +{" "}
-                    {currentItem.pricing.laborCost} +{" "}
-                    {currentItem.pricing.extraCost}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs font-bold text-[#7A6055] uppercase tracking-wide mb-3">
-                    {t("profitMargin")}
-                  </p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className={lbl}>{t("profitMargin")}</label>
-                      <input
-                        type="number"
-                        value={currentItem.pricing.profitMargin}
-                        onChange={(e) =>
-                          updatePricing(
-                            activeItemIdx,
-                            "profitMargin",
-                            Number(e.target.value),
-                          )
-                        }
-                        className={inp}
-                      />
-                    </div>
-                    <div>
-                      <label className={lbl}>
-                        {t("finalSellingPrice")}
-                        <CurrencySymbol className="w-3 h-3" />)
-                      </label>
-                      <input
-                        readOnly
-                        value={currentItem.pricing.sellingPrice.toLocaleString()}
-                        className={roInp + " font-bold text-lg text-[#1B3A2D]"}
-                      />
-                      {currentItem.quantity > 1 && (
-                        <p className="text-[10px] text-[#A89080] mt-1 text-end italic">
-                          {t("perUnit")}
-                          <CurrencySymbol className="w-2 h-2" />{" "}
-                          {(
-                            currentItem.pricing.sellingPrice /
-                            currentItem.quantity
-                          ).toFixed(3)}
-                        </p>
-                      )}
-                    </div>
                   </div>
                 </div>
               </div>

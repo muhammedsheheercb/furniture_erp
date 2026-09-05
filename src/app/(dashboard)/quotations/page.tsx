@@ -173,18 +173,18 @@ function calcTotals(items: IQuotationItem[], taxPct: number, discPct: number) {
   const subtotal = items.reduce(
     (s, i) =>
       s +
-      (i.subtotal || i.price * i.quantity * (1 - (i.discount || 0) / 100)),
+      (i.subtotal || Math.max(0, i.price * i.quantity - (i.discount || 0))),
     0,
   );
   const taxAmt = items.reduce(
     (s, i) =>
       s +
       (i.taxAmount ||
-        i.price * i.quantity * (1 - (i.discount || 0) / 100) * 0.05),
+        Math.max(0, i.price * i.quantity - (i.discount || 0)) * 0.05),
     0,
   );
-  const discAmt = subtotal * (discPct / 100);
-  return { subtotal, taxAmt, total: subtotal + taxAmt - discAmt };
+  const discAmt = discPct || 0;
+  return { subtotal, taxAmt, total: Math.round(subtotal + taxAmt - discAmt) };
 }
 
 export default function QuotationsPage() {
@@ -325,7 +325,7 @@ export default function QuotationsPage() {
     const items = form.items.map((it, i) => {
       if (i !== idx) return it;
       const updated = { ...it, [key]: val } as any;
-      updated.subtotal = updated.price * updated.quantity * (1 - (updated.discount || 0) / 100);
+      updated.subtotal = Math.max(0, updated.price * updated.quantity - (updated.discount || 0));
       updated.taxAmount = updated.subtotal * 0.05;
       updated.total = updated.subtotal + updated.taxAmount;
       return updated;
@@ -411,13 +411,13 @@ export default function QuotationsPage() {
         ...it,
         subtotal:
           it.subtotal ||
-          it.price * it.quantity * (1 - (it.discount || 0) / 100),
+          Math.max(0, it.price * it.quantity - (it.discount || 0)),
         taxAmount:
           it.taxAmount ||
-          it.price * it.quantity * (1 - (it.discount || 0) / 100) * 0.05,
+          Math.max(0, it.price * it.quantity - (it.discount || 0)) * 0.05,
         total:
           it.total ||
-          it.price * it.quantity * (1 - (it.discount || 0) / 100) * 1.05,
+          Math.max(0, it.price * it.quantity - (it.discount || 0)) * 1.05,
       })),
       subtotal: q.subtotal,
       tax: q.tax,
@@ -441,8 +441,7 @@ export default function QuotationsPage() {
       return toast.error("Customer name is required");
     if (!form.customerMobile?.trim())
       return toast.error("Mobile number is required");
-    if (!form.customerAddress?.trim())
-      return toast.error("Customer address is required");
+    
     if (!form.date) return toast.error("Date is required");
     if (!form.validUntil) return toast.error("Valid Until date is required");
     if (form.items.length === 0)
@@ -872,145 +871,125 @@ export default function QuotationsPage() {
             ) : (
               quotations.map((q, idx) => (
                 <React.Fragment key={q._id}>
-                <motion.tr
-                  className="tr-hover"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.03 }}
-                >
-                  <td className="td">
-                    <span
-                      style={{
-                        fontFamily: "monospace",
-                        fontSize: 12,
-                        color: "#7A6055",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {q.quotationNumber}
-                    </span>
-                  </td>
-                  <td className="td">
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        color: "#1A1210",
-                        fontSize: 13,
-                      }}
-                    >
-                      {q.customerName}
-                    </div>
-                    {q.customerMobile && (
-                      <div style={{ fontSize: 11, color: "#A89080" }}>
-                        {q.customerMobile}
-                      </div>
-                    )}
-                  </td>
-                  <td className="td" style={{ fontSize: 12, color: "#7A6055" }}>
-                    {formatDate(q.date)}
-                  </td>
-                  <td className="td">
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 4,
-                        background: "#F7F4F0",
-                        border: "1px solid #E5DDD5",
-                        borderRadius: 20,
-                        padding: "2px 10px",
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: "#5C3D2E",
-                      }}
-                    >
-                      <Package size={10} /> {q.items.length} {t("items")}
-                    </span>
-                  </td>
-                  <td className="td text-end">
-                    <span style={{ color: "#7A6055", fontSize: 13 }}>
-                      {formatCurrency(q.subtotal)}
-                    </span>
-                  </td>
-                  <td className="td text-end">
-                    {(q.discount || 0) > 0 ? (
+                  <motion.tr
+                    className="tr-hover"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.03 }}
+                  >
+                    <td className="td">
                       <span
                         style={{
-                          color: "#C0392B",
-                          fontWeight: 600,
+                          fontFamily: "monospace",
                           fontSize: 12,
+                          color: "#7A6055",
+                          fontWeight: 600,
                         }}
                       >
-                        -
-                        {formatCurrency((q.subtotal * (q.discount || 0)) / 100)}
-                        <br />
-                        <small>({q.discount}%)</small>
+                        {q.quotationNumber}
                       </span>
-                    ) : (
-                      <span style={{ color: "#A89080", fontSize: 12 }}>—</span>
-                    )}
-                  </td>
-                  <td className="td text-end">
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        color: "#2C1810",
-                        fontSize: 14,
-                      }}
-                    >
-                      {formatCurrency(q.total)}
-                    </span>
-                  </td>
-                  <td className="td text-center">{statusBadge(q.status)}</td>
-                  <td className="td text-center">
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: "#2980B9",
-                        background: "#EBF5FB",
-                        padding: "3px 10px",
-                        borderRadius: 20,
-                      }}
-                    >
-                      {q.createdBy?.name || "—"}
-                    </span>
-                  </td>
-
-                  <td className="td text-end">
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "flex-end",
-                        gap: 4,
-                      }}
-                    >
-                      <button
-                        onClick={() => {
-                          setViewingQuotation(q);
-                          setViewModalOpen(true);
-                        }}
+                    </td>
+                    <td className="td">
+                      <div
                         style={{
-                          padding: "6px",
-                          borderRadius: 8,
+                          fontWeight: 600,
+                          color: "#1A1210",
+                          fontSize: 13,
+                        }}
+                      >
+                        {q.customerName}
+                      </div>
+                      {q.customerMobile && (
+                        <div style={{ fontSize: 11, color: "#A89080" }}>
+                          {q.customerMobile}
+                        </div>
+                      )}
+                    </td>
+                    <td className="td" style={{ fontSize: 12, color: "#7A6055" }}>
+                      {formatDate(q.date)}
+                    </td>
+                    <td className="td">
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          background: "#F7F4F0",
                           border: "1px solid #E5DDD5",
-                          background: "#fff",
-                          cursor: "pointer",
-                          color: "#7A6055",
+                          borderRadius: 20,
+                          padding: "2px 10px",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: "#5C3D2E",
+                        }}
+                      >
+                        <Package size={10} /> {q.items.length} {t("items")}
+                      </span>
+                    </td>
+                    <td className="td text-end">
+                      <span style={{ color: "#7A6055", fontSize: 13 }}>
+                        {formatCurrency(q.subtotal)}
+                      </span>
+                    </td>
+                    <td className="td text-end">
+                      {(q.discount || 0) > 0 ? (
+                        <span
+                          style={{
+                            color: "#C0392B",
+                            fontWeight: 600,
+                            fontSize: 12,
+                          }}
+                        >
+                          -
+                          {formatCurrency(q.discount || 0)}
+                          <br />
+
+                        </span>
+                      ) : (
+                        <span style={{ color: "#A89080", fontSize: 12 }}>—</span>
+                      )}
+                    </td>
+                    <td className="td text-end">
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          color: "#2C1810",
+                          fontSize: 14,
+                        }}
+                      >
+                        {formatCurrency(q.total)}
+                      </span>
+                    </td>
+                    <td className="td text-center">{statusBadge(q.status)}</td>
+                    <td className="td text-center">
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "#2980B9",
+                          background: "#EBF5FB",
+                          padding: "3px 10px",
+                          borderRadius: 20,
+                        }}
+                      >
+                        {q.createdBy?.name || "—"}
+                      </span>
+                    </td>
+
+                    <td className="td text-end">
+                      <div
+                        style={{
                           display: "flex",
                           alignItems: "center",
-                          justifyContent: "center",
-                          transition: "all 0.15s",
+                          justifyContent: "flex-end",
+                          gap: 4,
                         }}
-                        title="View Quotation"
                       >
-                        <Eye size={16} />
-                      </button>
-                      
-                      {canEdit && q.status === "quote" && (
                         <button
-                          onClick={() => openEdit(q)}
+                          onClick={() => {
+                            setViewingQuotation(q);
+                            setViewModalOpen(true);
+                          }}
                           style={{
                             padding: "6px",
                             borderRadius: 8,
@@ -1023,114 +1002,134 @@ export default function QuotationsPage() {
                             justifyContent: "center",
                             transition: "all 0.15s",
                           }}
-                          title="Edit Quotation"
+                          title="View Quotation"
                         >
-                          <Pencil size={16} />
+                          <Eye size={16} />
                         </button>
-                      )}
 
-                      {q.status === "quote" && (
-                        <>
+                        {canEdit && q.status === "quote" && (
                           <button
-                            onClick={() =>
-                              setStatusConfirm({ id: q._id, status: "sale" })
-                            }
+                            onClick={() => openEdit(q)}
                             style={{
                               padding: "6px",
                               borderRadius: 8,
-                              border: "1px solid #A9DFBF",
-                              background: "#EAFAF1",
+                              border: "1px solid #E5DDD5",
+                              background: "#fff",
                               cursor: "pointer",
-                              color: "#1E8449",
+                              color: "#7A6055",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
                               transition: "all 0.15s",
                             }}
-                            title={t("acceptConvert")}
+                            title="Edit Quotation"
                           >
-                            <Check size={16} />
+                            <Pencil size={16} />
                           </button>
+                        )}
+
+                        {q.status === "quote" && (
+                          <>
+                            <button
+                              onClick={() =>
+                                setStatusConfirm({ id: q._id, status: "sale" })
+                              }
+                              style={{
+                                padding: "6px",
+                                borderRadius: 8,
+                                border: "1px solid #A9DFBF",
+                                background: "#EAFAF1",
+                                cursor: "pointer",
+                                color: "#1E8449",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                transition: "all 0.15s",
+                              }}
+                              title={t("acceptConvert")}
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button
+                              onClick={() =>
+                                setStatusConfirm({ id: q._id, status: "reject" })
+                              }
+                              style={{
+                                padding: "6px",
+                                borderRadius: 8,
+                                border: "1px solid #F5B7B1",
+                                background: "#FDEDEC",
+                                cursor: "pointer",
+                                color: "#C0392B",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                transition: "all 0.15s",
+                              }}
+                              title={t("rejectRemove")}
+                            >
+                              <X size={16} />
+                            </button>
+                          </>
+                        )}
+                        {canDelete && (
                           <button
-                            onClick={() =>
-                              setStatusConfirm({ id: q._id, status: "reject" })
-                            }
+                            onClick={() => setDeleteId(q._id)}
                             style={{
                               padding: "6px",
                               borderRadius: 8,
-                              border: "1px solid #F5B7B1",
-                              background: "#FDEDEC",
+                              border: "1px solid #E5DDD5",
+                              background: "#fff",
                               cursor: "pointer",
-                              color: "#C0392B",
+                              color: "#7A6055",
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "center",
                               transition: "all 0.15s",
                             }}
-                            title={t("rejectRemove")}
+                            onMouseEnter={(e) => {
+                              (e.currentTarget as HTMLElement).style.background =
+                                "#FDEDEC";
+                              (e.currentTarget as HTMLElement).style.color =
+                                "#C0392B";
+                              (e.currentTarget as HTMLElement).style.borderColor =
+                                "#F5B7B1";
+                            }}
+                            onMouseLeave={(e) => {
+                              (e.currentTarget as HTMLElement).style.background =
+                                "#fff";
+                              (e.currentTarget as HTMLElement).style.color =
+                                "#7A6055";
+                              (e.currentTarget as HTMLElement).style.borderColor =
+                                "#E5DDD5";
+                            }}
                           >
-                            <X size={16} />
+                            <Trash2 size={14} />
                           </button>
-                        </>
-                      )}
-                      {canDelete && (
-                        <button
-                          onClick={() => setDeleteId(q._id)}
-                          style={{
-                            padding: "6px",
-                            borderRadius: 8,
-                            border: "1px solid #E5DDD5",
-                            background: "#fff",
-                            cursor: "pointer",
-                            color: "#7A6055",
-                            display: "flex",
-                            alignItems: "center",
-                            transition: "all 0.15s",
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.background =
-                              "#FDEDEC";
-                            (e.currentTarget as HTMLElement).style.color =
-                              "#C0392B";
-                            (e.currentTarget as HTMLElement).style.borderColor =
-                              "#F5B7B1";
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.background =
-                              "#fff";
-                            (e.currentTarget as HTMLElement).style.color =
-                              "#7A6055";
-                            (e.currentTarget as HTMLElement).style.borderColor =
-                              "#E5DDD5";
-                          }}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </motion.tr>
-                {q.validationError && (
-                  <tr>
-                    <td colSpan={10} style={{ padding: 0 }}>
-                      <div
-                        style={{
-                          background: "#FEF2F2",
-                          color: "#B91C1C",
-                          padding: "8px 16px",
-                          fontSize: 12,
-                          borderBottom: "1px solid #FEE2E2",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6
-                        }}
-                      >
-                        <AlertTriangle size={14} />
-                        {q.validationError}
+                        )}
                       </div>
                     </td>
-                  </tr>
-                )}
+                  </motion.tr>
+                  {q.validationError && (
+                    <tr>
+                      <td colSpan={10} style={{ padding: 0 }}>
+                        <div
+                          style={{
+                            background: "#FEF2F2",
+                            color: "#B91C1C",
+                            padding: "8px 16px",
+                            fontSize: 12,
+                            borderBottom: "1px solid #FEE2E2",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6
+                          }}
+                        >
+                          <AlertTriangle size={14} />
+                          {q.validationError}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </React.Fragment>
               ))
             )}
@@ -1324,7 +1323,6 @@ export default function QuotationsPage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, customerAddress: e.target.value }))
                   }
-                  required
                   style={{
                     width: "100%",
                     height: 60,
@@ -1473,25 +1471,7 @@ export default function QuotationsPage() {
                 {t("productDetails")}
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={addBlankItem}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "5px 12px",
-                    borderRadius: 8,
-                    border: "1.5px solid #E5DDD5",
-                    background: "#fff",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "#7A6055",
-                    cursor: "pointer",
-                  }}
-                >
-                  <Plus size={13} /> {t("addBlankRow")}
-                </button>
+
                 <button
                   type="button"
                   onClick={addItem}
@@ -1574,7 +1554,7 @@ export default function QuotationsPage() {
                 padding: "0 4px",
               }}
             >
-              {["Product", "Color", "Qty", "Price", "Disc%", "Subtotal", "VAT(5%)", "Total", ""].map(
+              {["Product", "Color", "Qty", "Price", "Discount", "Subtotal", "VAT(5%)", "Total", ""].map(
                 (h) => (
                   <div
                     key={h}
@@ -1584,7 +1564,7 @@ export default function QuotationsPage() {
                       color: "#A89080",
                       textTransform: "uppercase",
                       letterSpacing: "0.06em",
-                      textAlign: ["Qty", "Price", "Disc%", "Subtotal", "VAT(5%)", "Total"].includes(h)
+                      textAlign: ["Qty", "Price", "Discount", "Subtotal", "VAT(5%)", "Total"].includes(h)
                         ? "right"
                         : "left",
                     }}
@@ -1902,7 +1882,6 @@ export default function QuotationsPage() {
                     recalc(form.items, taxPct, v);
                   }}
                   min={0}
-                  max={100}
                   style={{
                     width: 60,
                     height: 32,
@@ -1922,10 +1901,10 @@ export default function QuotationsPage() {
                 0,
               );
               const itemDiscountTotal = form.items.reduce(
-                (s, i) => s + (i.price * i.quantity * (i.discount || 0)) / 100,
+                (s, i) => s + (i.discount || 0),
                 0,
               );
-              const globalDiscountAmt = form.subtotal * (discPct / 100);
+              const globalDiscountAmt = discPct || 0;
               const totalDiscount = itemDiscountTotal + globalDiscountAmt;
               const taxAmt = form.items.reduce((s, i) => s + (i.taxAmount || 0), 0);
 
@@ -2028,7 +2007,7 @@ export default function QuotationsPage() {
                         }}
                       >
                         {t("extraDiscount")}
-                        {discPct}%)
+
                       </span>
                       <span
                         style={{
@@ -2329,7 +2308,7 @@ export default function QuotationsPage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "#F7F4F0" }}>
-                    {["Item", "Color", "Qty", "Price", "Disc%", "Subtotal", "VAT (5%)", "Total"].map(
+                    {["Item", "Color", "Qty", "Price", "Discount", "Subtotal", "VAT (5%)", "Total"].map(
                       (h) => (
                         <th
                           key={h}
@@ -2402,7 +2381,7 @@ export default function QuotationsPage() {
                           color: "#7A6055",
                         }}
                       >
-                        {item.discount}%
+                        {item.discount}
                       </td>
                       <td
                         style={{

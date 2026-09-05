@@ -4,8 +4,6 @@ import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import {
   Package,
-  Ruler,
-  Tag,
   Layers,
   Search,
   Info,
@@ -28,12 +26,9 @@ const CATEGORIES = [
   "Dining",
   "Other",
 ];
-const DIM_UNITS = ["cm", "inch", "mm", "ft"];
 
 const TABS = [
   { id: "basic", label: "Basic Info", icon: Package },
-  { id: "dimensions", label: "Dimensions", icon: Ruler },
-  { id: "pricing", label: "Pricing", icon: Tag },
   { id: "bom", label: "BOM", icon: Layers },
 ];
 
@@ -56,6 +51,7 @@ interface FormState {
   color: string;
   description: string;
   quantity: number;
+  price: number;
   dimensions: {
     width: string;
     height: string;
@@ -73,6 +69,7 @@ interface FormState {
     discountPrice: number;
   };
   bom: BomRow[];
+  itemId?: string;
 }
 
 function makeEmpty(): FormState {
@@ -82,6 +79,7 @@ function makeEmpty(): FormState {
     color: "",
     description: "",
     quantity: 1,
+    price: 0,
     dimensions: { width: "", height: "", depth: "", weight: "", unit: "cm" },
     pricing: {
       materialCost: 0,
@@ -93,39 +91,8 @@ function makeEmpty(): FormState {
       discountPrice: 0,
     },
     bom: [],
+    itemId: undefined,
   };
-}
-
-// ── dimension preview (copied from ProductModal) ───────────────────────────────
-function DimPreview({ d }: { d: FormState["dimensions"] }) {
-  const { t } = useLanguage();
-  return (
-    <div className="flex flex-col items-center justify-center bg-[#FAF8F6] rounded-2xl border border-[#E5DDD5] p-6 gap-4">
-      <div className="w-32 h-22 border-2 border-[#C9A84C] rounded-xl relative flex items-center justify-center bg-white shadow-sm px-2">
-        <span className="text-xs font-mono text-[#C9A84C] text-center leading-relaxed">
-          {d.width || "W"} × {d.height || "H"} × {d.depth || "D"}
-        </span>
-        <span className="absolute -bottom-5 start-0 end-0 text-center text-[10px] text-[#A89080]">
-          {t("width")}
-        </span>
-        <span
-          className="absolute top-0 -right-8 h-full flex items-center text-[10px] text-[#A89080] -rotate-90 origin-center"
-          style={{ writingMode: "vertical-rl" }}
-        >
-          {t("height")}
-        </span>
-      </div>
-      <p className="text-xs text-[#A89080] mt-3">
-        {t("wHD")}
-        {d.unit})
-      </p>
-      {d.weight && (
-        <p className="text-xs text-[#C9A84C] font-semibold">
-          ⚖ {d.weight} {t("kg")}
-        </p>
-      )}
-    </div>
-  );
 }
 
 // ── props ──────────────────────────────────────────────────────────────────────
@@ -180,12 +147,14 @@ export default function QuotationItemModal({
     setTab("basic");
     setErrors({});
     if (editItem) {
+      const priceVal = editItem.price || 0;
       setForm({
         productName: editItem.itemName,
         category: (editItem as any).category || "Sofa",
         color: editItem.color || "",
         description: editItem.description || "",
         quantity: editItem.quantity,
+        price: priceVal,
         dimensions: {
           width: String(editItem.dimensions?.width ?? ""),
           height: String(editItem.dimensions?.height ?? ""),
@@ -199,7 +168,7 @@ export default function QuotationItemModal({
           extraCost: (editItem as any).pricing?.extraCost ?? 0,
           totalCost: (editItem as any).pricing?.totalCost ?? 0,
           profitMargin: (editItem as any).pricing?.profitMargin ?? 0,
-          sellingPrice: editItem.price || 0,
+          sellingPrice: priceVal,
           discountPrice: (editItem as any).pricing?.discountPrice ?? 0,
         },
         bom: (editItem.bom || []).map((b) => ({
@@ -219,16 +188,19 @@ export default function QuotationItemModal({
     }
   }, [open, editItem]);
 
-  // ── pre-fill from existing product ────────────────────────────────────────
+  // ── pre-fill from existing direct buy product ──────────────────────────────
   function handleProductSelect(productId: string) {
     const p = products.find((x) => x._id === productId);
     if (!p) return;
+    const priceVal = p.salesAmount ?? p.pricing?.sellingPrice ?? 0;
     setForm((prev) => ({
       ...prev,
       productName: p.name,
+      itemId: p._id,
       category: p.category || "Sofa",
       color: p.color || "",
       description: p.description || "",
+      price: priceVal,
       dimensions: {
         width: String(p.dimensions?.width ?? ""),
         height: String(p.dimensions?.height ?? ""),
@@ -243,7 +215,7 @@ export default function QuotationItemModal({
         extraCost: p.pricing?.extraCost ?? 0,
         totalCost: p.pricing?.totalCost ?? 0,
         profitMargin: p.pricing?.profitMargin ?? 0,
-        sellingPrice: p.pricing?.sellingPrice ?? p.salesAmount ?? 0,
+        sellingPrice: priceVal,
         discountPrice: p.pricing?.discountPrice ?? p.mrp ?? 0,
       },
       bom: (p.bom || []).map((b: any) => ({
@@ -260,26 +232,14 @@ export default function QuotationItemModal({
     }));
   }
 
-  // ── pricing helpers (same as ProductModal) ─────────────────────────────────
+  // ── pricing helpers ────────────────────────────────────────────────────────
   function recalcPricing(base: FormState["pricing"]) {
     const total = base.materialCost + base.laborCost + base.extraCost;
     const sell = Math.round(total * (1 + base.profitMargin / 100));
     return { ...base, totalCost: total, sellingPrice: sell };
   }
 
-  function setPricingField(key: keyof FormState["pricing"], value: number) {
-    setForm((prev) => {
-      const p = { ...prev.pricing, [key]: value };
-      if (
-        ["materialCost", "laborCost", "extraCost", "profitMargin"].includes(key)
-      ) {
-        return { ...prev, pricing: recalcPricing(p) };
-      }
-      return { ...prev, pricing: p };
-    });
-  }
-
-  // ── BOM helpers (same as ProductModal) ────────────────────────────────────
+  // ── BOM helpers ───────────────────────────────────────────────────────────
   function addBomRow() {
     setForm((prev) => ({
       ...prev,
@@ -383,16 +343,22 @@ export default function QuotationItemModal({
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (!form.productName.trim()) errs.productName = "Product name is required";
-    if (form.pricing.sellingPrice <= 0)
-      errs.sellingPrice = "Selling price must be greater than 0";
+    if (form.price <= 0)
+      errs.price = "Price must be greater than 0";
     if (Object.keys(errs).length) {
       setErrors(errs);
       setTab("basic");
       return;
     }
 
+    const priceVal = form.price;
+    const subtotalVal = priceVal * form.quantity;
+    const taxVal = subtotalVal * 0.05;
+    const totalVal = subtotalVal * 1.05;
+
     onSubmit({
       itemName: form.productName.trim(),
+      itemId: form.itemId,
       category: form.category as any,
       description: form.description,
       color: form.color,
@@ -400,11 +366,11 @@ export default function QuotationItemModal({
       size: "",
       unit: "pcs",
       quantity: form.quantity,
-      price: form.pricing.sellingPrice,
+      price: priceVal,
       discount: 0,
-      subtotal: form.pricing.sellingPrice * form.quantity,
-      taxAmount: form.pricing.sellingPrice * form.quantity * 0.05,
-      total: form.pricing.sellingPrice * form.quantity * 1.05,
+      subtotal: subtotalVal,
+      taxAmount: taxVal,
+      total: totalVal,
       dimensions: {
         width: form.dimensions.width
           ? Number(form.dimensions.width)
@@ -420,7 +386,10 @@ export default function QuotationItemModal({
           : undefined,
         unit: form.dimensions.unit,
       },
-      pricing: form.pricing as any,
+      pricing: {
+        ...form.pricing,
+        sellingPrice: priceVal,
+      } as any,
       bom: form.bom
         .filter((r) => r.materialId)
         .map((r) => ({
@@ -438,13 +407,16 @@ export default function QuotationItemModal({
     onClose();
   }
 
+  // Filter only direct buy products (not manufactured)
+  const directBuyProducts = products.filter((p) => !p.isManufactured);
+
   // ── render ─────────────────────────────────────────────────────────────────
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={
-        editItem ? `Edit: ${editItem.itemName}` : "Add Product to Quotation"
+        editItem ? `Edit: ${editItem.itemName}` : t("chooseAvailableProduct")
       }
       size="xl"
       footer={
@@ -461,7 +433,7 @@ export default function QuotationItemModal({
       {/* Quick-select existing product */}
       {!editItem && (
         <div className="p-4 bg-[#F5F2EA] rounded-xl border border-[#E5DDD5] mb-5">
-          <label className={lbl}>{t("quickSelectExistingProduct")}</label>
+          <label className={lbl}>{t("chooseAvailableProduct")}</label>
           <div className="relative">
             <select
               onChange={(e) => handleProductSelect(e.target.value)}
@@ -471,11 +443,11 @@ export default function QuotationItemModal({
               <option value="" disabled>
                 {fetching
                   ? "Loading products…"
-                  : "— Choose a product to pre-fill —"}
+                  : "— Choose a direct buy product to pre-fill —"}
               </option>
-              {products.map((p) => (
+              {directBuyProducts.map((p) => (
                 <option key={p._id} value={p._id}>
-                  {p.name} ({p.itemNumber})
+                  {p.name} ({p.itemNumber}) - Stock: {p.quantity || 0}
                 </option>
               ))}
             </select>
@@ -487,7 +459,7 @@ export default function QuotationItemModal({
         </div>
       )}
 
-      {/* Tab bar — exact same as ProductModal */}
+      {/* Tab bar — 2 sections: Basic Info & BOM */}
       <div className="flex gap-1 mb-6 border-b border-[#F0EBE5] overflow-x-auto pb-0">
         {TABS.map((t) => (
           <button
@@ -548,7 +520,7 @@ export default function QuotationItemModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className={lbl}>{t("color")}</label>
                 <input
@@ -576,6 +548,39 @@ export default function QuotationItemModal({
                   className={inp}
                 />
               </div>
+              <div>
+                <label className={lbl}>
+                  {t("price")} (<CurrencySymbol plain />)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.price}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      price: parseFloat(e.target.value) || 0,
+                    }))
+                  }
+                  placeholder="0.00"
+                  className={inp}
+                />
+                {errors.price && (
+                  <p className="text-xs text-rose-500 mt-1">{errors.price}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="p-3 bg-[#FAF8F6] rounded-lg border border-[#E5DDD5] flex justify-between items-center text-sm">
+              <span className="font-semibold text-[#7A6055]">Item Total:</span>
+              <span className="font-bold text-[#1B3A2D] text-base">
+                <CurrencySymbol className="w-4 h-4 me-1" />
+                {(form.quantity * form.price).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 3,
+                })}
+              </span>
             </div>
 
             <div>
@@ -590,239 +595,6 @@ export default function QuotationItemModal({
                 className="w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 resize-none"
               />
             </div>
-          </div>
-        )}
-
-        {/* ── Tab: Dimensions ───────────────────────────────────── */}
-        {tab === "dimensions" && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-[#7A6055]">
-                {t("enterProductDimensionsAndWeight")}
-              </p>
-              <select
-                value={form.dimensions.unit}
-                onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    dimensions: { ...p.dimensions, unit: e.target.value },
-                  }))
-                }
-                className="border border-[#E5DDD5] rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40"
-              >
-                {DIM_UNITS.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-              <DimPreview d={form.dimensions} />
-              <div className="grid grid-cols-2 gap-4">
-                {(["width", "height", "depth"] as const).map((f) => (
-                  <div key={f}>
-                    <label className={lbl}>
-                      {f.charAt(0).toUpperCase() + f.slice(1)} (
-                      {form.dimensions.unit})
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={form.dimensions[f]}
-                      onChange={(e) =>
-                        setForm((p) => ({
-                          ...p,
-                          dimensions: { ...p.dimensions, [f]: e.target.value },
-                        }))
-                      }
-                      placeholder="0"
-                      className={inp}
-                    />
-                  </div>
-                ))}
-                <div>
-                  <label className={lbl}>{t("weightKg")}</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.1"
-                    value={form.dimensions.weight}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        dimensions: { ...p.dimensions, weight: e.target.value },
-                      }))
-                    }
-                    placeholder="0"
-                    className={inp}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Tab: Pricing ──────────────────────────────────────── */}
-        {tab === "pricing" && (
-          <div className="space-y-5">
-            <div>
-              <p className="text-xs font-bold text-[#7A6055] uppercase tracking-wide mb-3">
-                {t("costBreakdown")}
-              </p>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className={lbl}>
-                    {t("materialCost")}
-                    <CurrencySymbol className="w-3 h-3" />)
-                    <span className="ms-1 text-[10px] text-[#A89080]">
-                      {t("autoFromBom")}
-                    </span>
-                  </label>
-                  <input
-                    readOnly
-                    value={form.pricing.materialCost}
-                    className={roInp}
-                  />
-                </div>
-                <div>
-                  <label className={lbl}>
-                    {t("labourCost")}
-                    <CurrencySymbol className="w-3 h-3" />)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.pricing.laborCost}
-                    onChange={(e) =>
-                      setPricingField("laborCost", Number(e.target.value))
-                    }
-                    className={inp}
-                  />
-                </div>
-                <div>
-                  <label className={lbl}>
-                    {t("extraOverhead")}
-                    <CurrencySymbol className="w-3 h-3" />)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.pricing.extraCost}
-                    onChange={(e) =>
-                      setPricingField("extraCost", Number(e.target.value))
-                    }
-                    className={inp}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-[#1B3A2D] px-5 py-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-white/60 uppercase tracking-wide">
-                  {t("totalCost")}
-                </p>
-                <p className="text-2xl font-black text-white">
-                  <CurrencySymbol className="w-5 h-5 me-1" />{" "}
-                  {form.pricing.totalCost.toLocaleString("en-IN")}
-                </p>
-              </div>
-              <p className="text-xs text-white/40">
-                {form.pricing.materialCost} + {form.pricing.laborCost} +{" "}
-                {form.pricing.extraCost}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-bold text-[#7A6055] uppercase tracking-wide mb-3">
-                {t("sellingPrice")}
-              </p>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className={lbl}>{t("profitMargin")}</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.pricing.profitMargin}
-                    onChange={(e) =>
-                      setPricingField("profitMargin", Number(e.target.value))
-                    }
-                    className={inp}
-                  />
-                </div>
-                <div>
-                  <label className={lbl}>
-                    {t("sellingPrice")}
-                    <CurrencySymbol className="w-3 h-3" />)
-                    <span className="text-[10px] text-[#A89080] ms-1">
-                      {t("autocalculated")}
-                    </span>
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.pricing.sellingPrice}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        pricing: {
-                          ...p.pricing,
-                          sellingPrice: Number(e.target.value),
-                        },
-                      }))
-                    }
-                    className={inp}
-                  />
-                  {errors.sellingPrice && (
-                    <p className="text-xs text-rose-500 mt-1">
-                      {errors.sellingPrice}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className={lbl}>
-                    {t("discountPrice")}
-                    <CurrencySymbol className="w-3 h-3" />)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.pricing.discountPrice}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        pricing: {
-                          ...p.pricing,
-                          discountPrice: Number(e.target.value),
-                        },
-                      }))
-                    }
-                    className={inp}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {form.pricing.sellingPrice > 0 && form.pricing.totalCost > 0 && (
-              <div className="flex gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-                <Info size={16} className="shrink-0 mt-0.5 text-amber-500" />
-                <span>
-                  {t("profit")}
-                  <CurrencySymbol className="w-3 h-3 me-1" />
-                  {(
-                    form.pricing.sellingPrice - form.pricing.totalCost
-                  ).toLocaleString("en-IN")}
-                  {t("nbspnbspMargin")}
-                  {(
-                    ((form.pricing.sellingPrice - form.pricing.totalCost) /
-                      form.pricing.totalCost) *
-                    100
-                  ).toFixed(1)}
-                  %
-                </span>
-              </div>
-            )}
           </div>
         )}
 
@@ -857,15 +629,11 @@ export default function QuotationItemModal({
                     <th className="py-2.5 px-3 text-start text-xs font-bold text-[#7A6055] uppercase">
                       {t("batch")}
                     </th>
-                    <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-20">
-                      {t("priceunit")}
-                    </th>
+                    
                     <th className="py-2.5 px-3 text-center text-xs font-bold text-[#7A6055] uppercase w-24">
                       {t("qty")}
                     </th>
-                    <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-24">
-                      {t("subtotal")}
-                    </th>
+                    
                     <th className="w-8" />
                   </tr>
                 </thead>
@@ -876,7 +644,7 @@ export default function QuotationItemModal({
                         colSpan={6}
                         className="py-10 text-center text-[#A89080] text-sm"
                       >
-                        {t("click")}
+                        {t("click")}{" "}
                         <strong>{t("addMaterial")}</strong> {t("toBuildTheBom")}
                       </td>
                     </tr>
@@ -922,9 +690,7 @@ export default function QuotationItemModal({
                                   <option value="">{t("selectBatch")}</option>
                                   {batches.map((b: any, bi: number) => (
                                     <option key={bi} value={b.batchNumber}>
-                                      {b.batchNumber || `Batch ${bi + 1}`} —{" "}
-                                      <CurrencySymbol plain />
-                                      {b.purchasePrice} | {Math.max(0, (b.quantity || 0) - (b.reservedQuantity || 0))} {row.unit}
+                                      {b.batchNumber || `Batch ${bi + 1}`} | {Math.max(0, (b.quantity || 0) - (b.reservedQuantity || 0))} {row.unit}
                                     </option>
                                   ))}
                                 </select>
@@ -954,17 +720,7 @@ export default function QuotationItemModal({
                             )}
                           </td>
 
-                          {/* Price/Unit (read-only) */}
-                          <td className="px-3 py-2 text-end font-mono text-xs text-[#7A6055]">
-                            {row.pricePerUnit > 0 ? (
-                              <>
-                                <CurrencySymbol className="w-3 h-3 me-0.5" />
-                                {row.pricePerUnit}
-                              </>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
+                          
 
                           {/* Qty */}
                           <td className="px-3 py-2">

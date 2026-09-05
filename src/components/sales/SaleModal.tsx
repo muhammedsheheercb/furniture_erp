@@ -106,10 +106,10 @@ export default function SaleModal({
 
   const subtotalAfterItemDiscount = lineItems.reduce((s, i) => s + (i.subtotal || 0), 0);
   const taxAmount = lineItems.reduce((s, i) => s + (i.taxAmount || 0), 0);
-  const grandTotal = Math.max(
+  const grandTotal = Math.round(Math.max(
     0,
     subtotalAfterItemDiscount + taxAmount - discAmt,
-  );
+  ));
   const balance = grandTotal - advancePaid;
 
   const isConversion = sale?.isConversion === true;
@@ -152,11 +152,10 @@ export default function SaleModal({
       setTaxPct(sale.tax || 0);
       const loadedSubtotal = (sale.items || []).reduce(
         (s: number, it: any) =>
-          s +
-          (it.price || 0) * (it.quantity || 1) * (1 - (it.discount || 0) / 100),
+          s + Math.max(0, (it.price || 0) * (it.quantity || 1) - (it.discount || 0)),
         0,
       );
-      setDiscAmt((loadedSubtotal * (sale.discount || 0)) / 100);
+      setDiscAmt(sale.discount || 0);
       setLineItems(
         (sale.items || []).map((it: any) => ({
           id: uid(),
@@ -173,19 +172,13 @@ export default function SaleModal({
           size: it.size || "",
           subtotal:
             it.subtotal ||
-            (it.price || 0) * (it.quantity || 1) * (1 - (it.discount || 0) / 100),
+            Math.max(0, (it.price || 0) * (it.quantity || 1) - (it.discount || 0)),
           taxAmount:
             it.taxAmount ||
-            (it.price || 0) *
-              (it.quantity || 1) *
-              (1 - (it.discount || 0) / 100) *
-              0.05,
+            Math.max(0, (it.price || 0) * (it.quantity || 1) - (it.discount || 0)) * 0.05,
           total:
             it.total ||
-            (it.price || 0) *
-              (it.quantity || 1) *
-              (1 - (it.discount || 0) / 100) *
-              1.05,
+            Math.max(0, (it.price || 0) * (it.quantity || 1) - (it.discount || 0)) * 1.05,
           dimensions: it.dimensions,
           bom: it.bom,
           pricing: it.pricing,
@@ -261,16 +254,19 @@ export default function SaleModal({
               itemNumber: p.itemNumber,
               itemName: p.name,
               unit: p.unit || "Piece",
-              price,
+              price: price,
               color,
               material,
               size,
-              subtotal: price * i.qty * (1 - (i.discount || 0) / 100),
-              taxAmount: (price * i.qty * (1 - (i.discount || 0) / 100)) * 0.05,
-              total: Math.max(0, (price * i.qty * (1 - (i.discount || 0) / 100)) * 1.05),
+              subtotal: Math.max(0, price * i.qty - (i.discount || 0)),
+              taxAmount: Math.max(0, price * i.qty - (i.discount || 0)) * 0.05,
+              total: Math.max(0, price * i.qty - (i.discount || 0)) * 1.05,
               dimensions: p.dimensions,
               bom: p.bom,
-              pricing: p.pricing,
+              pricing: {
+                ...p.pricing,
+                sellingPrice: price,
+              },
             },
       ),
     );
@@ -291,9 +287,10 @@ export default function SaleModal({
           ...i,
           batchNumber: batchNum,
           price,
-          subtotal: i.qty * price * (1 - (i.discount || 0) / 100),
-          taxAmount: (i.qty * price * (1 - (i.discount || 0) / 100)) * 0.05,
-          total: Math.max(0, i.qty * price * (1 - (i.discount || 0) / 100) * 1.05),
+          qty: i.qty,
+          subtotal: Math.max(0, i.qty * price - (i.discount || 0)),
+          taxAmount: Math.max(0, i.qty * price - (i.discount || 0)) * 0.05,
+          total: Math.max(0, i.qty * price - (i.discount || 0)) * 1.05,
         };
       }),
     );
@@ -325,9 +322,11 @@ export default function SaleModal({
           }
         }
         const u = { ...i, [field]: val };
-        u.subtotal = u.qty * u.price * (1 - (u.discount || 0) / 100);
-        u.taxAmount = u.subtotal * 0.05;
-        u.total = Math.max(0, u.subtotal + u.taxAmount);
+        if (field === "qty" || field === "price" || field === "discount") {
+          u.subtotal = Math.max(0, u.qty * u.price - (u.discount || 0));
+          u.taxAmount = u.subtotal * 0.05;
+          u.total = Math.max(0, u.subtotal + u.taxAmount);
+        }
         return u;
       }),
     );
@@ -441,11 +440,8 @@ export default function SaleModal({
       advancePaid,
       previousPaid: 0,
       subtotal: subtotalAfterItemDiscount,
-      tax: taxAmount, // Uses the dynamically derived item tax sum
-      discount:
-        subtotalAfterItemDiscount > 0
-          ? (discAmt / subtotalAfterItemDiscount) * 100
-          : 0,
+      tax: taxAmount,
+      discount: discAmt,
       total: grandTotal,
       deliveryDate: deliveryDate || undefined,
       deliveryAddress,
@@ -731,6 +727,8 @@ export default function SaleModal({
                       <td className="px-2 py-2">
                         <input
                           type="number"
+                          min={0}
+                          step="0.001"
                           value={item.discount}
                           onChange={(e) =>
                             updateField(

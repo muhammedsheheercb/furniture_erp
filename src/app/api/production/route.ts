@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Production from "@/models/Production";
+import "@/models/Sale";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
