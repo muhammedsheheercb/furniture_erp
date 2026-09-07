@@ -15,6 +15,7 @@ export interface IQuotationDocument extends Document {
     quantity: number;
     price: number;
     discount: number;
+    batch?: string;
     color?: string;
     material?: string;
     size?: string;
@@ -73,6 +74,7 @@ const QuotationSchema = new Schema<IQuotationDocument>(
         quantity: { type: Number, required: true, min: 0 },
         price: { type: Number, required: true, min: 0 },
         discount: { type: Number, default: 0, min: 0 },
+        batch: String,
         color: String,
         material: String,
         size: String,

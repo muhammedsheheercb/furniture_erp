@@ -666,7 +666,7 @@ export default function NewSalePage() {
                       </label>
                       <input
                         type="number"
-                        step="0.001"
+                        step={1}
                         disabled={c.isFOC}
                         value={c.price}
                         onChange={(e) =>
@@ -681,7 +681,7 @@ export default function NewSalePage() {
                       </label>
                       <input
                         type="number"
-                        step="0.001"
+                        step={1}
                         placeholder="0.000"
                         disabled={c.isFOC}
                         value={c.discount}
@@ -715,7 +715,7 @@ export default function NewSalePage() {
                       ) : (
                         <input
                           type="number"
-                          step="0.01"
+                          step={1}
                           value={c.total}
                           onChange={(e) =>
                             updateItem(idx, { total: e.target.value })

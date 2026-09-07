@@ -178,7 +178,7 @@ export default function ExpenseModal({
                 id="amount"
                 type="number"
                 min="0"
-                step="0.01"
+                step={1}
                 value={formData.amount}
                 onChange={(e) => {
                   setFormData({ ...formData, amount: e.target.value });

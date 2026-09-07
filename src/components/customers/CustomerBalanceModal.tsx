@@ -528,7 +528,7 @@ export default function CustomerBalanceModal({
                 onChange={(e) => setAmount(e.target.value)}
                 min={0.01}
                 max={selectedBalance}
-                step="0.01"
+                step={1}
                 autoFocus
                 style={{
                   width: "100%",

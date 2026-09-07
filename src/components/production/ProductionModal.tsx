@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
-import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import { generateProductionJobCardPDF } from "@/lib/pdf-utils";
 import { useLanguage } from "../../context/LanguageContext";
 
@@ -665,9 +664,6 @@ export default function ProductionModal({
                         <th className="py-2.5 px-3 text-center text-xs font-bold text-[#7A6055] uppercase w-24">
                           {t("qty")}
                         </th>
-                        <th className="py-2.5 px-3 text-end text-xs font-bold text-[#7A6055] uppercase w-28">
-                          {t("subtotal")}
-                        </th>
                         <th className="w-8"></th>
                       </tr>
                     </thead>
@@ -675,7 +671,7 @@ export default function ProductionModal({
                       {currentItem.bom.length === 0 ? (
                         <tr>
                           <td
-                            colSpan={5}
+                            colSpan={4}
                             className="py-10 text-center text-[#A89080] text-sm italic"
                           >
                             {t("noMaterialsDefinedAddA")}
@@ -687,7 +683,9 @@ export default function ProductionModal({
                             (m) =>
                               m._id.toString() === row.materialId?.toString(),
                           );
-                          const batches = mat?.batches || [];
+                          const batches = (mat?.batches || []).filter(
+                            (batch: any) => Math.floor(Number(batch.quantity) || 0) >= 1,
+                          );
                           return (
                             <tr key={bIdx} className="hover:bg-[#FAF8F6]">
                               <td className="px-3 py-2">
@@ -737,19 +735,22 @@ export default function ProductionModal({
                               <td className="px-3 py-2">
                                 <input
                                   type="number"
-                                  min={0.01}
-                                  step={0.01}
+                                  min={1}
+                                  step={1}
                                   value={row.quantity}
                                   onChange={(e) => {
-                                    let qty = parseFloat(e.target.value) || 0;
+                                    let qty = Math.max(
+                                      1,
+                                      Math.floor(Number(e.target.value) || 1),
+                                    );
                                     if (
                                       row.batchNumber &&
-                                      qty > row.availableQty
+                                      qty > Math.floor(row.availableQty)
                                     ) {
                                       toast.error(
                                         `Insufficient stock! Max available: ${row.availableQty} ${row.unit}`,
                                       );
-                                      qty = row.availableQty;
+                                      qty = Math.floor(row.availableQty);
                                     }
                                     setItemStates((prev) =>
                                       prev.map((it, i) => {
@@ -810,10 +811,6 @@ export default function ProductionModal({
                                   </p>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-end font-semibold text-[#1B3A2D] text-xs">
-                                <CurrencySymbol className="w-3 h-3 me-1" />{" "}
-                                {row.subtotal.toLocaleString()}
-                              </td>
                               <td className="px-2 py-2 text-center">
                                 <button
                                   onClick={() =>
@@ -829,23 +826,6 @@ export default function ProductionModal({
                         })
                       )}
                     </tbody>
-                    {currentItem.bom.length > 0 && (
-                      <tfoot className="bg-[#FAF8F6] border-t border-[#E5DDD5]">
-                        <tr>
-                          <td
-                            colSpan={3}
-                            className="px-3 py-2 text-end font-bold text-[#7A6055] text-[10px] uppercase"
-                          >
-                            {t("totalMaterialCost")}
-                          </td>
-                          <td className="px-3 py-2 text-end font-black text-[#1B3A2D] text-sm">
-                            <CurrencySymbol className="w-3 h-3 me-1" />{" "}
-                            {currentItem.pricing.materialCost.toLocaleString()}
-                          </td>
-                          <td></td>
-                        </tr>
-                      </tfoot>
-                    )}
                   </table>
                 </div>
               </div>

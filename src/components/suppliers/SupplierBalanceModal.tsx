@@ -113,7 +113,7 @@ export default function SupplierBalanceModal({
           <Input
             label={t("amount")}
             type="number"
-            step="0.01"
+            step={1}
             required
             error={errors.adjustAmount?.message}
             {...register("adjustAmount")}

@@ -568,7 +568,7 @@ export default function EditSalePage() {
                     <td className="td text-end">
                       <input
                         type="number"
-                        step="0.001"
+                        step={1}
                         value={c.price}
                         disabled={c.isFOC}
                         onChange={(e) =>
@@ -633,7 +633,7 @@ export default function EditSalePage() {
                       ) : (
                         <input
                           type="number"
-                          step="0.01"
+                          step={1}
                           value={c.total}
                           onChange={(e) =>
                             updateItem(idx, { total: e.target.value })

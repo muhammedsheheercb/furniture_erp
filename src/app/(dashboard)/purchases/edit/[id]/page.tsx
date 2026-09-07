@@ -417,7 +417,7 @@ export default function EditPurchasePage() {
                     <td className="td text-end">
                       <input
                         type="number"
-                        step="0.001"
+                        step={1}
                         value={c.price}
                         onChange={(e) => updatePrice(idx, e.target.value)}
                         className="w-24 px-2 py-1.5 text-xs text-end border border-gray-200 rounded-md focus:ring-1 focus:ring-amber-500 focus:border-amber-500 ms-auto block"
@@ -426,7 +426,7 @@ export default function EditPurchasePage() {
                     <td className="td text-end">
                       <input
                         type="number"
-                        step="0.001"
+                        step={1}
                         value={c.sellingPrice}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -525,7 +525,7 @@ export default function EditPurchasePage() {
                     <td className="td text-end">
                       <input
                         type="number"
-                        step="0.01"
+                        step={1}
                         value={c.total}
                         onChange={(e) => updateTotal(idx, e.target.value)}
                         className="w-24 px-2 py-1.5 text-xs text-end font-bold text-gray-900 border border-gray-200 rounded-md focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 ms-auto block"

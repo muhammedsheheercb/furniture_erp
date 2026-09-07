@@ -523,7 +523,7 @@ export default function NewPurchasePage() {
                     <td className="td">
                       <input
                         type="number"
-                        step="0.001"
+                        step={1}
                         value={c.price}
                         onChange={(e) =>
                           updateItem(idx, { price: e.target.value })
@@ -534,7 +534,7 @@ export default function NewPurchasePage() {
                     <td className="td">
                       <input
                         type="number"
-                        step="0.001"
+                        step={1}
                         value={c.sellingPrice}
                         onChange={(e) =>
                           updateItem(idx, { sellingPrice: e.target.value })
@@ -545,7 +545,7 @@ export default function NewPurchasePage() {
                     <td className="td text-end">
                       <input
                         type="number"
-                        step="0.01"
+                        step={1}
                         value={c.total}
                         onChange={(e) =>
                           updateItem(idx, { total: e.target.value })

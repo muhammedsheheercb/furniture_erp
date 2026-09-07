@@ -104,7 +104,7 @@ export default function PurchaseModal({
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [formError, setFormError] = useState("");
 
-  const grandTotal = lineItems.reduce((s, i) => s + i.total, 0);
+  const grandTotal = Math.round(lineItems.reduce((s, i) => s + i.total, 0));
 
   // ── load reference data ──────────────────────────────────────────────────
   useEffect(() => {
@@ -577,7 +577,7 @@ export default function PurchaseModal({
                         <input
                           type="number"
                           min={0}
-                          step="0.01"
+                          step={1}
                           value={item.price}
                           onChange={(e) =>
                             updateField(
@@ -596,7 +596,7 @@ export default function PurchaseModal({
                           <input
                             type="number"
                             min={item.price}
-                            step="0.01"
+                            step={1}
                             value={item.sellingPrice}
                             onChange={(e) =>
                               updateField(

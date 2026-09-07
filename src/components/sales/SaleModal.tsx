@@ -19,7 +19,7 @@ interface LineItem {
   unit: string;
   qty: number;
   price: number;
-  discount: number; // percentage
+  discount: number; // amount
   batchNumber: string;
   color: string;
   material: string;
@@ -251,6 +251,7 @@ export default function SaleModal({
           : {
               ...i,
               itemId: productId,
+              batchNumber: "",
               itemNumber: p.itemNumber,
               itemName: p.name,
               unit: p.unit || "Piece",
@@ -283,14 +284,15 @@ export default function SaleModal({
       prev.map((i) => {
         if (i.id !== lineId) return i;
         const price = batch?.salePrice || i.price;
+        const qty = Math.min(Math.max(i.qty, 1), Number(batch?.quantity) || 1);
         return {
           ...i,
           batchNumber: batchNum,
           price,
-          qty: i.qty,
-          subtotal: Math.max(0, i.qty * price - (i.discount || 0)),
-          taxAmount: Math.max(0, i.qty * price - (i.discount || 0)) * 0.05,
-          total: Math.max(0, i.qty * price - (i.discount || 0)) * 1.05,
+          qty,
+          subtotal: Math.max(0, qty * price - (i.discount || 0)),
+          taxAmount: Math.max(0, qty * price - (i.discount || 0)) * 0.05,
+          total: Math.max(0, qty * price - (i.discount || 0)) * 1.05,
         };
       }),
     );
@@ -308,10 +310,17 @@ export default function SaleModal({
         if (field === "qty") {
           const prod = products.find((p) => p._id === i.itemId);
           if (prod) {
-            const stock = prod.quantity ?? 0;
-            if (Number(val) > stock) {
+            const selectedBatch = prod.batches?.find(
+              (b: any) => b.batchNumber === i.batchNumber,
+            );
+            if (!selectedBatch) {
+              toast.error(`Select a batch for ${prod.name} before changing the quantity.`);
+              val = Math.max(1, Number(val));
+            }
+            const stock = selectedBatch ? Number(selectedBatch.quantity) || 0 : undefined;
+            if (stock !== undefined && Number(val) > stock) {
               toast.error(
-                `Only ${stock} available in stock for ${prod.name}`,
+                `Only ${stock} available in batch ${i.batchNumber || "(select a batch)"} for ${prod.name}`,
               );
               val = stock;
             } else {
@@ -358,6 +367,9 @@ export default function SaleModal({
             ? i
             : {
                 ...i,
+                itemId: itemData.itemId || i.itemId,
+                itemNumber: itemData.itemNumber || i.itemNumber,
+                batchNumber: itemData.batch || i.batchNumber,
                 itemName: itemData.itemName,
                 unit: itemData.unit || "Piece",
                 qty: itemData.quantity,
@@ -380,14 +392,14 @@ export default function SaleModal({
         ...prev,
         {
           id: uid(),
-          itemId: "",
-          itemNumber: "",
+          itemId: itemData.itemId || "",
+          itemNumber: itemData.itemNumber || "",
           itemName: itemData.itemName,
           unit: itemData.unit || "Piece",
           qty: itemData.quantity,
           price: itemData.price,
           discount: itemData.discount || 0,
-          batchNumber: "",
+          batchNumber: itemData.batch || "",
           color: itemData.color || "",
           material: itemData.material || "",
           size: itemData.size || "",
@@ -426,6 +438,16 @@ export default function SaleModal({
     }
     if (lineItems.some((i) => !i.itemName.trim())) {
       setFormError("All rows must have a product.");
+      return;
+    }
+    const invalidBatch = lineItems.find((i) => {
+      if (!i.itemId) return false;
+      const product = products.find((p) => p._id === i.itemId);
+      const batch = product?.batches?.find((b: any) => b.batchNumber === i.batchNumber);
+      return !batch || Number(batch.quantity) <= 0 || i.qty > Number(batch.quantity);
+    });
+    if (invalidBatch) {
+      setFormError(`Select an available batch and a valid quantity for ${invalidBatch.itemName}.`);
       return;
     }
 
@@ -614,6 +636,9 @@ export default function SaleModal({
                   <th className="py-2.5 px-2 text-start text-xs font-bold text-[#7A6055] uppercase w-24">
                     {t("color")}
                   </th>
+                  <th className="py-2.5 px-2 text-start text-xs font-bold text-[#7A6055] uppercase w-40">
+                    {t("batch")}
+                  </th>
                   <th className="py-2.5 px-2 text-center text-xs font-bold text-[#7A6055] uppercase w-20">
                     {t("qty")}
                   </th>
@@ -680,10 +705,10 @@ export default function SaleModal({
                           >
                             <option value="">{t("selectProduct")}</option>
                             {products
-                              .filter((p) => !p.isManufactured)
+                              .filter((p) => (p.batches || []).some((b: any) => Number(b.quantity) > 0))
                               .map((p) => (
                                 <option key={p._id} value={p._id}>
-                                  {p.name} (Stock: {p.quantity || 0})
+                                  {p.name} ({(p.batches || []).filter((b: any) => Number(b.quantity) > 0).length} available batch(es))
                                 </option>
                               ))}
                           </select>
@@ -698,6 +723,31 @@ export default function SaleModal({
                           className={inp}
                           placeholder={t("color")}
                         />
+                      </td>
+                      <td className="px-2 py-2">
+                        {item.itemId ? (
+                          <div>
+                            <select
+                              value={item.batchNumber}
+                              onChange={(e) => selectBatch(item.id, e.target.value)}
+                              className={inp}
+                            >
+                              <option value="">{t("selectBatch")}</option>
+                              {(products.find((p) => p._id === item.itemId)?.batches || [])
+                                .filter((b: any) => Number(b.quantity) > 0)
+                                .map((b: any, index: number) => (
+                                  <option key={`${b.batchNumber}-${index}`} value={b.batchNumber}>
+                                    {b.batchNumber || `Batch ${index + 1}`} — {b.quantity} available
+                                  </option>
+                                ))}
+                            </select>
+                            {item.batchNumber && (
+                              <p className="text-[10px] text-[#7A6055] mt-1">
+                                Available: {products.find((p) => p._id === item.itemId)?.batches?.find((b: any) => b.batchNumber === item.batchNumber)?.quantity || 0}
+                              </p>
+                            )}
+                          </div>
+                        ) : <span className="text-xs text-[#A89080]">Select product first</span>}
                       </td>
                       <td className="px-2 py-2">
                         <input
@@ -728,7 +778,7 @@ export default function SaleModal({
                         <input
                           type="number"
                           min={0}
-                          step="0.001"
+                          step={1}
                           value={item.discount}
                           onChange={(e) =>
                             updateField(
@@ -820,7 +870,7 @@ export default function SaleModal({
               <input
                 type="number"
                 min={0}
-                step="0.001"
+                step={1}
                 value={discAmt}
                 onChange={(e) => setDiscAmt(Number(e.target.value))}
                 className="w-24 text-end border rounded px-1"

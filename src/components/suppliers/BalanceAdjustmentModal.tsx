@@ -75,7 +75,7 @@ export default function BalanceAdjustmentModal({
         <Input
           label={t("amountOmr")}
           type="number"
-          step="0.001"
+          step={1}
           placeholder={t("eg50000Or25500")}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}

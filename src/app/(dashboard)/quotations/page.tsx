@@ -1684,7 +1684,7 @@ export default function QuotationsPage() {
                         updateItem(idx, field, parseFloat(e.target.value) || 0)
                       }
                       min={0}
-                      step={field === "quantity" ? "0.01" : "0.001"}
+                      step={1}
                       style={{
                         height: 36,
                         border: "1.5px solid #E5DDD5",
@@ -2641,6 +2641,7 @@ export default function QuotationsPage() {
                 quantity: it.quantity,
                 price: it.price,
                 discount: it.discount,
+                batch: (it as any).batch,
                 color: it.color,
                 material: it.material,
                 size: it.size,

@@ -278,7 +278,7 @@ function MaterialModal({
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className={labelCls}>{t("currentStock")}</label>
+              <label className={labelCls}>Opening Stock</label>
               <Input
                 type="number"
                 min={0}
@@ -305,7 +305,7 @@ function MaterialModal({
               <Input
                 type="number"
                 min={0}
-                step="0.01"
+                step={1}
                 value={form.lastPurchasePrice}
                 onChange={(e) =>
                   set("lastPurchasePrice", Number(e.target.value))

@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import Material from "@/models/Material";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import mongoose from "mongoose";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -20,15 +21,42 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const body = await req.json();
 
-    const material = await Material.findByIdAndUpdate(id, body, {
-      new: true,
-      runValidators: true,
-    }).lean();
-    if (!material)
+    const existingMaterial = await Material.findById(id);
+    if (!existingMaterial) {
       return NextResponse.json(
         { success: false, error: "Material not found" },
         { status: 404 },
       );
+    }
+
+    if (body.currentStock !== undefined) {
+      const stockDiff = body.currentStock - existingMaterial.currentStock;
+      if (stockDiff !== 0) {
+        // Find if there is an opening stock batch
+        let openingBatchIndex = existingMaterial.batches?.findIndex(
+          (b: any) => b.purchaseNumber === 'OPENING-STOCK'
+        );
+        
+        if (openingBatchIndex !== -1 && existingMaterial.batches) {
+          existingMaterial.batches[openingBatchIndex].quantity += stockDiff;
+        } else if (stockDiff > 0) {
+          if (!existingMaterial.batches) existingMaterial.batches = [];
+          existingMaterial.batches.push({
+            purchaseId: new mongoose.Types.ObjectId().toString(),
+            purchaseNumber: 'OPENING-STOCK',
+            batchNumber: `BATCH-001`,
+            purchaseDate: new Date(),
+            purchasePrice: body.lastPurchasePrice || existingMaterial.lastPurchasePrice || 0,
+            quantity: body.currentStock,
+            reservedQuantity: 0,
+          });
+        }
+      }
+    }
+
+    Object.assign(existingMaterial, body);
+    await existingMaterial.save();
+    const material = existingMaterial;
 
     return NextResponse.json({ success: true, data: material });
   } catch (err: unknown) {

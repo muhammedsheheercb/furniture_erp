@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import Material from "@/models/Material";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import mongoose from "mongoose";
 
 const CATEGORY_PREFIX: Record<string, string> = {
   plywood: "PLY",
@@ -123,7 +124,22 @@ export async function POST(req: NextRequest) {
 
     // Always auto-generate code — ignore any client-supplied code
     const code = await generateCode(body.category || "other");
-    const material = await Material.create({ ...body, code });
+    
+    // Create opening stock batch if currentStock > 0
+    const initialBatches = [];
+    if (body.currentStock > 0) {
+      initialBatches.push({
+        purchaseId: new mongoose.Types.ObjectId().toString(), // dummy ID for opening stock
+        purchaseNumber: 'OPENING-STOCK',
+        batchNumber: `BATCH-001`,
+        purchaseDate: new Date(),
+        purchasePrice: body.lastPurchasePrice || 0,
+        quantity: body.currentStock,
+        reservedQuantity: 0,
+      });
+    }
+
+    const material = await Material.create({ ...body, code, batches: initialBatches });
 
     return NextResponse.json(
       { success: true, data: material },

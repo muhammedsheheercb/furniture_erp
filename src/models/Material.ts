@@ -1,4 +1,4 @@
-import mongoose, { Schema, model, models } from "mongoose";
+import mongoose, { Schema, model, models, Model } from "mongoose";
 
 const MaterialSchema = new Schema(
   {
@@ -49,5 +49,5 @@ if (process.env.NODE_ENV === "development") {
   delete (mongoose.models as any).Material;
 }
 
-const Material = models.Material || model("Material", MaterialSchema);
+const Material: Model<any> = models.Material || model("Material", MaterialSchema);
 export default Material;

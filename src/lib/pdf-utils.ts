@@ -57,9 +57,11 @@ const printHtml = (html: string) => {
     doc.write(`
       <html>
         <head>
-          <title>Print Document</title>
+          <title></title>
           <style>
             @media print {
+              @page { margin: 0; }
+              html, body { margin: 0; }
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             }
           </style>
@@ -224,11 +226,7 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                 </div>
             </div>
 
-            <div style="margin-top: 60px; border-top: 1px solid #E9ECEF; padding-top: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
-                <div style="font-size: 10px; color: #6C757D;">
-                    ${data.createdBy ? `<p style="margin: 0;"><strong>${t("salesPerson")}:</strong> ${data.createdBy}</p>` : ""}
-                    <p style="margin: 3px 0 0 0;"><strong>${t("printedOn")}:</strong> ${new Date().toLocaleString()}</p>
-                </div>
+            <div style="margin-top: 60px; border-top: 1px solid #E9ECEF; padding-top: 20px; display: flex; justify-content: flex-end; align-items: flex-end;">
                 <div style="text-align: center; width: 150px;">
                     <div style="border-bottom: 1px solid #333; margin-bottom: 5px;"></div>
                     <p style="font-size: 10px; color: #6C757D; margin: 0;">${t("authorizedSignature")}</p>
@@ -370,11 +368,7 @@ export const generateQuotationPDF = (data: any) => {
                 : ""
             }
 
-            <div style="margin-top: 60px; border-top: 1px solid #F0EAE3; padding-top: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
-                <div style="font-size: 10px; color: #A89080;">
-                    ${data.createdBy ? `<p style="margin: 0;"><strong>${t("salesPerson")}:</strong> ${data.createdBy}</p>` : ""}
-                    <p style="margin: 3px 0 0 0;"><strong>${t("printedOn")}:</strong> ${new Date().toLocaleString()}</p>
-                </div>
+            <div style="margin-top: 60px; border-top: 1px solid #F0EAE3; padding-top: 20px; display: flex; justify-content: flex-end; align-items: flex-end;">
                 <div style="text-align: center; width: 150px;">
                     <div style="border-bottom: 1px solid #333; margin-bottom: 5px;"></div>
                     <p style="font-size: 10px; color: #A89080; margin: 0;">${t("authorizedSignature")}</p>
@@ -426,7 +420,6 @@ export const generateProductionJobCardPDF = (data: any) => {
                         <th style="padding: 12px; text-align: center; border: 1px solid #2C1810; width: 40px">#</th>
                         <th style="padding: 12px; text-align: left; border: 1px solid #2C1810">${t("itemName")}</th>
                         <th style="padding: 12px; text-align: center; border: 1px solid #2C1810">${t("color")}</th>
-                        <th style="padding: 12px; text-align: center; border: 1px solid #2C1810">${t("size")}</th>
                         <th style="padding: 12px; text-align: center; border: 1px solid #2C1810; width: 60px">${t("qty")}</th>
                     </tr>
                 </thead>
@@ -441,7 +434,6 @@ export const generateProductionJobCardPDF = (data: any) => {
                                 <div style="font-size: 12px; color: #666">${item.material || ""}</div>
                             </td>
                             <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5">${item.color || "—"}</td>
-                            <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5">${item.size || "—"}</td>
                             <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5; font-weight: bold">${item.quantity}</td>
                         </tr>
                     `,
@@ -464,11 +456,6 @@ export const generateProductionJobCardPDF = (data: any) => {
             <div style="margin-top: 60px; display: flex; justify-content: space-between; align-items: flex-end;">
                 <div style="text-align: center; width: 200px; border-top: 1.5px solid #2C1810; padding-top: 10px; font-size: 11px; font-weight: bold; color: #2C1810;">
                     ${t("workshopSupervisor")}
-                    ${data.createdBy ? `<div style="margin-top: 4px; font-size: 10px; font-weight: normal; color: #7A6055;">(Sales: ${data.createdBy})</div>` : ""}
-                </div>
-                <div style="font-size: 9px; color: #A89080; font-family: monospace;">
-                    ${t("jobCardId")}: ${data.saleNumber}<br>
-                    Printed: ${new Date().toLocaleString()}
                 </div>
                 <div style="text-align: center; width: 200px; border-top: 1.5px solid #2C1810; padding-top: 10px; font-size: 11px; font-weight: bold; color: #2C1810;">
                     ${t("workerSignature")}
@@ -533,7 +520,6 @@ export const generateDeliveryChallanPDF = (data: any) => {
                         <th style="padding: 12px; text-align: center; border: 1px solid #1E8449; width: 40px">#</th>
                         <th style="padding: 12px; text-align: left; border: 1px solid #1E8449">Item ${t("description")}</th>
                         <th style="padding: 12px; text-align: center; border: 1px solid #1E8449">${t("color")}</th>
-                        <th style="padding: 12px; text-align: center; border: 1px solid #1E8449">${t("size")}</th>
                         <th style="padding: 12px; text-align: center; border: 1px solid #1E8449; width: 80px">${t("quantity")}</th>
                     </tr>
                 </thead>
@@ -548,7 +534,6 @@ export const generateDeliveryChallanPDF = (data: any) => {
                                 <div style="font-size: 12px; color: #666">${item.material || ""}</div>
                             </td>
                             <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5">${item.color || "—"}</td>
-                            <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5">${item.size || "—"}</td>
                             <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5; font-weight: bold">${item.quantity}</td>
                         </tr>
                     `,
@@ -560,10 +545,6 @@ export const generateDeliveryChallanPDF = (data: any) => {
             <div style="margin-top: 80px; display: flex; justify-content: space-between; align-items: flex-end;">
                 <div style="text-align: center; width: 220px; border-top: 1.5px solid #1E8449; padding-top: 10px; font-size: 11px; font-weight: bold; color: #2C1810;">
                     ${t("driversSignature")}
-                </div>
-                <div style="font-size: 9px; color: #A89080; font-family: monospace; text-align: center">
-                    Challan ID: DEL-${data.saleNumber}<br>
-                    Generated: ${new Date().toLocaleString()}
                 </div>
                 <div style="text-align: center; width: 220px; border-top: 1.5px solid #1E8449; padding-top: 10px; font-size: 11px; font-weight: bold; color: #2C1810;">
                     ${t("customerSignature")}

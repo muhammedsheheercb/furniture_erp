@@ -141,7 +141,7 @@ export default function CustomerModal({
           <Input
             label={isEdit ? "Current Balance (INR)" : "Opening Balance (INR)"}
             type="number"
-            step="0.001"
+            step={1}
             placeholder="0.000"
             error={errors.balance?.message}
             {...register("balance")}

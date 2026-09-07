@@ -126,7 +126,7 @@ export default function EditExpensePage() {
             label={t("amountOmr")}
             type="number"
             min={0}
-            step="0.001"
+            step={1}
             value={form.amount}
             onChange={(e) => {
               const val = e.target.value;

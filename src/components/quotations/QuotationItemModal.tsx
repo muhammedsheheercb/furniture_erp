@@ -52,6 +52,7 @@ interface FormState {
   description: string;
   quantity: number;
   price: number;
+  discount: number;
   dimensions: {
     width: string;
     height: string;
@@ -70,6 +71,8 @@ interface FormState {
   };
   bom: BomRow[];
   itemId?: string;
+  batch?: string;
+  availableBatchQty?: number;
 }
 
 function makeEmpty(): FormState {
@@ -80,6 +83,7 @@ function makeEmpty(): FormState {
     description: "",
     quantity: 1,
     price: 0,
+    discount: 0,
     dimensions: { width: "", height: "", depth: "", weight: "", unit: "cm" },
     pricing: {
       materialCost: 0,
@@ -92,6 +96,8 @@ function makeEmpty(): FormState {
     },
     bom: [],
     itemId: undefined,
+    batch: "",
+    availableBatchQty: 0,
   };
 }
 
@@ -155,6 +161,7 @@ export default function QuotationItemModal({
         description: editItem.description || "",
         quantity: editItem.quantity,
         price: priceVal,
+        discount: editItem.discount || 0,
         dimensions: {
           width: String(editItem.dimensions?.width ?? ""),
           height: String(editItem.dimensions?.height ?? ""),
@@ -182,6 +189,9 @@ export default function QuotationItemModal({
           quantity: b.quantity || 1,
           subtotal: (b as any).subtotal || 0,
         })),
+        itemId: editItem.itemId,
+        batch: (editItem as any).batch || "",
+        availableBatchQty: 0,
       });
     } else {
       setForm(makeEmpty());
@@ -197,6 +207,8 @@ export default function QuotationItemModal({
       ...prev,
       productName: p.name,
       itemId: p._id,
+      batch: "",
+      availableBatchQty: 0,
       category: p.category || "Sofa",
       color: p.color || "",
       description: p.description || "",
@@ -229,6 +241,20 @@ export default function QuotationItemModal({
         quantity: Number(b.quantity || 1),
         subtotal: 0,
       })),
+    }));
+  }
+
+  function handleProductBatchSelect(batchNumber: string) {
+    const product = products.find((p) => p._id === form.itemId);
+    const batch = product?.batches?.find((b: any) => b.batchNumber === batchNumber);
+    if (!batch) return;
+    const available = Math.max(0, Math.floor(Number(batch.quantity) || 0));
+    setForm((prev) => ({
+      ...prev,
+      batch: batchNumber,
+      availableBatchQty: available,
+      quantity: Math.min(prev.quantity, available),
+      price: batch.salePrice ?? prev.price,
     }));
   }
 
@@ -290,8 +316,11 @@ export default function QuotationItemModal({
       const updatedBom = prev.bom.map((r, i) => {
         if (i !== idx) return r;
         const price = batch?.purchasePrice || 0;
-        const avail = Math.max(0, (batch?.quantity || 0) - (batch?.reservedQuantity || 0));
-        const qty = Math.min(r.quantity, avail) || 1;
+        const avail = Math.max(
+          0,
+          Math.floor((batch?.quantity || 0) - (batch?.reservedQuantity || 0)),
+        );
+        const qty = Math.max(1, Math.min(Math.floor(r.quantity), avail));
         return {
           ...r,
           batchNumber,
@@ -314,7 +343,10 @@ export default function QuotationItemModal({
     setForm((prev) => {
       const updatedBom = prev.bom.map((r, i) => {
         if (i !== idx) return r;
-        const safe = Math.max(0.01, Math.min(qty, r.availableQty || qty));
+        const safe = Math.max(
+          1,
+          Math.min(Math.floor(Number(qty) || 1), Math.floor(r.availableQty || qty)),
+        );
         return { ...r, quantity: safe, subtotal: r.pricePerUnit * safe };
       });
       const matCost = updatedBom.reduce((s, r) => s + r.subtotal, 0);
@@ -343,6 +375,13 @@ export default function QuotationItemModal({
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (!form.productName.trim()) errs.productName = "Product name is required";
+    if (form.itemId && !form.batch) errs.batch = "Select an available batch";
+    const currentBatch = products
+      .find((product) => product._id === form.itemId)
+      ?.batches?.find((batch: any) => batch.batchNumber === form.batch);
+    const currentBatchQty = Number(currentBatch?.quantity ?? form.availableBatchQty) || 0;
+    if (form.itemId && form.quantity > currentBatchQty)
+      errs.quantity = `Only ${currentBatchQty} available in the selected batch`;
     if (form.price <= 0)
       errs.price = "Price must be greater than 0";
     if (Object.keys(errs).length) {
@@ -352,7 +391,7 @@ export default function QuotationItemModal({
     }
 
     const priceVal = form.price;
-    const subtotalVal = priceVal * form.quantity;
+    const subtotalVal = Math.max(0, priceVal * form.quantity - form.discount);
     const taxVal = subtotalVal * 0.05;
     const totalVal = subtotalVal * 1.05;
 
@@ -367,7 +406,8 @@ export default function QuotationItemModal({
       unit: "pcs",
       quantity: form.quantity,
       price: priceVal,
-      discount: 0,
+      discount: form.discount,
+      batch: form.batch || undefined,
       subtotal: subtotalVal,
       taxAmount: taxVal,
       total: totalVal,
@@ -407,8 +447,14 @@ export default function QuotationItemModal({
     onClose();
   }
 
-  // Filter only direct buy products (not manufactured)
-  const directBuyProducts = products.filter((p) => !p.isManufactured);
+  // Only inventory products with at least one selectable batch belong in product selection.
+  const availableProducts = products.filter(
+    (p) => (p.batches || []).some((b: any) => Number(b.quantity) >= 1),
+  );
+  const selectedProduct = products.find((p) => p._id === form.itemId);
+  const availableProductBatches = (selectedProduct?.batches || []).filter(
+    (b: any) => Number(b.quantity) >= 1,
+  );
 
   // ── render ─────────────────────────────────────────────────────────────────
   return (
@@ -443,11 +489,11 @@ export default function QuotationItemModal({
               <option value="" disabled>
                 {fetching
                   ? "Loading products…"
-                  : "— Choose a direct buy product to pre-fill —"}
+                  : "— Choose an available product to pre-fill —"}
               </option>
-              {directBuyProducts.map((p) => (
+              {availableProducts.map((p) => (
                 <option key={p._id} value={p._id}>
-                  {p.name} ({p.itemNumber}) - Stock: {p.quantity || 0}
+                  {p.name} ({p.itemNumber}) - {p.batches.filter((b: any) => Number(b.quantity) >= 1).length} available batch(es)
                 </option>
               ))}
             </select>
@@ -521,6 +567,25 @@ export default function QuotationItemModal({
             </div>
 
             <div className="grid grid-cols-3 gap-4">
+              {form.itemId && (
+                <div>
+                  <label className={lbl}>Available batch</label>
+                  <select
+                    value={form.batch || ""}
+                    onChange={(e) => handleProductBatchSelect(e.target.value)}
+                    className={inp}
+                  >
+                    <option value="">Select batch</option>
+                    {availableProductBatches.map((b: any, index: number) => (
+                      <option key={`${b.batchNumber}-${index}`} value={b.batchNumber}>
+                        {b.batchNumber || `Batch ${index + 1}`} — Available: {b.quantity}
+                      </option>
+                    ))}
+                  </select>
+                  {form.batch && <p className="text-xs text-[#7A6055] mt-1">Available: {form.availableBatchQty}</p>}
+                  {errors.batch && <p className="text-xs text-rose-500 mt-1">{errors.batch}</p>}
+                </div>
+              )}
               <div>
                 <label className={lbl}>{t("color")}</label>
                 <input
@@ -536,17 +601,28 @@ export default function QuotationItemModal({
                 <label className={lbl}>{t("quantity")}</label>
                 <input
                   type="number"
-                  min={0.01}
-                  step="0.01"
+                  min={1}
+                  step={1}
                   value={form.quantity}
                   onChange={(e) =>
-                    setForm((p) => ({
-                      ...p,
-                      quantity: parseFloat(e.target.value) || 1,
-                    }))
+                    setForm((p) => {
+                      const batchQty = Math.floor(Number(
+                        products.find((product) => product._id === p.itemId)
+                          ?.batches?.find((batch: any) => batch.batchNumber === p.batch)
+                          ?.quantity ?? p.availableBatchQty,
+                      )) || 0;
+                      const requestedQty = Math.max(1, Math.floor(Number(e.target.value) || 1));
+                      return {
+                        ...p,
+                        quantity: p.itemId && p.batch
+                          ? Math.max(1, Math.min(requestedQty, batchQty))
+                          : requestedQty,
+                      };
+                    })
                   }
                   className={inp}
                 />
+                {errors.quantity && <p className="text-xs text-rose-500 mt-1">{errors.quantity}</p>}
               </div>
               <div>
                 <label className={lbl}>
@@ -555,7 +631,7 @@ export default function QuotationItemModal({
                 <input
                   type="number"
                   min={0}
-                  step="0.01"
+                  step={1}
                   value={form.price}
                   onChange={(e) =>
                     setForm((p) => ({
@@ -570,13 +646,33 @@ export default function QuotationItemModal({
                   <p className="text-xs text-rose-500 mt-1">{errors.price}</p>
                 )}
               </div>
+              <div>
+                <label className={lbl}>{t("discountAmount")}</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={form.discount}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      discount: Math.min(
+                        Math.max(0, parseFloat(e.target.value) || 0),
+                        p.price * p.quantity,
+                      ),
+                    }))
+                  }
+                  placeholder="0"
+                  className={inp}
+                />
+              </div>
             </div>
 
             <div className="p-3 bg-[#FAF8F6] rounded-lg border border-[#E5DDD5] flex justify-between items-center text-sm">
               <span className="font-semibold text-[#7A6055]">Item Total:</span>
               <span className="font-bold text-[#1B3A2D] text-base">
                 <CurrencySymbol className="w-4 h-4 me-1" />
-                {(form.quantity * form.price).toLocaleString("en-IN", {
+                {Math.max(0, form.quantity * form.price - form.discount).toLocaleString("en-IN", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 3,
                 })}
@@ -726,8 +822,8 @@ export default function QuotationItemModal({
                           <td className="px-3 py-2">
                             <input
                               type="number"
-                              min={0.01}
-                              step="0.01"
+                              min={1}
+                              step={1}
                               value={row.quantity}
                               max={row.availableQty || undefined}
                               disabled={!row.batchNumber}

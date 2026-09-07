@@ -377,7 +377,7 @@ export default function ItemModal({
               <label style={labelStyle}>{t("purchasePrice")}</label>
               <input
                 type="number"
-                step="0.001"
+                step={1}
                 placeholder="0.000"
                 style={inputStyle}
                 {...register("purchaseAmount")}
@@ -392,7 +392,7 @@ export default function ItemModal({
               <label style={labelStyle}>{t("sellingPrice")}</label>
               <input
                 type="number"
-                step="0.001"
+                step={1}
                 placeholder="0.000"
                 style={inputStyle}
                 {...register("salesAmount")}
@@ -410,7 +410,7 @@ export default function ItemModal({
               </label>
               <input
                 type="number"
-                step="0.01"
+                step={1}
                 placeholder="0"
                 style={inputStyle}
                 {...register("quantity")}

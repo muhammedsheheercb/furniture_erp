@@ -156,6 +156,8 @@ export interface IQuotationItem {
   quantity: number;
   price: number;
   discount: number;
+  /** Stock batch chosen for an inventory/direct-buy product. */
+  batch?: string;
   color?: string;
   material?: string;
   size?: string;

@@ -220,6 +220,18 @@ export async function POST(req: NextRequest) {
       // Otherwise, it's a direct buy item (or a direct sale of a manufactured item already in stock)
       directBuyItems.push(saleItem);
 
+      const selectedBatch = item.batches?.find(
+        (batch: any) => batch.batchNumber === saleItem.batch,
+      );
+      if (!saleItem.batch || !selectedBatch) {
+        throw new Error(`Select a valid batch for item: ${saleItem.itemName}`);
+      }
+      if ((Number(selectedBatch.quantity) || 0) < Number(saleItem.quantity)) {
+        throw new Error(
+          `Insufficient quantity in batch ${saleItem.batch} for ${saleItem.itemName} (Available: ${selectedBatch.quantity}, Requested: ${saleItem.quantity})`,
+        );
+      }
+
       if ((item.quantity || 0) < saleItem.quantity) {
         throw new Error(
           `Insufficient stock for item: ${saleItem.itemName} (Available: ${item.quantity || 0}, Requested: ${saleItem.quantity})`,
@@ -231,30 +243,7 @@ export async function POST(req: NextRequest) {
 
       // Update batches (Manual Selection if provided, else FIFO)
       if (item.batches && item.batches.length > 0) {
-        if (saleItem.batch) {
-          const batch = item.batches.find((b: any) => b.batchNumber === saleItem.batch);
-          if (batch) {
-            batch.quantity -= saleItem.quantity;
-          } else {
-            let remainingToDeduct = saleItem.quantity;
-            item.batches.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-            for (const b of item.batches) {
-              if (remainingToDeduct <= 0) break;
-              const deductFromThisBatch = Math.min(b.quantity, remainingToDeduct);
-              b.quantity -= deductFromThisBatch;
-              remainingToDeduct -= deductFromThisBatch;
-            }
-          }
-        } else {
-          let remainingToDeduct = saleItem.quantity;
-          item.batches.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-          for (const batch of item.batches) {
-            if (remainingToDeduct <= 0) break;
-            const deductFromThisBatch = Math.min(batch.quantity, remainingToDeduct);
-            batch.quantity -= deductFromThisBatch;
-            remainingToDeduct -= deductFromThisBatch;
-          }
-        }
+        selectedBatch.quantity -= saleItem.quantity;
       }
 
       await item.save({ session: dbSession });
