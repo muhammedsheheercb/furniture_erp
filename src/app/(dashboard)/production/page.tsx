@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/Badge";
 import ProductionModal from "@/components/production/ProductionModal";
 import Pagination from "@/components/ui/Pagination";
 import Modal from "@/components/ui/Modal";
-import { generateDeliveryChallanPDF } from "@/lib/pdf-utils";
 import {
   Card,
   CardContent,
@@ -35,8 +34,6 @@ export default function ProductionPage() {
   const [updating, setUpdating] = useState(false);
   const [finishModalOpen, setFinishModalOpen] = useState(false);
   const [finishProdId, setFinishProdId] = useState<string | null>(null);
-  const [driverName, setDriverName] = useState("");
-  const [driverContact, setDriverContact] = useState("");
   const [finishing, setFinishing] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "pending" | "processing" | "finished"
@@ -82,49 +79,19 @@ export default function ProductionPage() {
       setModalOpen(true);
       return;
     }
-    // Open modal to enter delivery partner details when marking as finished
+    // Delivery assignment and printing belong on the Delivery page.
     setFinishProdId(id);
-    setDriverName("");
-    setDriverContact("");
     setFinishModalOpen(true);
   };
 
   const handleConfirmFinish = async () => {
-    if (!driverName.trim()) {
-      toast.error("Driver Name is required");
-      return;
-    }
-    if (!driverContact.trim()) {
-      toast.error("Driver Contact/Mobile Number is required");
-      return;
-    }
-
     setFinishing(true);
     try {
       const res = await axios.put(`/api/production/${finishProdId}`, {
         status: "finished",
-        driverName: driverName.trim(),
-        driverContact: driverContact.trim(),
       });
       if (res.data.success) {
-        toast.success("Production marked as finished and delivery created!");
-
-        // Find the production order details to generate the PDF
-        const prod = productions.find((p) => p._id === finishProdId);
-        if (prod) {
-          generateDeliveryChallanPDF({
-            saleNumber: prod.saleNumber || "",
-            customerName: prod.customerName || "",
-            customerMobile: prod.saleId?.customerMobile || "",
-            customerAddress: prod.saleId?.customerAddress || "",
-            deliveryAddress: prod.saleId?.deliveryAddress || "",
-            items: prod.items || [],
-            driverName: driverName.trim(),
-            driverContact: driverContact.trim(),
-            grandTotal: prod.saleId?.total || 0,
-            advancePaid: prod.saleId?.advancePaid || 0,
-          });
-        }
+        toast.success("Production marked as finished and added to delivery.");
 
         setFinishModalOpen(false);
         fetchProductions();
@@ -386,37 +353,7 @@ export default function ProductionPage() {
         }
       >
         <div className="space-y-4 py-2">
-          <p className="text-sm text-[#7A6055]">
-            {t("pleaseEnterTheDeliveryAssignment")}
-          </p>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-semibold text-[#7A6055] mb-1">
-                {t("driverName")}
-              </label>
-              <input
-                type="text"
-                placeholder={t("egJohnDoeSalimAlfarsi")}
-                value={driverName}
-                onChange={(e) => setDriverName(e.target.value)}
-                className="w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 font-medium"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-[#7A6055] mb-1">
-                {t("driverContactMobileNumber")}
-              </label>
-              <input
-                type="text"
-                placeholder={t("eg96891234567")}
-                value={driverContact}
-                onChange={(e) => setDriverContact(e.target.value)}
-                className="w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 font-medium"
-                required
-              />
-            </div>
-          </div>
+          <p className="text-sm text-[#7A6055]">This product will now be available on the Delivery page under the same sales bill.</p>
         </div>
       </Modal>
     </div>

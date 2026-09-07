@@ -311,6 +311,9 @@ export async function POST(req: NextRequest) {
             items: directBuyItems.map((it: any) => ({
               itemName: it.itemName,
               quantity: it.quantity,
+              color: it.color,
+              material: it.material,
+              size: it.size,
               status: "pending",
             })),
             status: "pending",

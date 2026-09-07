@@ -28,7 +28,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
         { status: 404 },
       );
 
-    delivery.status = status;
+    if (status) delivery.status = status;
     if (status === "delivered") {
       delivery.deliveryDate = new Date();
       delivery.items.forEach((it) => (it.status = "delivered"));
@@ -36,10 +36,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
       // Update linked sale status
       await Sale.findByIdAndUpdate(delivery.saleId, { status: "invoiced" });
     }
-    if (remarks) delivery.remarks = remarks;
-    if (deliveryPartner) delivery.deliveryPartner = deliveryPartner;
-    if (driverName) delivery.driverName = driverName;
-    if (driverContact) delivery.driverContact = driverContact;
+    if (remarks !== undefined) delivery.remarks = remarks;
+    if (deliveryPartner !== undefined) delivery.deliveryPartner = deliveryPartner;
+    if (driverName !== undefined) delivery.driverName = driverName;
+    if (driverContact !== undefined) delivery.driverContact = driverContact;
 
     await delivery.save();
     return NextResponse.json({ success: true, data: delivery });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Delivery from "@/models/Delivery";
+import "@/models/Sale";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -34,6 +35,10 @@ export async function GET(req: NextRequest) {
 
     const [deliveries, total] = await Promise.all([
       Delivery.find(query)
+        .populate(
+          "saleId",
+          "customerMobile customerAddress deliveryAddress total advancePaid date items",
+        )
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

@@ -8,6 +8,9 @@ export interface IDeliveryDocument extends Document {
   items: {
     itemName: string;
     quantity: number;
+    color?: string;
+    material?: string;
+    size?: string;
     status: "pending" | "delivered";
   }[];
   status: "pending" | "delivered";
@@ -35,6 +38,9 @@ const DeliverySchema = new Schema<IDeliveryDocument>(
       {
         itemName: { type: String, required: true },
         quantity: { type: Number, required: true },
+        color: String,
+        material: String,
+        size: String,
         status: {
           type: String,
           enum: ["pending", "delivered"],

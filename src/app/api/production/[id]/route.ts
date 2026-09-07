@@ -45,6 +45,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
         { status: 404 },
       );
 
+    const wasAlreadyFinished = production.status === "finished";
+    const isFinishing = status === "finished" && !wasAlreadyFinished;
+
     console.log("[PUT /api/production/[id]] Incoming payload:", {
       workerId,
       workerName,
@@ -86,8 +89,14 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
           batch.quantity -= totalNeeded;
           material.currentStock -= totalNeeded;
-          batch.reservedQuantity = Math.max(0, (batch.reservedQuantity || 0) - totalNeeded);
-          material.reservedStock = Math.max(0, (material.reservedStock || 0) - totalNeeded);
+          batch.reservedQuantity = Math.max(
+            0,
+            (batch.reservedQuantity || 0) - totalNeeded,
+          );
+          material.reservedStock = Math.max(
+            0,
+            (material.reservedStock || 0) - totalNeeded,
+          );
           await material.save({ session: dbSession });
         }
       }
@@ -101,7 +110,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     }
 
     // Handle "finished" (Product registration)
-    if (status === "finished" && production.status !== "finished") {
+    if (isFinishing) {
       for (const config of production.items) {
         // Register/Update Product (Item)
         let product = await Item.findOne({
@@ -168,11 +177,20 @@ export async function PUT(req: NextRequest, { params }: Params) {
       }).session(dbSession);
     }
 
-    // If status is finished, create delivery entry
-    if (status === "finished") {
+    // A delivery is one record per sales bill.  Direct-sale items may already
+    // be in it; append the newly finished manufactured items to that same bill.
+    if (isFinishing) {
       const existingDelivery = await Delivery.findOne({
         saleId: production.saleId,
       }).session(dbSession);
+      const finishedItems = production.items.map((it: any) => ({
+        itemName: it.itemName,
+        quantity: it.quantity,
+        color: it.color,
+        material: it.material,
+        size: it.size,
+        status: "pending" as const,
+      }));
       if (!existingDelivery) {
         await Delivery.create(
           [
@@ -181,25 +199,17 @@ export async function PUT(req: NextRequest, { params }: Params) {
               saleNumber: production.saleNumber,
               customerId: production.customerId,
               customerName: production.customerName,
-              items: production.items.map((it: any) => ({
-                itemName: it.itemName,
-                quantity: it.quantity,
-                status: "pending",
-              })),
+              items: finishedItems,
               status: "pending",
-              deliveryPartner,
-              driverName,
-              driverContact,
+              deliveryAddress:
+                (await Sale.findById(production.saleId).session(dbSession))
+                  ?.deliveryAddress || "",
             },
           ],
           { session: dbSession },
         );
       } else {
-        existingDelivery.driverName = driverName;
-        existingDelivery.driverContact = driverContact;
-        if (deliveryPartner) {
-          existingDelivery.deliveryPartner = deliveryPartner;
-        }
+        existingDelivery.items.push(...finishedItems);
         await existingDelivery.save({ session: dbSession });
       }
     }

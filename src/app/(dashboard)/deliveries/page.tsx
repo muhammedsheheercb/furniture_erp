@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Clock,
   PackageCheck,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -18,6 +19,7 @@ import { formatDate } from "@/lib/utils";
 import Pagination from "@/components/ui/Pagination";
 import Modal from "@/components/ui/Modal";
 import { useLanguage } from "../../../context/LanguageContext";
+import { generateDeliveryChallanPDF } from "@/lib/pdf-utils";
 
 export default function DeliveriesPage() {
   const { t } = useLanguage();
@@ -33,12 +35,15 @@ export default function DeliveriesPage() {
     "pending",
   );
   const [modalOpen, setModalOpen] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(
     null,
   );
   const [driverName, setDriverName] = useState("");
   const [driverContact, setDriverContact] = useState("");
   const [finishing, setFinishing] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const [deliveryToPrint, setDeliveryToPrint] = useState<any | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -74,8 +79,62 @@ export default function DeliveriesPage() {
 
   const handleMarkDone = (delivery: any) => {
     setSelectedDeliveryId(delivery._id);
-    setDriverName(delivery.driverName || "");
-    setDriverContact(delivery.driverContact || "");
+    setConfirmationOpen(true);
+  };
+
+  const handleConfirmMarkDone = async () => {
+    setFinishing(true);
+    try {
+      const res = await axios.put(`/api/deliveries/${selectedDeliveryId}`, {
+        status: "delivered",
+      });
+      if (res.data.success) {
+        toast.success("Delivery marked as completed!");
+        setConfirmationOpen(false);
+        setSelectedDeliveryId(null);
+        fetchDeliveries();
+      }
+    } catch {
+      toast.error("Failed to complete delivery");
+    } finally {
+      setFinishing(false);
+    }
+  };
+
+  const printDelivery = (
+    delivery: any,
+    name = delivery.driverName,
+    contact = delivery.driverContact,
+  ) => {
+    const sale = delivery.saleId || {};
+    generateDeliveryChallanPDF({
+      saleNumber: delivery.saleNumber,
+      customerName: delivery.customerName,
+      customerMobile: sale.customerMobile || "",
+      customerAddress: sale.customerAddress || "",
+      deliveryAddress:
+        delivery.deliveryAddress ||
+        sale.deliveryAddress ||
+        sale.customerAddress ||
+        "",
+      items: delivery.items,
+      driverName: name,
+      driverContact: contact,
+      grandTotal: sale.total || 0,
+      advancePaid: sale.advancePaid || 0,
+    });
+  };
+
+  const handlePrint = (delivery: any) => {
+    if (delivery.driverName && delivery.driverContact) {
+      printDelivery(delivery);
+      return;
+    }
+    setDeliveryToPrint(delivery);
+    setSelectedDeliveryId(delivery._id);
+    setDriverName("");
+    setDriverContact("");
+    setPrinting(true);
     setModalOpen(true);
   };
 
@@ -96,13 +155,24 @@ export default function DeliveriesPage() {
     setFinishing(true);
     try {
       const res = await axios.put(`/api/deliveries/${selectedDeliveryId}`, {
-        status: "delivered",
+        ...(printing ? {} : { status: "delivered" }),
         driverName: driverName.trim(),
         driverContact: driverContact.trim(),
       });
       if (res.data.success) {
-        toast.success("Delivery marked as completed!");
+        if (printing && deliveryToPrint) {
+          printDelivery(
+            deliveryToPrint,
+            driverName.trim(),
+            driverContact.trim(),
+          );
+          toast.success("Delivery boy details saved. Print dialog opened.");
+        } else {
+          toast.success("Delivery marked as completed!");
+        }
         setModalOpen(false);
+        setPrinting(false);
+        setDeliveryToPrint(null);
         fetchDeliveries();
       }
     } catch (err) {
@@ -274,6 +344,13 @@ export default function DeliveriesPage() {
                         {t("markAsDone")}
                       </Button>
                     )}
+                    <Button
+                      onClick={() => handlePrint(delivery)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Printer size={16} className="me-2" /> Print / PDF
+                    </Button>
                     {delivery.status === "delivered" && (
                       <span className="text-xs font-semibold text-[#1B3A2D] flex items-center gap-1">
                         <CheckCircle2 size={13} /> {t("completed")}
@@ -300,9 +377,38 @@ export default function DeliveriesPage() {
       )}
 
       <Modal
+        open={confirmationOpen}
+        onClose={() => setConfirmationOpen(false)}
+        title="Confirm Delivery Completion"
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmationOpen(false)}
+              disabled={finishing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmMarkDone}
+              loading={finishing}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              Confirm
+            </Button>
+          </>
+        }
+      >
+        <p className="py-2 text-sm text-[#7A6055]">
+          Are you sure you want to mark this delivery as finished?
+        </p>
+      </Modal>
+
+      <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={t("completeDeliveryAssignment")}
+        title={printing ? "Add Delivery Boy" : t("completeDeliveryAssignment")}
         size="md"
         footer={
           <>
@@ -318,14 +424,16 @@ export default function DeliveriesPage() {
               loading={finishing}
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
-              {t("confirmDeliveryCompleted")}
+              {printing ? "Save & Print PDF" : t("confirmDeliveryCompleted")}
             </Button>
           </>
         }
       >
         <div className="space-y-4 py-2">
           <p className="text-sm text-[#7A6055]">
-            {t("pleaseEnterOrVerifyThe")}
+            {printing
+              ? "Enter the delivery boy details to generate the delivery PDF."
+              : t("pleaseEnterOrVerifyThe")}
           </p>
           <div className="space-y-3">
             <div>
@@ -349,7 +457,9 @@ export default function DeliveriesPage() {
                 type="text"
                 placeholder={t("eg96891234567")}
                 value={driverContact}
-                onChange={(e) => setDriverContact(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) =>
+                  setDriverContact(e.target.value.replace(/\D/g, ""))
+                }
                 className="w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white text-[#1A1210] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 font-medium"
                 required
               />
