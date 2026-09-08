@@ -333,12 +333,12 @@ export default function ProductsPage() {
                   onChange={(e) => setCategory(e.target.value)}
                 >
                   <option value="all">{t("allCategories")}</option>
-                  <option value="sofa">{t("sofas")}</option>
-                  <option value="chair">{t("chairs")}</option>
-                  <option value="table">{t("tables")}</option>
-                  <option value="bed">{t("beds")}</option>
-                  <option value="office">{t("office")}</option>
-                  <option value="other">{t("other")}</option>
+                  <option value="Sofa">{t("sofas")}</option>
+                  <option value="Chair">{t("chairs")}</option>
+                  <option value="Table">{t("tables")}</option>
+                  <option value="Bed">{t("beds")}</option>
+                  <option value="Office">{t("office")}</option>
+                  <option value="Other">{t("other")}</option>
                 </select>
               </div>
             )}
