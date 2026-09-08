@@ -80,7 +80,7 @@ export default function ProductsPage() {
       if (activeTab === "available") {
         const catParam = category !== "all" ? `&category=${category}` : "";
         const res = await axios.get(
-          `/api/items?search=${search}&page=${page}&limit=${limit}${catParam}${dateParam}&isManufactured=false`,
+          `/api/items?search=${search}&page=${page}&limit=${limit}${catParam}${dateParam}`,
         );
         if (res.data.success) {
           setProducts(res.data.data);

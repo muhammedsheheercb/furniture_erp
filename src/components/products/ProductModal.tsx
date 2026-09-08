@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import { Package, Tag, Info } from "lucide-react";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import { useLanguage } from "../../context/LanguageContext";
+import axios from "axios";
 
 // ── constants ─────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -33,6 +34,9 @@ interface FormState {
   isManufactured: boolean;
   description: string;
   currentStock: number;
+  materialId: string;
+  materialBatch: string;
+  materialQuantity: number;
   dimensions: {
     width: string;
     height: string;
@@ -66,6 +70,9 @@ function makeEmpty(): FormState {
     isManufactured: false,
     description: "",
     currentStock: 0,
+    materialId: "",
+    materialBatch: "",
+    materialQuantity: 0,
     dimensions: { width: "", height: "", depth: "", weight: "", unit: "cm" },
     pricing: {
       materialCost: 0,
@@ -117,6 +124,7 @@ export default function ProductModal({
   const [tab, setTab] = useState("basic");
   const [form, setForm] = useState<FormState>(makeEmpty());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [materials, setMaterials] = useState<any[]>([]);
   const isEdit = !!product;
 
   // ── style helpers ─────────────────────────────────────────────────────────
@@ -128,6 +136,12 @@ export default function ProductModal({
   // ── populate form ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
+    if (!product) {
+      axios
+        .get("/api/materials?limit=500")
+        .then((res) => setMaterials(res.data.data || []))
+        .catch(() => setMaterials([]));
+    }
     setTab("basic");
     setErrors({});
     if (product) {
@@ -142,6 +156,9 @@ export default function ProductModal({
         isManufactured: false,
         description: product.description || "",
         currentStock: product.quantity ?? 0,
+        materialId: "",
+        materialBatch: "",
+        materialQuantity: 0,
         dimensions: {
           width: product.dimensions?.width ?? "",
           height: product.dimensions?.height ?? "",
@@ -193,6 +210,24 @@ export default function ProductModal({
     if (form.currentStock < 0) {
       errs.currentStock = "Stock cannot be negative";
     }
+    if (!isEdit && form.materialId && !form.materialBatch) {
+      errs.materialBatch = "Select a material batch for this production";
+    }
+    if (!isEdit && form.materialId && form.materialQuantity < 0) {
+      errs.materialQuantity = "Quantity cannot be negative";
+    }
+    if (!isEdit && form.materialId && form.materialBatch) {
+      const selectedBatch = materials
+        .find((material) => material._id === form.materialId)
+        ?.batches?.find((batch: any) => batch.batchNumber === form.materialBatch);
+      const availableQuantity = Math.max(
+        0,
+        Number(selectedBatch?.quantity || 0) - Number(selectedBatch?.reservedQuantity || 0),
+      );
+      if (form.materialQuantity > availableQuantity) {
+        errs.materialQuantity = `Only ${availableQuantity} available in the selected batch`;
+      }
+    }
     if (form.pricing.purchasePrice < 0) {
       errs.purchasePrice = "Purchase price cannot be negative";
       errorTab = "pricing";
@@ -215,7 +250,7 @@ export default function ProductModal({
       category: form.category,
       unit: "Piece",
       status: form.status,
-      isManufactured: false,
+      isManufactured: !isEdit && !!form.materialId,
       description: form.description,
       primaryMaterial: form.primaryMaterial || "—",
       color: form.color || "",
@@ -246,7 +281,16 @@ export default function ProductModal({
         totalCost: form.pricing.purchasePrice,
         sellingPrice: form.pricing.salesPrice,
       },
-      bom: [],
+      bom:
+        !isEdit && form.materialId && form.materialBatch && form.materialQuantity > 0
+          ? [
+              {
+                materialId: form.materialId,
+                batchNumber: form.materialBatch,
+                quantity: form.materialQuantity,
+              },
+            ]
+          : [],
       variants: form.variants,
     };
 
@@ -254,6 +298,16 @@ export default function ProductModal({
   }
 
   // ── render ────────────────────────────────────────────────────────────────
+  const selectedMaterial = materials.find((material) => material._id === form.materialId);
+  const materialBatches = selectedMaterial?.batches || [];
+  const selectedBatch = materialBatches.find(
+    (batch: any) => batch.batchNumber === form.materialBatch,
+  );
+  const availableMaterialQuantity = Math.max(
+    0,
+    Number(selectedBatch?.quantity || 0) - Number(selectedBatch?.reservedQuantity || 0),
+  );
+
   return (
     <Modal
       open={open}
@@ -386,6 +440,91 @@ export default function ProductModal({
                 )}
               </div>
             </div>
+
+            {!isEdit && (
+              <div className="space-y-3 rounded-xl border border-[#E5DDD5] bg-[#FAF8F6] p-4">
+                <div>
+                  <label className={lbl}>Material <span className="font-normal text-[#A89080]">(optional)</span></label>
+                  <select
+                    value={form.materialId}
+                    onChange={(e) =>
+                      setForm((p) => ({
+                        ...p,
+                        materialId: e.target.value,
+                        materialBatch: "",
+                        materialQuantity: 0,
+                      }))
+                    }
+                    className={inp}
+                  >
+                    <option value="">No material</option>
+                    {materials.map((material) => (
+                      <option key={material._id} value={material._id}>
+                        {material.name} ({material.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {form.materialId && (
+                  <div>
+                    <label className={lbl}>Material Batch</label>
+                    <select
+                      value={form.materialBatch}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          materialBatch: e.target.value,
+                          materialQuantity: 0,
+                        }))
+                      }
+                      className={inp}
+                    >
+                      <option value="">Select batch</option>
+                      {materialBatches
+                        .filter(
+                          (batch: any) =>
+                            Number(batch.quantity || 0) - Number(batch.reservedQuantity || 0) > 0,
+                        )
+                        .map((batch: any, index: number) => (
+                          <option key={`${batch.batchNumber}-${index}`} value={batch.batchNumber}>
+                            {batch.batchNumber || `Batch ${index + 1}`} - Available: {Math.max(0, Number(batch.quantity || 0) - Number(batch.reservedQuantity || 0))}
+                          </option>
+                        ))}
+                    </select>
+                    {errors.materialBatch && (
+                      <p className="text-xs text-rose-500 mt-1">{errors.materialBatch}</p>
+                    )}
+                    <label className={`${lbl} mt-3`}>Quantity</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={availableMaterialQuantity}
+                      step={1}
+                      value={form.materialQuantity}
+                      disabled={!form.materialBatch}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          materialQuantity: Math.max(
+                            0,
+                            Math.min(Number(e.target.value) || 0, availableMaterialQuantity),
+                          ),
+                        }))
+                      }
+                      className={!form.materialBatch ? roInp : inp}
+                    />
+                    {errors.materialQuantity && (
+                      <p className="text-xs text-rose-500 mt-1">{errors.materialQuantity}</p>
+                    )}
+                    <p className="mt-2 flex gap-2 text-xs text-[#7A6055]">
+                      <Info size={14} className="shrink-0" />
+                      The selected material will be used for this production. The specified quantity will be deducted from this batch.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div>
               <label className={lbl}>{t("description")}</label>

@@ -517,9 +517,7 @@ export default function PurchaseModal({
                             className="w-full rounded-lg border border-[#E5DDD5] px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/30"
                           >
                             <option value="">{t("selectProduct")}</option>
-                            {products
-                              .filter((p: any) => !p.isManufactured)
-                              .map((p: any) => (
+                            {products.map((p: any) => (
                                 <option key={p._id} value={p._id}>
                                   {p.name} ({p.itemNumber})
                                 </option>

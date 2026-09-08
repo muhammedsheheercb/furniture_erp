@@ -137,6 +137,24 @@ export async function POST(req: NextRequest) {
       updatedBy: session.user.id,
     };
 
+    const bomRows = (body.bom || []).filter(
+      (r: any) => r.materialId && r.batchNumber && Number(r.quantity) > 0,
+    );
+
+    for (const row of bomRows) {
+      const material = await Material.findById(row.materialId).lean();
+      const batch = material?.batches?.find(
+        (candidate: any) => candidate.batchNumber === row.batchNumber,
+      );
+      const available = Number(batch?.quantity || 0) - Number(batch?.reservedQuantity || 0);
+      if (!batch || available < Number(row.quantity)) {
+        return NextResponse.json(
+          { success: false, error: "Insufficient quantity in the selected material batch" },
+          { status: 400 },
+        );
+      }
+    }
+
     if (itemData.quantity > 0) {
       itemData.batches = [
         {
@@ -154,10 +172,7 @@ export async function POST(req: NextRequest) {
 
     const item = await Item.create(itemData);
 
-    // Deduct BOM quantities from material batch stock (only for manufactured products)
-    const bomRows = (body.bom || []).filter(
-      (r: any) => r.materialId && r.batchNumber && Number(r.quantity) > 0,
-    );
+    // Deduct only explicitly selected material batches used for this production.
     if (bomRows.length > 0) {
       await Promise.all(
         bomRows.map((r: any) =>

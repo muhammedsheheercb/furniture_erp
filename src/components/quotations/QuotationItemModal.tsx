@@ -4,7 +4,6 @@ import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import {
   Package,
-  Layers,
   Search,
   Info,
   Plus,
@@ -25,11 +24,6 @@ const CATEGORIES = [
   "Office",
   "Dining",
   "Other",
-];
-
-const TABS = [
-  { id: "basic", label: "Basic Info", icon: Package },
-  { id: "bom", label: "BOM", icon: Layers },
 ];
 
 // ── types ──────────────────────────────────────────────────────────────────────
@@ -505,24 +499,6 @@ export default function QuotationItemModal({
         </div>
       )}
 
-      {/* Tab bar — 2 sections: Basic Info & BOM */}
-      <div className="flex gap-1 mb-6 border-b border-[#F0EBE5] overflow-x-auto pb-0">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors -mb-px ${tab === t.id
-                ? "border-[#C9A84C] text-[#C9A84C]"
-                : "border-transparent text-[#7A6055] hover:text-[#1A1210]"
-              }`}
-          >
-            <t.icon size={15} />
-            {t.label}
-          </button>
-        ))}
-      </div>
-
       <form
         id="quotation-item-form"
         onSubmit={handleSubmit}
@@ -540,7 +516,8 @@ export default function QuotationItemModal({
                     setForm((p) => ({ ...p, productName: e.target.value }))
                   }
                   placeholder={t("eg3seaterVelvetSofa")}
-                  className={inp}
+                  className={form.itemId ? roInp : inp}
+                  readOnly={!!form.itemId}
                 />
                 {errors.productName && (
                   <p className="text-xs text-rose-500 mt-1">
@@ -555,7 +532,8 @@ export default function QuotationItemModal({
                   onChange={(e) =>
                     setForm((p) => ({ ...p, category: e.target.value }))
                   }
-                  className={inp}
+                  className={form.itemId ? roInp : inp}
+                  disabled={!!form.itemId}
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c}>
@@ -594,7 +572,8 @@ export default function QuotationItemModal({
                     setForm((p) => ({ ...p, color: e.target.value }))
                   }
                   placeholder={t("egBrownBlackWhite")}
-                  className={inp}
+                  className={form.itemId ? roInp : inp}
+                  readOnly={!!form.itemId}
                 />
               </div>
               <div>
@@ -663,7 +642,8 @@ export default function QuotationItemModal({
                     }))
                   }
                   placeholder="0"
-                  className={inp}
+                  className={form.itemId ? roInp : inp}
+                  readOnly={!!form.itemId}
                 />
               </div>
             </div>
@@ -688,7 +668,8 @@ export default function QuotationItemModal({
                 }
                 rows={3}
                 placeholder={t("optionalProductDescription")}
-                className="w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 resize-none"
+                readOnly={!!form.itemId}
+                className={form.itemId ? `${roInp} resize-none` : "w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 resize-none"}
               />
             </div>
           </div>

@@ -87,7 +87,19 @@ const containsArabic = (text: string) => {
 export const generateInvoicePDF = (data: InvoiceData) => {
   const isArabic = typeof window !== "undefined" && document.documentElement.lang === "ar";
   const dir = isArabic ? "rtl" : "ltr";
-  const totalDiscount = data.items.reduce((s, i) => s + (i.discount || 0), 0);
+    const itemDiscountAmount = data.items.reduce((s, i) => s + (i.discount || 0), 0);
+    const grossSubtotal = data.items.reduce((s, i) => s + i.price * i.quantity, 0);
+    const discountedSubtotal = data.items.reduce(
+        (s, i) => s + Math.max(0, i.price * i.quantity - (i.discount || 0)),
+        0,
+    );
+    const taxAmount = data.items.reduce((s, i) => s + (i.taxAmount || 0), 0);
+    const extraDiscountAmount = Math.max(0, data.discount || 0);
+    const calculatedTotal = Math.max(
+        0,
+        discountedSubtotal + taxAmount - extraDiscountAmount,
+    );
+    const totalDiscount = itemDiscountAmount + extraDiscountAmount;
   const hasDiscount = totalDiscount > 0;
 
   const html = `
@@ -149,7 +161,7 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                         <th style="padding: 12px; text-align: left; border: 1px solid #3F51B5">${t("description")}</th>
                         <th style="padding: 12px; text-align: center; border: 1px solid #3F51B5; width: 60px">${t("qty")}</th>
                         <th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 100px">${t("unitPrice")}</th>
-                        ${hasDiscount ? `<th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 100px">${t("discPct")}</th>` : ""}
+                        ${hasDiscount ? `<th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 100px">${t("discountAmount")}</th>` : ""}
                         <th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 100px">${t("subtotal")}</th>
                         <th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 80px">${t("vat")} 5%</th>
                         <th style="padding: 12px; text-align: right; border: 1px solid #3F51B5; width: 120px">${t("total")}</th>
@@ -167,10 +179,10 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                             </td>
                             <td style="padding: 12px; text-align: center; border: 1px solid #DEE2E6; font-weight: 500">${item.quantity}</td>
                             <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6">${item.isFOC ? "0.00" : formatCurrency(item.price)}</td>
-                            ${hasDiscount ? `<td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6; color: #DC3545">${item.discount || 0}%</td>` : ""}
-                            <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6">${formatCurrency(item.subtotal || item.total)}</td>
+                            ${hasDiscount ? `<td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6; color: #DC3545">- ${formatCurrency(item.discount || 0)}</td>` : ""}
+                            <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6">${formatCurrency(Math.max(0, item.price * item.quantity - (item.discount || 0)))}</td>
                             <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6">${formatCurrency(item.taxAmount || 0)}</td>
-                            <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6; font-weight: bold">${formatCurrency(item.total)}</td>
+                            <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6; font-weight: bold">${formatCurrency(Math.max(0, item.price * item.quantity - (item.discount || 0)) + (item.taxAmount || 0))}</td>
                         </tr>
                     `,
                       )
@@ -182,14 +194,14 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                 <div style="width: 250px">
                     <div style="display: flex; justify-content: space-between; padding: 5px 0">
                         <span style="color: #6C757D">${t("subtotal")}:</span>
-                        <span style="font-weight: 500">${formatCurrency(data.items.reduce((acc, it) => acc + (it.subtotal || it.total), 0))}</span>
+                        <span style="font-weight: 500">${formatCurrency(grossSubtotal)}</span>
                     </div>
                     ${
                       hasDiscount
                         ? `
                     <div style="display: flex; justify-content: space-between; padding: 5px 0">
                         <span style="color: #6C757D">${t("itemDiscount")}:</span>
-                        <span style="font-weight: 500; color: #DC3545">- ${formatCurrency(data.items.reduce((acc, it) => acc + (it.price * it.quantity * (it.discount || 0)) / 100, 0))}</span>
+                        <span style="font-weight: 500; color: #DC3545">- ${formatCurrency(itemDiscountAmount)}</span>
                     </div>`
                         : ""
                     }
@@ -198,17 +210,17 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                         ? `
                     <div style="display: flex; justify-content: space-between; padding: 5px 0">
                         <span style="color: #6C757D">${t("discount")}:</span>
-                        <span style="font-weight: 500; color: #DC3545">- ${formatCurrency(data.subtotal * (data.discount / 100))}</span>
+                        <span style="font-weight: 500; color: #DC3545">- ${formatCurrency(extraDiscountAmount)}</span>
                     </div>`
                         : ""
                     }
                     <div style="display: flex; justify-content: space-between; padding: 5px 0">
                         <span style="color: #6C757D">${t("tax")} (VAT):</span>
-                        <span style="font-weight: 500">${formatCurrency(data.items.reduce((acc, it) => acc + (it.taxAmount || 0), 0))}</span>
+                        <span style="font-weight: 500">${formatCurrency(taxAmount)}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid #3F51B5; margin-top: 10px">
                         <span style="font-weight: bold; font-size: 18px; color: #212529">${t("grandTotal")}:</span>
-                        <span style="font-weight: bold; font-size: 18px; color: #3F51B5">${formatCurrency(data.total)}</span>
+                        <span style="font-weight: bold; font-size: 18px; color: #3F51B5">${formatCurrency(calculatedTotal)}</span>
                     </div>
                     ${
                       data.advancePaid
@@ -219,7 +231,7 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                     </div>
                     <div style="display: flex; justify-content: space-between; padding: 5px 0; font-weight: bold; color: #DC3545">
                         <span>${t("balanceDue")}:</span>
-                        <span>${formatCurrency(data.total - data.advancePaid)}</span>
+                        <span>${formatCurrency(calculatedTotal - data.advancePaid)}</span>
                     </div>`
                         : ""
                     }
@@ -241,12 +253,29 @@ export const generateInvoicePDF = (data: InvoiceData) => {
 export const generateQuotationPDF = (data: any) => {
   const isArabic = typeof window !== "undefined" && document.documentElement.lang === "ar";
   const dir = isArabic ? "rtl" : "ltr";
+    const grossSubtotal = data.items.reduce(
+        (s: number, i: any) => s + i.price * i.quantity,
+        0,
+    );
+    const discountedSubtotal = data.items.reduce(
+        (s: number, i: any) =>
+            s + Math.max(0, i.price * i.quantity - (i.discount || 0)),
+        0,
+    );
   const totalItemDiscount = data.items.reduce(
-    (s: number, i: any) => s + (i.price * i.quantity * (i.discount || 0)) / 100,
+        (s: number, i: any) => s + (i.discount || 0),
     0,
   );
-  const extraDiscountAmount = (data.subtotal * (data.discount || 0)) / 100;
+    const extraDiscountAmount = Math.max(0, data.discount || 0);
+    const taxAmount = data.items.reduce(
+        (s: number, i: any) => s + (i.taxAmount || 0),
+        0,
+    );
   const totalDiscountAmount = totalItemDiscount + extraDiscountAmount;
+    const calculatedTotal = Math.max(
+        0,
+        discountedSubtotal + taxAmount - extraDiscountAmount,
+    );
   const hasAnyDiscount = totalDiscountAmount > 0;
 
   const html = `
@@ -299,7 +328,7 @@ export const generateQuotationPDF = (data: any) => {
                         <th style="padding: 12px; text-align: center; border: 1px solid #8B5E3C">${t("color")}</th>
                         <th style="padding: 12px; text-align: center; border: 1px solid #8B5E3C; width: 60px">${t("qty")}</th>
                         <th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 100px">${t("unitPrice")}</th>
-                        ${totalItemDiscount > 0 ? `<th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 100px">${t("discPct")}</th>` : ""}
+                        ${totalItemDiscount > 0 ? `<th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 100px">${t("discountAmount")}</th>` : ""}
                         <th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 100px">${t("subtotal")}</th>
                         <th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 80px">${t("vat")} 5%</th>
                         <th style="padding: 12px; text-align: right; border: 1px solid #8B5E3C; width: 120px">${t("total")}</th>
@@ -320,10 +349,10 @@ export const generateQuotationPDF = (data: any) => {
                             </td>
                             <td style="padding: 12px; text-align: center; border: 1px solid #E5DDD5; font-weight: 500">${item.quantity}</td>
                             <td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5">${formatCurrency(item.price)}</td>
-                            ${totalItemDiscount > 0 ? `<td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5; color: #DC3545">${item.discount || 0}%</td>` : ""}
-                            <td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5">${formatCurrency(item.subtotal || item.total)}</td>
+                            ${totalItemDiscount > 0 ? `<td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5; color: #DC3545">- ${formatCurrency(item.discount || 0)}</td>` : ""}
+                            <td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5">${formatCurrency(Math.max(0, item.price * item.quantity - (item.discount || 0)))}</td>
                             <td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5">${formatCurrency(item.taxAmount || 0)}</td>
-                            <td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5; font-weight: bold">${formatCurrency(item.total)}</td>
+                            <td style="padding: 12px; text-align: right; border: 1px solid #E5DDD5; font-weight: bold">${formatCurrency(Math.max(0, item.price * item.quantity - (item.discount || 0)) + (item.taxAmount || 0))}</td>
                         </tr>
                     `,
                       )
@@ -335,7 +364,7 @@ export const generateQuotationPDF = (data: any) => {
                 <div style="width: 250px">
                     <div style="display: flex; justify-content: space-between; padding: 5px 0">
                         <span style="color: #7A6055">${t("subtotal")}:</span>
-                        <span style="font-weight: 500">${formatCurrency(data.subtotal)}</span>
+                        <span style="font-weight: 500">${formatCurrency(grossSubtotal)}</span>
                     </div>
                     ${
                       hasAnyDiscount
@@ -348,11 +377,11 @@ export const generateQuotationPDF = (data: any) => {
                     }
                     <div style="display: flex; justify-content: space-between; padding: 5px 0">
                         <span style="color: #7A6055">${t("vat")}:</span>
-                        <span style="font-weight: 500">${formatCurrency(data.items.reduce((acc: number, it: any) => acc + (it.taxAmount || 0), 0))}</span>
+                        <span style="font-weight: 500">${formatCurrency(taxAmount)}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding: 15px 0; border-top: 2px solid #8B5E3C; margin-top: 10px">
                         <span style="font-weight: bold; font-size: 18px; color: #2C1810">${t("grandTotal")}:</span>
-                        <span style="font-weight: bold; font-size: 18px; color: #8B5E3C">${formatCurrency(data.total)}</span>
+                        <span style="font-weight: bold; font-size: 18px; color: #8B5E3C">${formatCurrency(calculatedTotal)}</span>
                     </div>
                 </div>
             </div>
