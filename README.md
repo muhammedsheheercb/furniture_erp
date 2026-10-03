@@ -9,7 +9,7 @@ A comprehensive full-stack ERP system built for single owners managing both reta
 - **Auth**: NextAuth.js (Credentials)
 - **Styling**: Tailwind CSS + shadcn/ui
 - **Icons**: Lucide React
-- **Forms**: React Hook Form + Zod
+- **Forms**: React Hook Form  Zod
 
 ## Features
 
