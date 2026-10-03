@@ -17,8 +17,7 @@ interface SalesChartProps {
   data: IChartData[];
 }
 
-const fmt = (v: number) =>
-  v >= 1000 ? `OMR ${(v / 1000).toFixed(1)}K` : `OMR ${v}`;
+const fmt = (v: number) => formatCurrency(v);
 
 export default function SalesChart({ data }: SalesChartProps) {
   const { t } = useLanguage();
@@ -43,7 +42,7 @@ export default function SalesChart({ data }: SalesChartProps) {
             tick={{ fontSize: 10, fill: "#9ca3af" }}
             axisLine={false}
             tickLine={false}
-            width={80}
+            width={110}
           />
           <Tooltip
             formatter={

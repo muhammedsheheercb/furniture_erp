@@ -30,6 +30,7 @@ import autoTable from "jspdf-autotable";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "../../../../../context/LanguageContext";
+import { AmountInput } from "@/components/ui/AmountInput";
 
 interface CartItem extends IPurchaseItem {
   _itemRef?: IItem;
@@ -180,7 +181,7 @@ export default function EditPurchasePage() {
         return {
           ...c,
           quantity: qtyRaw === "" ? ("" as any) : val,
-          total: Number((Number(c.price || 0) * val).toFixed(3)),
+          total: Number(c.price || 0) * val,
         };
       }),
     );
@@ -196,7 +197,7 @@ export default function EditPurchasePage() {
         return {
           ...c,
           price: priceRaw === "" ? ("" as any) : val,
-          total: Number((val * q).toFixed(3)),
+          total: val * q,
         };
       }),
     );
@@ -209,7 +210,7 @@ export default function EditPurchasePage() {
         const t = totalRaw === "" ? 0 : Number(totalRaw);
         const val = t < 0 ? 0 : t;
         const q = (c.quantity as any) === "" ? 0 : Number(c.quantity);
-        const newPrice = q > 0 ? Number((val / q).toFixed(3)) : c.price;
+        const newPrice = q > 0 ? val / q : c.price;
         return {
           ...c,
           total: totalRaw === "" ? ("" as any) : val,
@@ -308,7 +309,9 @@ export default function EditPurchasePage() {
           <div>
             <SearchSelect
               label={t("purchaser") || "Purchaser"}
-              placeholder={t("selectPurchaser") || "Select Purchaser (Optional)"}
+              placeholder={
+                t("selectPurchaser") || "Select Purchaser (Optional)"
+              }
               options={purchaserOptions}
               value={selPurchaser}
               onChange={setSelPurchaser}
@@ -415,18 +418,18 @@ export default function EditPurchasePage() {
                       </div>
                     </td>
                     <td className="td text-end">
-                      <input
+                      <AmountInput
                         type="number"
-                        step={1}
+                        step={0.001}
                         value={c.price}
                         onChange={(e) => updatePrice(idx, e.target.value)}
                         className="w-24 px-2 py-1.5 text-xs text-end border border-gray-200 rounded-md focus:ring-1 focus:ring-amber-500 focus:border-amber-500 ms-auto block"
                       />
                     </td>
                     <td className="td text-end">
-                      <input
+                      <AmountInput
                         type="number"
-                        step={1}
+                        step={0.001}
                         value={c.sellingPrice}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -523,9 +526,9 @@ export default function EditPurchasePage() {
                       </div>
                     </td>
                     <td className="td text-end">
-                      <input
+                      <AmountInput
                         type="number"
-                        step={1}
+                        step={0.001}
                         value={c.total}
                         onChange={(e) => updateTotal(idx, e.target.value)}
                         className="w-24 px-2 py-1.5 text-xs text-end font-bold text-gray-900 border border-gray-200 rounded-md focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 ms-auto block"

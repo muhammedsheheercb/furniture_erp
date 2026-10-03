@@ -22,6 +22,7 @@ import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
 import { useLanguage } from "../../../../context/LanguageContext";
+import { AmountInput } from "@/components/ui/AmountInput";
 
 interface CartItem extends IPurchaseItem {
   _itemRef: IItem;
@@ -180,7 +181,7 @@ export default function NewPurchasePage() {
             (updates.quantity as any) === "" ? 0 : Number(updated.quantity);
           const newP =
             (updates.price as any) === "" ? 0 : Number(updated.price);
-          updated.total = Number((newQ * newP).toFixed(3));
+          updated.total = newQ * newP;
         }
         // If total (amount) changed, recalculate price
         else if ("total" in updates) {
@@ -188,7 +189,7 @@ export default function NewPurchasePage() {
           const currentQ =
             (updated.quantity as any) === "" ? 0 : Number(updated.quantity);
           if (currentQ > 0) {
-            updated.price = Number((t / currentQ).toFixed(3));
+            updated.price = t / currentQ;
           }
         }
 
@@ -310,10 +311,7 @@ export default function NewPurchasePage() {
 
   return (
     <div className="page-container max-w-6xl">
-      <TopBar
-        title={t("newPurchase")}
-        subtitle={t("recordANewPurchaseFrom")}
-      />
+      <TopBar title={t("newPurchase")} subtitle={t("recordANewPurchaseFrom")} />
 
       <div className="card p-6 flex flex-col gap-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -330,7 +328,9 @@ export default function NewPurchasePage() {
           <div>
             <SearchSelect
               label={t("purchaser") || "Purchaser"}
-              placeholder={t("selectPurchaser") || "Select Purchaser (Optional)"}
+              placeholder={
+                t("selectPurchaser") || "Select Purchaser (Optional)"
+              }
               options={purchaserOptions}
               value={selPurchaser}
               onChange={setSelPurchaser}
@@ -521,9 +521,9 @@ export default function NewPurchasePage() {
                       </div>
                     </td>
                     <td className="td">
-                      <input
+                      <AmountInput
                         type="number"
-                        step={1}
+                        step={0.001}
                         value={c.price}
                         onChange={(e) =>
                           updateItem(idx, { price: e.target.value })
@@ -532,9 +532,9 @@ export default function NewPurchasePage() {
                       />
                     </td>
                     <td className="td">
-                      <input
+                      <AmountInput
                         type="number"
-                        step={1}
+                        step={0.001}
                         value={c.sellingPrice}
                         onChange={(e) =>
                           updateItem(idx, { sellingPrice: e.target.value })
@@ -543,9 +543,9 @@ export default function NewPurchasePage() {
                       />
                     </td>
                     <td className="td text-end">
-                      <input
+                      <AmountInput
                         type="number"
-                        step={1}
+                        step={0.001}
                         value={c.total}
                         onChange={(e) =>
                           updateItem(idx, { total: e.target.value })

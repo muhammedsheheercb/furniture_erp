@@ -34,6 +34,7 @@ import {
   Cell,
 } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
+import { formatAmount } from "@/lib/amounts";
 
 export default function DashboardPage() {
   const { t } = useLanguage();
@@ -195,7 +196,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-xl md:text-2xl font-black text-[#1A1210] mb-1">
-                  <CurrencySymbol /> {kpi.value.toLocaleString()}
+                  <CurrencySymbol /> {formatAmount(kpi.value, "en-OM")}
                 </div>
 
                 {kpi.details && (
@@ -237,7 +238,8 @@ export default function DashboardPage() {
                             </span>
                           </div>
                           <span className="text-xs md:text-sm font-bold text-[#1A1210]">
-                            <CurrencySymbol /> {detail.value.toLocaleString()}
+                            <CurrencySymbol />{" "}
+                            {formatAmount(detail.value, "en-OM")}
                           </span>
                         </div>
                       ))}
@@ -307,12 +309,11 @@ export default function DashboardPage() {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: "#7A6055", fontSize: 10 }}
-                  tickFormatter={(value) =>
-                    `₹${value >= 1000 ? (value / 1000).toFixed(0) + "k" : value}`
-                  }
-                  width={40}
+                  tickFormatter={(value) => `₹${formatAmount(value)}`}
+                  width={100}
                 />
                 <Tooltip
+                  formatter={(value) => formatAmount(Number(value))}
                   cursor={{ fill: "#FAF8F6" }}
                   contentStyle={{
                     borderRadius: "12px",
@@ -374,7 +375,7 @@ export default function DashboardPage() {
                     </p>
                     <p className="text-xs md:text-sm font-black text-emerald-900 truncate">
                       <CurrencySymbol />{" "}
-                      {data?.kpi?.totalReceivable?.toLocaleString()}
+                      {formatAmount(data?.kpi?.totalReceivable, "en-OM")}
                     </p>
                   </div>
                   <div className="p-2 md:p-3 rounded-xl bg-rose-50 border border-rose-100">
@@ -383,7 +384,7 @@ export default function DashboardPage() {
                     </p>
                     <p className="text-xs md:text-sm font-black text-rose-900 truncate">
                       <CurrencySymbol />{" "}
-                      {data?.kpi?.totalPayable?.toLocaleString()}
+                      {formatAmount(data?.kpi?.totalPayable, "en-OM")}
                     </p>
                   </div>
                 </div>

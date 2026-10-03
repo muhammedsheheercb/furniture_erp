@@ -44,6 +44,7 @@ export default function SupplierModal({
   const isEdit = !!supplier;
   const {
     register,
+    watch,
     handleSubmit,
     reset,
     formState: { errors },
@@ -130,10 +131,12 @@ export default function SupplierModal({
           <Input
             label={isEdit ? "Opening Balance (INR)" : "Opening balance (INR)"}
             type="number"
-            step={1}
+            step={0.001}
             placeholder="0.000"
             error={errors.balance?.message}
             {...register("balance")}
+            value={watch("balance") ?? ""}
+            amount={true}
           />
         </div>
       </form>

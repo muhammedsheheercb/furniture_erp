@@ -25,6 +25,7 @@ import { generateInvoicePDF } from "@/lib/pdf-utils";
 
 import BatchSelectionModal from "@/components/sales/BatchSelectionModal";
 import { useLanguage } from "../../../../context/LanguageContext";
+import { AmountInput } from "@/components/ui/AmountInput";
 
 interface CartItem extends ISaleItem {
   _itemRef: IItem;
@@ -252,7 +253,7 @@ export default function NewSalePage() {
             const newQ = updated.quantity === "" ? 0 : Number(updated.quantity);
             const newP = updated.price === "" ? 0 : Number(updated.price);
             const newD = updated.discount === "" ? 0 : Number(updated.discount);
-            updated.total = Number((newQ * newP - newD).toFixed(3));
+            updated.total = newQ * newP - newD;
           } else if ("total" in updates) {
             const newT = updated.total === "" ? 0 : Number(updated.total);
             const currentQ =
@@ -260,7 +261,7 @@ export default function NewSalePage() {
             const currentD =
               updated.discount === "" ? 0 : Number(updated.discount);
             if (currentQ > 0) {
-              updated.price = Number(((newT + currentD) / currentQ).toFixed(3));
+              updated.price = (newT + currentD) / currentQ;
             }
           }
         }
@@ -508,6 +509,8 @@ export default function NewSalePage() {
               }}
               placeholder="0"
               hint="Applied to total after discounts"
+              amount={true}
+              step={0.001}
             />
             <div className="flex items-center gap-2 mt-1">
               <input
@@ -535,6 +538,8 @@ export default function NewSalePage() {
             value={advancePaid}
             onChange={(e) => setAdvancePaid(Number(e.target.value))}
             placeholder="0"
+            amount={true}
+            step={0.001}
           />
           <div className="flex items-center gap-2 mt-7">
             <span className="text-sm font-medium text-gray-500">
@@ -664,9 +669,9 @@ export default function NewSalePage() {
                       <label className="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-1 block">
                         {t("price")}
                       </label>
-                      <input
+                      <AmountInput
                         type="number"
-                        step={1}
+                        step={0.001}
                         disabled={c.isFOC}
                         value={c.price}
                         onChange={(e) =>
@@ -679,9 +684,9 @@ export default function NewSalePage() {
                       <label className="md:hidden text-[10px] font-bold text-gray-400 uppercase mb-1 block">
                         {t("disc")}
                       </label>
-                      <input
+                      <AmountInput
                         type="number"
-                        step={1}
+                        step={0.001}
                         placeholder="0.000"
                         disabled={c.isFOC}
                         value={c.discount}
@@ -713,9 +718,9 @@ export default function NewSalePage() {
                           {t("free")}
                         </span>
                       ) : (
-                        <input
+                        <AmountInput
                           type="number"
-                          step={1}
+                          step={0.001}
                           value={c.total}
                           onChange={(e) =>
                             updateItem(idx, { total: e.target.value })

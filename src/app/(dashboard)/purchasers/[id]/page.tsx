@@ -11,8 +11,11 @@ import { Badge } from "@/components/ui/Badge";
 import Link from "next/link";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import { useLanguage } from "../../../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
 
-export default function PurchaserDetailsPage(props: { params: Promise<{ id: string }> }) {
+export default function PurchaserDetailsPage(props: {
+  params: Promise<{ id: string }>;
+}) {
   const params = use(props.params);
   const { t } = useLanguage();
   const [purchaser, setPurchaser] = useState<any>(null);
@@ -92,15 +95,16 @@ export default function PurchaserDetailsPage(props: { params: Promise<{ id: stri
     }, 100);
   };
 
-  if (!purchaser) return <div className="p-10 text-center">{t("loading")}...</div>;
+  if (!purchaser)
+    return <div className="p-10 text-center">{t("loading")}...</div>;
 
   const filteredTransactions = transactions.filter(
-    (t) => filterType === "all" || t._type === filterType
+    (t) => filterType === "all" || t._type === filterType,
   );
 
   const totalAmount = filteredTransactions.reduce(
     (sum, t) => sum + (t._type === "purchase" ? t.total : t.amount),
-    0
+    0,
   );
 
   return (
@@ -128,9 +132,12 @@ export default function PurchaserDetailsPage(props: { params: Promise<{ id: stri
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-[#1A1210]">
-              <CurrencySymbol /> {totalAmount.toLocaleString()}
+              <CurrencySymbol /> {formatAmount(totalAmount, "en-OM")}
             </div>
-            <p className="text-xs text-[#A89080] mt-1">{filteredTransactions.length} {t("transactions") || "Transactions"}</p>
+            <p className="text-xs text-[#A89080] mt-1">
+              {filteredTransactions.length}{" "}
+              {t("transactions") || "Transactions"}
+            </p>
           </CardContent>
         </Card>
 
@@ -139,7 +146,9 @@ export default function PurchaserDetailsPage(props: { params: Promise<{ id: stri
             <div className="flex flex-wrap gap-4 items-center">
               <div className="flex items-center gap-2">
                 <Filter size={16} className="text-[#7A6055]" />
-                <span className="text-sm font-bold text-[#7A6055]">{t("filterByDate")}</span>
+                <span className="text-sm font-bold text-[#7A6055]">
+                  {t("filterByDate")}
+                </span>
               </div>
               <Input
                 type="date"
@@ -159,14 +168,25 @@ export default function PurchaserDetailsPage(props: { params: Promise<{ id: stri
                 onChange={(e) => setFilterType(e.target.value)}
                 className="h-10 px-3 rounded-md border border-[#E5DDD5] bg-[#FAF8F6] text-sm text-[#1A1210] outline-none focus:ring-2 focus:ring-[#C9A84C]/20 transition-all"
               >
-                <option value="all">{t("allTransactions") || "All Transactions"}</option>
-                <option value="purchase">{t("purchases") || "Purchases"}</option>
+                <option value="all">
+                  {t("allTransactions") || "All Transactions"}
+                </option>
+                <option value="purchase">
+                  {t("purchases") || "Purchases"}
+                </option>
                 <option value="expense">{t("expenses") || "Expenses"}</option>
               </select>
-              <Button onClick={handleFilter} className="bg-[#2C1810] text-white hover:bg-[#1A0F0A]">
+              <Button
+                onClick={handleFilter}
+                className="bg-[#2C1810] text-white hover:bg-[#1A0F0A]"
+              >
                 {t("apply")}
               </Button>
-              <Button onClick={handleReset} variant="outline" className="border-[#E5DDD5]">
+              <Button
+                onClick={handleReset}
+                variant="outline"
+                className="border-[#E5DDD5]"
+              >
                 <RefreshCcw size={16} className="me-2" /> {t("reset")}
               </Button>
             </div>
@@ -181,11 +201,21 @@ export default function PurchaserDetailsPage(props: { params: Promise<{ id: stri
                 <table className="w-full text-start border-collapse">
                   <thead className="sticky top-0 bg-[#FAF8F6] z-10">
                     <tr className="border-b border-[#E5DDD5]">
-                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">{t("date")}</th>
-                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">{t("type")}</th>
-                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">{t("reference")}</th>
-                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">{t("details")}</th>
-                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase text-end">{t("amount")}</th>
+                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">
+                        {t("date")}
+                      </th>
+                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">
+                        {t("type")}
+                      </th>
+                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">
+                        {t("reference")}
+                      </th>
+                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase">
+                        {t("details")}
+                      </th>
+                      <th className="py-3 px-4 text-xs font-bold text-[#7A6055] uppercase text-end">
+                        {t("amount")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#F0EBE5]">
@@ -193,7 +223,10 @@ export default function PurchaserDetailsPage(props: { params: Promise<{ id: stri
                       filteredTransactions.map((txn) => (
                         <tr key={txn._id} className="hover:bg-[#FAF8F6]">
                           <td className="py-3 px-4 text-sm">
-                            {format(new Date(txn.date || txn.createdAt), "dd MMM yyyy")}
+                            {format(
+                              new Date(txn.date || txn.createdAt),
+                              "dd MMM yyyy",
+                            )}
                           </td>
                           <td className="py-3 px-4 text-sm font-semibold">
                             {txn._type === "purchase" ? (
@@ -207,24 +240,37 @@ export default function PurchaserDetailsPage(props: { params: Promise<{ id: stri
                             )}
                           </td>
                           <td className="py-3 px-4 text-sm font-mono text-[#1A1210]">
-                            {txn._type === "purchase" ? txn.purchaseNumber : txn.expenseNumber}
+                            {txn._type === "purchase"
+                              ? txn.purchaseNumber
+                              : txn.expenseNumber}
                           </td>
                           <td className="py-3 px-4 text-sm">
                             <div className="font-semibold text-[#1A1210]">
-                              {txn._type === "purchase" ? txn.supplierName : txn.title}
+                              {txn._type === "purchase"
+                                ? txn.supplierName
+                                : txn.title}
                             </div>
                             <div className="text-xs text-[#7A6055] mt-0.5">
-                              {txn._type === "purchase" ? "Supplier" : txn.category}
+                              {txn._type === "purchase"
+                                ? "Supplier"
+                                : txn.category}
                             </div>
                           </td>
                           <td className="py-3 px-4 text-sm font-bold text-[#1A1210] text-end">
-                            <CurrencySymbol /> {(txn._type === "purchase" ? txn.total : txn.amount).toLocaleString()}
+                            <CurrencySymbol />{" "}
+                            {formatAmount(
+                              txn._type === "purchase" ? txn.total : txn.amount,
+                              "en-OM",
+                            )}
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="py-10 text-center text-[#7A6055]">
+                        <td
+                          colSpan={5}
+                          className="py-10 text-center text-[#7A6055]"
+                        >
                           {t("noData")}
                         </td>
                       </tr>

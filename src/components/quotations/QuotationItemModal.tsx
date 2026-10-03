@@ -2,17 +2,13 @@
 import { useState, useEffect } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
-import {
-  Package,
-  Search,
-  Info,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Package, Search, Info, Plus, Trash2 } from "lucide-react";
 import axios from "axios";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import { IQuotationItem } from "@/types";
 import { useLanguage } from "../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
+import { AmountInput } from "@/components/ui/AmountInput";
 
 // ── constants ──────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -137,7 +133,7 @@ export default function QuotationItemModal({
         setProducts(ir.data.data || []);
         setMaterials(mr.data.data || []);
       })
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setFetching(false));
   }, [open]);
 
@@ -240,7 +236,9 @@ export default function QuotationItemModal({
 
   function handleProductBatchSelect(batchNumber: string) {
     const product = products.find((p) => p._id === form.itemId);
-    const batch = product?.batches?.find((b: any) => b.batchNumber === batchNumber);
+    const batch = product?.batches?.find(
+      (b: any) => b.batchNumber === batchNumber,
+    );
     if (!batch) return;
     const available = Math.max(0, Math.floor(Number(batch.quantity) || 0));
     setForm((prev) => ({
@@ -255,7 +253,7 @@ export default function QuotationItemModal({
   // ── pricing helpers ────────────────────────────────────────────────────────
   function recalcPricing(base: FormState["pricing"]) {
     const total = base.materialCost + base.laborCost + base.extraCost;
-    const sell = Math.round(total * (1 + base.profitMargin / 100));
+    const sell = total * (1 + base.profitMargin / 100);
     return { ...base, totalCost: total, sellingPrice: sell };
   }
 
@@ -288,17 +286,17 @@ export default function QuotationItemModal({
         i !== idx
           ? r
           : {
-            ...r,
-            materialId: matId,
-            materialName: mat?.name || "",
-            materialCode: mat?.code || "",
-            unit: mat?.unit || "",
-            batchNumber: "",
-            pricePerUnit: 0,
-            availableQty: 0,
-            quantity: 1,
-            subtotal: 0,
-          },
+              ...r,
+              materialId: matId,
+              materialName: mat?.name || "",
+              materialCode: mat?.code || "",
+              unit: mat?.unit || "",
+              batchNumber: "",
+              pricePerUnit: 0,
+              availableQty: 0,
+              quantity: 1,
+              subtotal: 0,
+            },
       ),
     }));
   }
@@ -339,7 +337,10 @@ export default function QuotationItemModal({
         if (i !== idx) return r;
         const safe = Math.max(
           1,
-          Math.min(Math.floor(Number(qty) || 1), Math.floor(r.availableQty || qty)),
+          Math.min(
+            Math.floor(Number(qty) || 1),
+            Math.floor(r.availableQty || qty),
+          ),
         );
         return { ...r, quantity: safe, subtotal: r.pricePerUnit * safe };
       });
@@ -373,11 +374,11 @@ export default function QuotationItemModal({
     const currentBatch = products
       .find((product) => product._id === form.itemId)
       ?.batches?.find((batch: any) => batch.batchNumber === form.batch);
-    const currentBatchQty = Number(currentBatch?.quantity ?? form.availableBatchQty) || 0;
+    const currentBatchQty =
+      Number(currentBatch?.quantity ?? form.availableBatchQty) || 0;
     if (form.itemId && form.quantity > currentBatchQty)
       errs.quantity = `Only ${currentBatchQty} available in the selected batch`;
-    if (form.price <= 0)
-      errs.price = "Price must be greater than 0";
+    if (form.price <= 0) errs.price = "Price must be greater than 0";
     if (Object.keys(errs).length) {
       setErrors(errs);
       setTab("basic");
@@ -442,8 +443,8 @@ export default function QuotationItemModal({
   }
 
   // Only inventory products with at least one selectable batch belong in product selection.
-  const availableProducts = products.filter(
-    (p) => (p.batches || []).some((b: any) => Number(b.quantity) >= 1),
+  const availableProducts = products.filter((p) =>
+    (p.batches || []).some((b: any) => Number(b.quantity) >= 1),
   );
   const selectedProduct = products.find((p) => p._id === form.itemId);
   const availableProductBatches = (selectedProduct?.batches || []).filter(
@@ -487,7 +488,9 @@ export default function QuotationItemModal({
               </option>
               {availableProducts.map((p) => (
                 <option key={p._id} value={p._id}>
-                  {p.name} ({p.itemNumber}) - {p.batches.filter((b: any) => Number(b.quantity) >= 1).length} available batch(es)
+                  {p.name} ({p.itemNumber}) -{" "}
+                  {p.batches.filter((b: any) => Number(b.quantity) >= 1).length}{" "}
+                  available batch(es)
                 </option>
               ))}
             </select>
@@ -555,13 +558,23 @@ export default function QuotationItemModal({
                   >
                     <option value="">Select batch</option>
                     {availableProductBatches.map((b: any, index: number) => (
-                      <option key={`${b.batchNumber}-${index}`} value={b.batchNumber}>
-                        {b.batchNumber || `Batch ${index + 1}`} — Available: {b.quantity}
+                      <option
+                        key={`${b.batchNumber}-${index}`}
+                        value={b.batchNumber}
+                      >
+                        {b.batchNumber || `Batch ${index + 1}`} — Available:{" "}
+                        {b.quantity}
                       </option>
                     ))}
                   </select>
-                  {form.batch && <p className="text-xs text-[#7A6055] mt-1">Available: {form.availableBatchQty}</p>}
-                  {errors.batch && <p className="text-xs text-rose-500 mt-1">{errors.batch}</p>}
+                  {form.batch && (
+                    <p className="text-xs text-[#7A6055] mt-1">
+                      Available: {form.availableBatchQty}
+                    </p>
+                  )}
+                  {errors.batch && (
+                    <p className="text-xs text-rose-500 mt-1">{errors.batch}</p>
+                  )}
                 </div>
               )}
               <div>
@@ -585,32 +598,45 @@ export default function QuotationItemModal({
                   value={form.quantity}
                   onChange={(e) =>
                     setForm((p) => {
-                      const batchQty = Math.floor(Number(
-                        products.find((product) => product._id === p.itemId)
-                          ?.batches?.find((batch: any) => batch.batchNumber === p.batch)
-                          ?.quantity ?? p.availableBatchQty,
-                      )) || 0;
-                      const requestedQty = Math.max(1, Math.floor(Number(e.target.value) || 1));
+                      const batchQty =
+                        Math.floor(
+                          Number(
+                            products
+                              .find((product) => product._id === p.itemId)
+                              ?.batches?.find(
+                                (batch: any) => batch.batchNumber === p.batch,
+                              )?.quantity ?? p.availableBatchQty,
+                          ),
+                        ) || 0;
+                      const requestedQty = Math.max(
+                        1,
+                        Math.floor(Number(e.target.value) || 1),
+                      );
                       return {
                         ...p,
-                        quantity: p.itemId && p.batch
-                          ? Math.max(1, Math.min(requestedQty, batchQty))
-                          : requestedQty,
+                        quantity:
+                          p.itemId && p.batch
+                            ? Math.max(1, Math.min(requestedQty, batchQty))
+                            : requestedQty,
                       };
                     })
                   }
                   className={inp}
                 />
-                {errors.quantity && <p className="text-xs text-rose-500 mt-1">{errors.quantity}</p>}
+                {errors.quantity && (
+                  <p className="text-xs text-rose-500 mt-1">
+                    {errors.quantity}
+                  </p>
+                )}
               </div>
               <div>
                 <label className={lbl}>
                   {t("price")} (<CurrencySymbol plain />)
                 </label>
-                <input
+                <AmountInput
                   type="number"
                   min={0}
-                  step={1}
+                  step={0.001}
                   value={form.price}
                   onChange={(e) =>
                     setForm((p) => ({
@@ -627,10 +653,10 @@ export default function QuotationItemModal({
               </div>
               <div>
                 <label className={lbl}>{t("discountAmount")}</label>
-                <input
+                <AmountInput
                   type="number"
                   min={0}
-                  step={1}
+                  step={0.001}
                   value={form.discount}
                   onChange={(e) =>
                     setForm((p) => ({
@@ -652,10 +678,10 @@ export default function QuotationItemModal({
               <span className="font-semibold text-[#7A6055]">Item Total:</span>
               <span className="font-bold text-[#1B3A2D] text-base">
                 <CurrencySymbol className="w-4 h-4 me-1" />
-                {Math.max(0, form.quantity * form.price - form.discount).toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 3,
-                })}
+                {formatAmount(
+                  Math.max(0, form.quantity * form.price - form.discount),
+                  "en-IN",
+                )}
               </span>
             </div>
 
@@ -669,7 +695,11 @@ export default function QuotationItemModal({
                 rows={3}
                 placeholder={t("optionalProductDescription")}
                 readOnly={!!form.itemId}
-                className={form.itemId ? `${roInp} resize-none` : "w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 resize-none"}
+                className={
+                  form.itemId
+                    ? `${roInp} resize-none`
+                    : "w-full border border-[#E5DDD5] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 resize-none"
+                }
               />
             </div>
           </div>
@@ -706,11 +736,11 @@ export default function QuotationItemModal({
                     <th className="py-2.5 px-3 text-start text-xs font-bold text-[#7A6055] uppercase">
                       {t("batch")}
                     </th>
-                    
+
                     <th className="py-2.5 px-3 text-center text-xs font-bold text-[#7A6055] uppercase w-24">
                       {t("qty")}
                     </th>
-                    
+
                     <th className="w-8" />
                   </tr>
                 </thead>
@@ -721,8 +751,8 @@ export default function QuotationItemModal({
                         colSpan={6}
                         className="py-10 text-center text-[#A89080] text-sm"
                       >
-                        {t("click")}{" "}
-                        <strong>{t("addMaterial")}</strong> {t("toBuildTheBom")}
+                        {t("click")} <strong>{t("addMaterial")}</strong>{" "}
+                        {t("toBuildTheBom")}
                       </td>
                     </tr>
                   ) : (
@@ -731,7 +761,11 @@ export default function QuotationItemModal({
                         (m) => m._id === row.materialId,
                       );
                       const batches = (mat?.batches || []).filter(
-                        (b: any) => Math.max(0, (b.quantity || 0) - (b.reservedQuantity || 0)) > 0 || b.batchNumber === row.batchNumber
+                        (b: any) =>
+                          Math.max(
+                            0,
+                            (b.quantity || 0) - (b.reservedQuantity || 0),
+                          ) > 0 || b.batchNumber === row.batchNumber,
                       );
                       return (
                         <tr key={idx} className="hover:bg-[#FAF8F6]">
@@ -767,7 +801,13 @@ export default function QuotationItemModal({
                                   <option value="">{t("selectBatch")}</option>
                                   {batches.map((b: any, bi: number) => (
                                     <option key={bi} value={b.batchNumber}>
-                                      {b.batchNumber || `Batch ${bi + 1}`} | {Math.max(0, (b.quantity || 0) - (b.reservedQuantity || 0))} {row.unit}
+                                      {b.batchNumber || `Batch ${bi + 1}`} |{" "}
+                                      {Math.max(
+                                        0,
+                                        (b.quantity || 0) -
+                                          (b.reservedQuantity || 0),
+                                      )}{" "}
+                                      {row.unit}
                                     </option>
                                   ))}
                                 </select>
@@ -797,8 +837,6 @@ export default function QuotationItemModal({
                             )}
                           </td>
 
-                          
-
                           {/* Qty */}
                           <td className="px-3 py-2">
                             <input
@@ -811,10 +849,11 @@ export default function QuotationItemModal({
                               onChange={(e) =>
                                 updateBomQty(idx, Number(e.target.value))
                               }
-                              className={`w-full rounded-lg border text-sm text-center px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 ${!row.batchNumber
+                              className={`w-full rounded-lg border text-sm text-center px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 ${
+                                !row.batchNumber
                                   ? "bg-[#F5F2EA] text-[#A89080] border-[#E5DDD5] cursor-not-allowed"
                                   : "bg-white border-[#E5DDD5]"
-                                }`}
+                              }`}
                             />
                           </td>
 
@@ -823,7 +862,7 @@ export default function QuotationItemModal({
                             {row.subtotal > 0 ? (
                               <>
                                 <CurrencySymbol className="w-3 h-3 me-0.5" />
-                                {row.subtotal.toLocaleString("en-IN")}
+                                {formatAmount(row.subtotal, "en-IN")}
                               </>
                             ) : (
                               "—"
@@ -856,7 +895,7 @@ export default function QuotationItemModal({
                       </td>
                       <td className="px-3 py-2.5 text-end text-sm font-black text-[#1B3A2D]">
                         <CurrencySymbol className="w-3 h-3 me-0.5" />
-                        {form.pricing.materialCost.toLocaleString("en-IN")}
+                        {formatAmount(form.pricing.materialCost, "en-IN")}
                       </td>
                       <td />
                     </tr>
@@ -868,11 +907,11 @@ export default function QuotationItemModal({
             {form.bom.some(
               (r) => r.batchNumber && r.quantity >= r.availableQty,
             ) && (
-                <div className="flex gap-2 rounded-lg bg-rose-50 border border-rose-200 px-4 py-2.5 text-xs text-rose-700">
-                  <Info size={14} className="shrink-0 mt-0.5" />
-                  {t("someRowsAreUsingThe")}
-                </div>
-              )}
+              <div className="flex gap-2 rounded-lg bg-rose-50 border border-rose-200 px-4 py-2.5 text-xs text-rose-700">
+                <Info size={14} className="shrink-0 mt-0.5" />
+                {t("someRowsAreUsingThe")}
+              </div>
+            )}
           </div>
         )}
       </form>

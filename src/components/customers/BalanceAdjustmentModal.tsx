@@ -194,11 +194,12 @@ export default function BalanceAdjustmentModal({
         <Input
           label={t("amountOmr")}
           type="number"
-          step={1}
+          step={0.001}
           placeholder="0.000"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           required
+          amount={true}
         />
 
         <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">

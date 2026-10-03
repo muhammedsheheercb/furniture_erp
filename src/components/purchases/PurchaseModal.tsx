@@ -7,6 +7,8 @@ import axios from "axios";
 import { toast } from "sonner";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import { useLanguage } from "../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
+import { AmountInput } from "@/components/ui/AmountInput";
 
 // ── types ─────────────────────────────────────────────────────────────────────
 interface LineItem {
@@ -104,7 +106,7 @@ export default function PurchaseModal({
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [formError, setFormError] = useState("");
 
-  const grandTotal = Math.round(lineItems.reduce((s, i) => s + i.total, 0));
+  const grandTotal = lineItems.reduce((s, i) => s + i.total, 0);
 
   // ── load reference data ──────────────────────────────────────────────────
   useEffect(() => {
@@ -188,8 +190,8 @@ export default function PurchaseModal({
               price: p.purchaseAmount || 0,
               sellingPrice: p.salesAmount || 0,
               subtotal: (p.purchaseAmount || 0) * i.qty,
-              taxAmount: ((p.purchaseAmount || 0) * i.qty) * 0.05,
-              total: ((p.purchaseAmount || 0) * i.qty) * 1.05,
+              taxAmount: (p.purchaseAmount || 0) * i.qty * 0.05,
+              total: (p.purchaseAmount || 0) * i.qty * 1.05,
             },
       ),
     );
@@ -210,8 +212,8 @@ export default function PurchaseModal({
               unit: m.unit || "Sheet",
               price: m.lastPurchasePrice || 0,
               subtotal: (m.lastPurchasePrice || 0) * i.qty,
-              taxAmount: ((m.lastPurchasePrice || 0) * i.qty) * 0.05,
-              total: ((m.lastPurchasePrice || 0) * i.qty) * 1.05,
+              taxAmount: (m.lastPurchasePrice || 0) * i.qty * 0.05,
+              total: (m.lastPurchasePrice || 0) * i.qty * 1.05,
             },
       ),
     );
@@ -268,13 +270,13 @@ export default function PurchaseModal({
     );
     if (belowCost) {
       setFormError(
-        `Sales price for "${belowCost.name}" cannot be less than its purchase price (${belowCost.price.toLocaleString("en-IN")}).`,
+        `Sales price for "${belowCost.name}" cannot be less than its purchase price (${formatAmount(belowCost.price, "en-IN")}).`,
       );
       return;
     }
     if (paidAmount > grandTotal) {
       setFormError(
-        `Paid amount (${paidAmount.toLocaleString("en-IN")}) cannot exceed Grand Total (${grandTotal.toLocaleString("en-IN")}).`,
+        `Paid amount (${formatAmount(paidAmount, "en-IN")}) cannot exceed Grand Total (${formatAmount(grandTotal, "en-IN")}).`,
       );
       return;
     }
@@ -371,7 +373,9 @@ export default function PurchaseModal({
               }}
               className={inputCls}
             >
-              <option value="">{t("selectPurchaser") || "None (Optional)"}</option>
+              <option value="">
+                {t("selectPurchaser") || "None (Optional)"}
+              </option>
               {purchasers.map((p) => (
                 <option key={p._id} value={p._id}>
                   {p.name}
@@ -518,10 +522,10 @@ export default function PurchaseModal({
                           >
                             <option value="">{t("selectProduct")}</option>
                             {products.map((p: any) => (
-                                <option key={p._id} value={p._id}>
-                                  {p.name} ({p.itemNumber})
-                                </option>
-                              ))}
+                              <option key={p._id} value={p._id}>
+                                {p.name} ({p.itemNumber})
+                              </option>
+                            ))}
                           </select>
                         ) : (
                           <select
@@ -572,10 +576,10 @@ export default function PurchaseModal({
 
                       {/* Purchase Price */}
                       <td className="px-3 py-2">
-                        <input
+                        <AmountInput
                           type="number"
                           min={0}
-                          step={1}
+                          step={0.001}
                           value={item.price}
                           onChange={(e) =>
                             updateField(
@@ -591,10 +595,10 @@ export default function PurchaseModal({
                       {/* Sales Price — product only */}
                       <td className="px-3 py-2">
                         {item.type === "product" ? (
-                          <input
+                          <AmountInput
                             type="number"
                             min={item.price}
-                            step={1}
+                            step={0.001}
                             value={item.sellingPrice}
                             onChange={(e) =>
                               updateField(
@@ -626,19 +630,19 @@ export default function PurchaseModal({
                       {/* Subtotal */}
                       <td className="px-3 py-2 text-end text-[#7A6055]">
                         <CurrencySymbol className="w-3 h-3 me-1" />
-                        {item.subtotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+                        {formatAmount(item.subtotal, "en-IN")}
                       </td>
 
                       {/* VAT */}
                       <td className="px-3 py-2 text-end text-[#7A6055]">
                         <CurrencySymbol className="w-3 h-3 me-1" />
-                        {item.taxAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+                        {formatAmount(item.taxAmount, "en-IN")}
                       </td>
 
                       {/* Total */}
                       <td className="px-3 py-2 text-end font-semibold text-[#1A1210]">
                         <CurrencySymbol className="w-3 h-3 me-1" />
-                        {item.total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+                        {formatAmount(item.total, "en-IN")}
                       </td>
 
                       {/* Remove */}
@@ -685,14 +689,14 @@ export default function PurchaseModal({
               <span className="text-sm text-[#7A6055]">{t("grandTotal")}</span>
               <span className="text-2xl font-black text-[#1A1210]">
                 <CurrencySymbol className="w-5 h-5 me-1" />{" "}
-                {grandTotal.toLocaleString("en-IN")}
+                {formatAmount(grandTotal, "en-IN")}
               </span>
             </div>
             <div className="flex items-center justify-end gap-3">
               <label className="text-sm text-[#7A6055]">
                 {t("paidAmount")}
               </label>
-              <input
+              <AmountInput
                 type="number"
                 min={0}
                 max={grandTotal}
@@ -707,12 +711,13 @@ export default function PurchaseModal({
                     ? "border-rose-400 focus:ring-rose-300 text-rose-600"
                     : "border-[#E5DDD5] focus:ring-[#C9A84C]/30"
                 }`}
+                step={0.001}
               />
             </div>
             {paidAmount > grandTotal && (
               <p className="text-xs text-rose-500 text-end">
                 {t("paidAmountCannotExceedGrand")}
-                {grandTotal.toLocaleString("en-IN")})
+                {formatAmount(grandTotal, "en-IN")})
               </p>
             )}
           </div>

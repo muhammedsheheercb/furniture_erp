@@ -45,6 +45,8 @@ import QuotationItemModal from "@/components/quotations/QuotationItemModal";
 import axios from "axios";
 import { ICustomer } from "@/types";
 import { useLanguage } from "../../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
+import { AmountInput } from "@/components/ui/AmountInput";
 
 const LIMIT = 15;
 const UNITS: UnitType[] = [
@@ -172,8 +174,7 @@ const emptyForm = (): IQuotationForm => ({
 function calcTotals(items: IQuotationItem[], taxPct: number, discPct: number) {
   const subtotal = items.reduce(
     (s, i) =>
-      s +
-      (i.subtotal || Math.max(0, i.price * i.quantity - (i.discount || 0))),
+      s + (i.subtotal || Math.max(0, i.price * i.quantity - (i.discount || 0))),
     0,
   );
   const taxAmt = items.reduce(
@@ -184,7 +185,7 @@ function calcTotals(items: IQuotationItem[], taxPct: number, discPct: number) {
     0,
   );
   const discAmt = discPct || 0;
-  return { subtotal, taxAmt, total: Math.round(subtotal + taxAmt - discAmt) };
+  return { subtotal, taxAmt, total: subtotal + taxAmt - discAmt };
 }
 
 export default function QuotationsPage() {
@@ -314,7 +315,14 @@ export default function QuotationsPage() {
 
   const recalc = (items: IQuotationItem[], tp: number, dp: number) => {
     const { subtotal, taxAmt, total } = calcTotals(items, tp, dp);
-    setForm((f) => ({ ...f, items, subtotal, total, tax: taxAmt, discount: dp }));
+    setForm((f) => ({
+      ...f,
+      items,
+      subtotal,
+      total,
+      tax: taxAmt,
+      discount: dp,
+    }));
   };
 
   const updateItem = (
@@ -325,7 +333,10 @@ export default function QuotationsPage() {
     const items = form.items.map((it, i) => {
       if (i !== idx) return it;
       const updated = { ...it, [key]: val } as any;
-      updated.subtotal = Math.max(0, updated.price * updated.quantity - (updated.discount || 0));
+      updated.subtotal = Math.max(
+        0,
+        updated.price * updated.quantity - (updated.discount || 0),
+      );
       updated.taxAmount = updated.subtotal * 0.05;
       updated.total = updated.subtotal + updated.taxAmount;
       return updated;
@@ -396,7 +407,7 @@ export default function QuotationsPage() {
         (rawCustId && String(c._id) === String(rawCustId)) ||
         (q.customerName &&
           c.name?.toLowerCase().trim() ===
-          q.customerName.toLowerCase().trim()) ||
+            q.customerName.toLowerCase().trim()) ||
         (q.customerMobile && c.mobile?.trim() === q.customerMobile.trim()),
     );
     const resolvedCustomerId =
@@ -441,7 +452,7 @@ export default function QuotationsPage() {
       return toast.error("Customer name is required");
     if (!form.customerMobile?.trim())
       return toast.error("Mobile number is required");
-    
+
     if (!form.date) return toast.error("Date is required");
     if (!form.validUntil) return toast.error("Valid Until date is required");
     if (form.items.length === 0)
@@ -507,7 +518,9 @@ export default function QuotationsPage() {
       } else if (status === "sale") {
         const q = quotations.find((qt) => qt._id === id);
         if (q) {
-          const valRes = await axios.get(`/api/quotations/${id}/validate-stock`);
+          const valRes = await axios.get(
+            `/api/quotations/${id}/validate-stock`,
+          );
           if (valRes.data.success) {
             setConvertingQuotation(q);
             setSaleModalOpen(true);
@@ -905,7 +918,10 @@ export default function QuotationsPage() {
                         </div>
                       )}
                     </td>
-                    <td className="td" style={{ fontSize: 12, color: "#7A6055" }}>
+                    <td
+                      className="td"
+                      style={{ fontSize: 12, color: "#7A6055" }}
+                    >
                       {formatDate(q.date)}
                     </td>
                     <td className="td">
@@ -940,13 +956,13 @@ export default function QuotationsPage() {
                             fontSize: 12,
                           }}
                         >
-                          -
-                          {formatCurrency(q.discount || 0)}
+                          -{formatCurrency(q.discount || 0)}
                           <br />
-
                         </span>
                       ) : (
-                        <span style={{ color: "#A89080", fontSize: 12 }}>—</span>
+                        <span style={{ color: "#A89080", fontSize: 12 }}>
+                          —
+                        </span>
                       )}
                     </td>
                     <td className="td text-end">
@@ -1052,7 +1068,10 @@ export default function QuotationsPage() {
                             </button>
                             <button
                               onClick={() =>
-                                setStatusConfirm({ id: q._id, status: "reject" })
+                                setStatusConfirm({
+                                  id: q._id,
+                                  status: "reject",
+                                })
                               }
                               style={{
                                 padding: "6px",
@@ -1087,20 +1106,24 @@ export default function QuotationsPage() {
                               transition: "all 0.15s",
                             }}
                             onMouseEnter={(e) => {
-                              (e.currentTarget as HTMLElement).style.background =
-                                "#FDEDEC";
+                              (
+                                e.currentTarget as HTMLElement
+                              ).style.background = "#FDEDEC";
                               (e.currentTarget as HTMLElement).style.color =
                                 "#C0392B";
-                              (e.currentTarget as HTMLElement).style.borderColor =
-                                "#F5B7B1";
+                              (
+                                e.currentTarget as HTMLElement
+                              ).style.borderColor = "#F5B7B1";
                             }}
                             onMouseLeave={(e) => {
-                              (e.currentTarget as HTMLElement).style.background =
-                                "#fff";
+                              (
+                                e.currentTarget as HTMLElement
+                              ).style.background = "#fff";
                               (e.currentTarget as HTMLElement).style.color =
                                 "#7A6055";
-                              (e.currentTarget as HTMLElement).style.borderColor =
-                                "#E5DDD5";
+                              (
+                                e.currentTarget as HTMLElement
+                              ).style.borderColor = "#E5DDD5";
                             }}
                           >
                             <Trash2 size={14} />
@@ -1121,7 +1144,7 @@ export default function QuotationsPage() {
                             borderBottom: "1px solid #FEE2E2",
                             display: "flex",
                             alignItems: "center",
-                            gap: 6
+                            gap: 6,
                           }}
                         >
                           <AlertTriangle size={14} />
@@ -1471,7 +1494,6 @@ export default function QuotationsPage() {
                 {t("productDetails")}
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-
                 <button
                   type="button"
                   onClick={addItem}
@@ -1548,31 +1570,47 @@ export default function QuotationsPage() {
             <div
               className="hidden md:grid"
               style={{
-                gridTemplateColumns: "1.5fr 1fr 90px 130px 80px 130px 130px 130px 40px",
+                gridTemplateColumns:
+                  "1.5fr 1fr 90px 130px 80px 130px 130px 130px 40px",
                 gap: 8,
                 marginBottom: 6,
                 padding: "0 4px",
               }}
             >
-              {["Product", "Color", "Qty", "Price", "Discount", "Subtotal", "VAT(5%)", "Total", ""].map(
-                (h) => (
-                  <div
-                    key={h}
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: "#A89080",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
-                      textAlign: ["Qty", "Price", "Discount", "Subtotal", "VAT(5%)", "Total"].includes(h)
-                        ? "right"
-                        : "left",
-                    }}
-                  >
-                    {h}
-                  </div>
-                ),
-              )}
+              {[
+                "Product",
+                "Color",
+                "Qty",
+                "Price",
+                "Discount",
+                "Subtotal",
+                "VAT(5%)",
+                "Total",
+                "",
+              ].map((h) => (
+                <div
+                  key={h}
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#A89080",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    textAlign: [
+                      "Qty",
+                      "Price",
+                      "Discount",
+                      "Subtotal",
+                      "VAT(5%)",
+                      "Total",
+                    ].includes(h)
+                      ? "right"
+                      : "left",
+                  }}
+                >
+                  {h}
+                </div>
+              ))}
             </div>
 
             {form.items.map((item, idx) => (
@@ -1677,27 +1715,59 @@ export default function QuotationsPage() {
                     >
                       {field.toUpperCase()}
                     </label>
-                    <input
-                      type="number"
-                      value={item[field]}
-                      onChange={(e) =>
-                        updateItem(idx, field, parseFloat(e.target.value) || 0)
-                      }
-                      min={0}
-                      step={1}
-                      style={{
-                        height: 36,
-                        border: "1.5px solid #E5DDD5",
-                        borderRadius: 7,
-                        padding: "0 8px",
-                        fontSize: 12,
-                        color: "#1A1210",
-                        outline: "none",
-                        background: "#fff",
-                        width: "100%",
-                        textAlign: "right",
-                      }}
-                    />
+                    {field === "quantity" ? (
+                      <input
+                        type="number"
+                        value={item[field]}
+                        onChange={(e) =>
+                          updateItem(
+                            idx,
+                            field,
+                            parseFloat(e.target.value) || 0,
+                          )
+                        }
+                        min={0}
+                        step={1}
+                        style={{
+                          height: 36,
+                          border: "1.5px solid #E5DDD5",
+                          borderRadius: 7,
+                          padding: "0 8px",
+                          fontSize: 12,
+                          color: "#1A1210",
+                          outline: "none",
+                          background: "#fff",
+                          width: "100%",
+                          textAlign: "right",
+                        }}
+                      />
+                    ) : (
+                      <AmountInput
+                        type="number"
+                        value={item[field]}
+                        onChange={(e) =>
+                          updateItem(
+                            idx,
+                            field,
+                            parseFloat(e.target.value) || 0,
+                          )
+                        }
+                        min={0}
+                        step={0.001}
+                        style={{
+                          height: 36,
+                          border: "1.5px solid #E5DDD5",
+                          borderRadius: 7,
+                          padding: "0 8px",
+                          fontSize: 12,
+                          color: "#1A1210",
+                          outline: "none",
+                          background: "#fff",
+                          width: "100%",
+                          textAlign: "right",
+                        }}
+                      />
+                    )}
                   </div>
                 ))}
                 <div
@@ -1721,7 +1791,7 @@ export default function QuotationsPage() {
                       paddingRight: 4,
                     }}
                   >
-                    {item.subtotal?.toFixed(3)}
+                    {formatAmount(item.subtotal)}
                   </div>
                 </div>
                 <div
@@ -1745,7 +1815,7 @@ export default function QuotationsPage() {
                       paddingRight: 4,
                     }}
                   >
-                    {item.taxAmount?.toFixed(3)}
+                    {formatAmount(item.taxAmount)}
                   </div>
                 </div>
                 <div
@@ -1769,7 +1839,7 @@ export default function QuotationsPage() {
                       paddingRight: 4,
                     }}
                   >
-                    {item.total.toFixed(3)}
+                    {formatAmount(item.total)}
                   </div>
                 </div>
                 <div
@@ -1873,7 +1943,7 @@ export default function QuotationsPage() {
                 >
                   {t("disc")}
                 </label>
-                <input
+                <AmountInput
                   type="number"
                   value={discPct}
                   onChange={(e) => {
@@ -1892,6 +1962,7 @@ export default function QuotationsPage() {
                     outline: "none",
                     background: "#fff",
                   }}
+                  step={0.001}
                 />
               </div>
             </div>
@@ -1906,7 +1977,10 @@ export default function QuotationsPage() {
               );
               const globalDiscountAmt = discPct || 0;
               const totalDiscount = itemDiscountTotal + globalDiscountAmt;
-              const taxAmt = form.items.reduce((s, i) => s + (i.taxAmount || 0), 0);
+              const taxAmt = form.items.reduce(
+                (s, i) => s + (i.taxAmount || 0),
+                0,
+              );
 
               return (
                 <div
@@ -2007,7 +2081,6 @@ export default function QuotationsPage() {
                         }}
                       >
                         {t("extraDiscount")}
-
                       </span>
                       <span
                         style={{
@@ -2308,24 +2381,31 @@ export default function QuotationsPage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "#F7F4F0" }}>
-                    {["Item", "Color", "Qty", "Price", "Discount", "Subtotal", "VAT (5%)", "Total"].map(
-                      (h) => (
-                        <th
-                          key={h}
-                          style={{
-                            padding: "8px 12px",
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: "#A89080",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.06em",
-                            textAlign: h === "Item" ? "left" : "right",
-                          }}
-                        >
-                          {h}
-                        </th>
-                      ),
-                    )}
+                    {[
+                      "Item",
+                      "Color",
+                      "Qty",
+                      "Price",
+                      "Discount",
+                      "Subtotal",
+                      "VAT (5%)",
+                      "Total",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        style={{
+                          padding: "8px 12px",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: "#A89080",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                          textAlign: h === "Item" ? "left" : "right",
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -2371,7 +2451,7 @@ export default function QuotationsPage() {
                           color: "#7A6055",
                         }}
                       >
-                        {item.price.toFixed(3)}
+                        {formatAmount(item.price)}
                       </td>
                       <td
                         style={{
@@ -2624,38 +2704,38 @@ export default function QuotationsPage() {
         sale={
           convertingQuotation
             ? {
-              customerId: convertingQuotation.customerId,
-              customerName: convertingQuotation.customerName,
-              customerNumber:
-                customers.find(
-                  (c) =>
-                    c._id === (convertingQuotation.customerId as any)?._id ||
-                    convertingQuotation.customerId,
-                )?.customerNumber || "",
-              customerMobile: convertingQuotation.customerMobile || "",
-              customerAddress: convertingQuotation.customerAddress || "",
-              items: convertingQuotation.items.map((it) => ({
-                itemId: it.itemId,
-                itemNumber: it.itemNumber,
-                itemName: it.itemName,
-                quantity: it.quantity,
-                price: it.price,
-                discount: it.discount,
-                batch: (it as any).batch,
-                color: it.color,
-                material: it.material,
-                size: it.size,
-                total: it.total,
-                dimensions: it.dimensions,
-                bom: it.bom,
-                pricing: (it as any).pricing,
-              })),
-              subtotal: convertingQuotation.subtotal,
-              tax: convertingQuotation.tax,
-              discount: convertingQuotation.discount,
-              total: convertingQuotation.total,
-              isConversion: true,
-            }
+                customerId: convertingQuotation.customerId,
+                customerName: convertingQuotation.customerName,
+                customerNumber:
+                  customers.find(
+                    (c) =>
+                      c._id === (convertingQuotation.customerId as any)?._id ||
+                      convertingQuotation.customerId,
+                  )?.customerNumber || "",
+                customerMobile: convertingQuotation.customerMobile || "",
+                customerAddress: convertingQuotation.customerAddress || "",
+                items: convertingQuotation.items.map((it) => ({
+                  itemId: it.itemId,
+                  itemNumber: it.itemNumber,
+                  itemName: it.itemName,
+                  quantity: it.quantity,
+                  price: it.price,
+                  discount: it.discount,
+                  batch: (it as any).batch,
+                  color: it.color,
+                  material: it.material,
+                  size: it.size,
+                  total: it.total,
+                  dimensions: it.dimensions,
+                  bom: it.bom,
+                  pricing: (it as any).pricing,
+                })),
+                subtotal: convertingQuotation.subtotal,
+                tax: convertingQuotation.tax,
+                discount: convertingQuotation.discount,
+                total: convertingQuotation.total,
+                isConversion: true,
+              }
             : null
         }
       />

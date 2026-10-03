@@ -9,6 +9,8 @@ import axios from "axios";
 import { toast } from "sonner";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import { useLanguage } from "../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
+import { AmountInput } from "@/components/ui/AmountInput";
 
 // ── types ──────────────────────────────────────────────────────────────────────
 interface LineItem {
@@ -104,12 +106,15 @@ export default function SaleModal({
   const [discAmt, setDiscAmt] = useState(0);
   const [formError, setFormError] = useState("");
 
-  const subtotalAfterItemDiscount = lineItems.reduce((s, i) => s + (i.subtotal || 0), 0);
+  const subtotalAfterItemDiscount = lineItems.reduce(
+    (s, i) => s + (i.subtotal || 0),
+    0,
+  );
   const taxAmount = lineItems.reduce((s, i) => s + (i.taxAmount || 0), 0);
-  const grandTotal = Math.round(Math.max(
+  const grandTotal = Math.max(
     0,
     subtotalAfterItemDiscount + taxAmount - discAmt,
-  ));
+  );
   const balance = grandTotal - advancePaid;
 
   const isConversion = sale?.isConversion === true;
@@ -152,7 +157,11 @@ export default function SaleModal({
       setTaxPct(sale.tax || 0);
       const loadedSubtotal = (sale.items || []).reduce(
         (s: number, it: any) =>
-          s + Math.max(0, (it.price || 0) * (it.quantity || 1) - (it.discount || 0)),
+          s +
+          Math.max(
+            0,
+            (it.price || 0) * (it.quantity || 1) - (it.discount || 0),
+          ),
         0,
       );
       setDiscAmt(sale.discount || 0);
@@ -172,13 +181,22 @@ export default function SaleModal({
           size: it.size || "",
           subtotal:
             it.subtotal ||
-            Math.max(0, (it.price || 0) * (it.quantity || 1) - (it.discount || 0)),
+            Math.max(
+              0,
+              (it.price || 0) * (it.quantity || 1) - (it.discount || 0),
+            ),
           taxAmount:
             it.taxAmount ||
-            Math.max(0, (it.price || 0) * (it.quantity || 1) - (it.discount || 0)) * 0.05,
+            Math.max(
+              0,
+              (it.price || 0) * (it.quantity || 1) - (it.discount || 0),
+            ) * 0.05,
           total:
             it.total ||
-            Math.max(0, (it.price || 0) * (it.quantity || 1) - (it.discount || 0)) * 1.05,
+            Math.max(
+              0,
+              (it.price || 0) * (it.quantity || 1) - (it.discount || 0),
+            ) * 1.05,
           dimensions: it.dimensions,
           bom: it.bom,
           pricing: it.pricing,
@@ -314,10 +332,14 @@ export default function SaleModal({
               (b: any) => b.batchNumber === i.batchNumber,
             );
             if (!selectedBatch) {
-              toast.error(`Select a batch for ${prod.name} before changing the quantity.`);
+              toast.error(
+                `Select a batch for ${prod.name} before changing the quantity.`,
+              );
               val = Math.max(1, Number(val));
             }
-            const stock = selectedBatch ? Number(selectedBatch.quantity) || 0 : undefined;
+            const stock = selectedBatch
+              ? Number(selectedBatch.quantity) || 0
+              : undefined;
             if (stock !== undefined && Number(val) > stock) {
               toast.error(
                 `Only ${stock} available in batch ${i.batchNumber || "(select a batch)"} for ${prod.name}`,
@@ -443,11 +465,17 @@ export default function SaleModal({
     const invalidBatch = lineItems.find((i) => {
       if (!i.itemId) return false;
       const product = products.find((p) => p._id === i.itemId);
-      const batch = product?.batches?.find((b: any) => b.batchNumber === i.batchNumber);
-      return !batch || Number(batch.quantity) <= 0 || i.qty > Number(batch.quantity);
+      const batch = product?.batches?.find(
+        (b: any) => b.batchNumber === i.batchNumber,
+      );
+      return (
+        !batch || Number(batch.quantity) <= 0 || i.qty > Number(batch.quantity)
+      );
     });
     if (invalidBatch) {
-      setFormError(`Select an available batch and a valid quantity for ${invalidBatch.itemName}.`);
+      setFormError(
+        `Select an available batch and a valid quantity for ${invalidBatch.itemName}.`,
+      );
       return;
     }
 
@@ -705,10 +733,20 @@ export default function SaleModal({
                           >
                             <option value="">{t("selectProduct")}</option>
                             {products
-                              .filter((p) => (p.batches || []).some((b: any) => Number(b.quantity) > 0))
+                              .filter((p) =>
+                                (p.batches || []).some(
+                                  (b: any) => Number(b.quantity) > 0,
+                                ),
+                              )
                               .map((p) => (
                                 <option key={p._id} value={p._id}>
-                                  {p.name} ({(p.batches || []).filter((b: any) => Number(b.quantity) > 0).length} available batch(es))
+                                  {p.name} (
+                                  {
+                                    (p.batches || []).filter(
+                                      (b: any) => Number(b.quantity) > 0,
+                                    ).length
+                                  }{" "}
+                                  available batch(es))
                                 </option>
                               ))}
                           </select>
@@ -729,25 +767,44 @@ export default function SaleModal({
                           <div>
                             <select
                               value={item.batchNumber}
-                              onChange={(e) => selectBatch(item.id, e.target.value)}
+                              onChange={(e) =>
+                                selectBatch(item.id, e.target.value)
+                              }
                               className={inp}
                             >
                               <option value="">{t("selectBatch")}</option>
-                              {(products.find((p) => p._id === item.itemId)?.batches || [])
+                              {(
+                                products.find((p) => p._id === item.itemId)
+                                  ?.batches || []
+                              )
                                 .filter((b: any) => Number(b.quantity) > 0)
                                 .map((b: any, index: number) => (
-                                  <option key={`${b.batchNumber}-${index}`} value={b.batchNumber}>
-                                    {b.batchNumber || `Batch ${index + 1}`} — {b.quantity} available
+                                  <option
+                                    key={`${b.batchNumber}-${index}`}
+                                    value={b.batchNumber}
+                                  >
+                                    {b.batchNumber || `Batch ${index + 1}`} —{" "}
+                                    {b.quantity} available
                                   </option>
                                 ))}
                             </select>
                             {item.batchNumber && (
                               <p className="text-[10px] text-[#7A6055] mt-1">
-                                Available: {products.find((p) => p._id === item.itemId)?.batches?.find((b: any) => b.batchNumber === item.batchNumber)?.quantity || 0}
+                                Available:{" "}
+                                {products
+                                  .find((p) => p._id === item.itemId)
+                                  ?.batches?.find(
+                                    (b: any) =>
+                                      b.batchNumber === item.batchNumber,
+                                  )?.quantity || 0}
                               </p>
                             )}
                           </div>
-                        ) : <span className="text-xs text-[#A89080]">Select product first</span>}
+                        ) : (
+                          <span className="text-xs text-[#A89080]">
+                            Select product first
+                          </span>
+                        )}
                       </td>
                       <td className="px-2 py-2">
                         <input
@@ -761,7 +818,7 @@ export default function SaleModal({
                         />
                       </td>
                       <td className="px-2 py-2">
-                        <input
+                        <AmountInput
                           type="number"
                           value={item.price}
                           onChange={(e) =>
@@ -772,13 +829,14 @@ export default function SaleModal({
                             )
                           }
                           className={inp + " text-end"}
+                          step={0.001}
                         />
                       </td>
                       <td className="px-2 py-2">
-                        <input
+                        <AmountInput
                           type="number"
                           min={0}
-                          step={1}
+                          step={0.001}
                           value={item.discount}
                           onChange={(e) =>
                             updateField(
@@ -793,15 +851,15 @@ export default function SaleModal({
                       </td>
                       <td className="px-2 py-2 text-end text-[#7A6055]">
                         <CurrencySymbol className="w-3 h-3 me-1" />
-                        {item.subtotal?.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+                        {formatAmount(item.subtotal, "en-IN")}
                       </td>
                       <td className="px-2 py-2 text-end text-[#7A6055]">
                         <CurrencySymbol className="w-3 h-3 me-1" />
-                        {item.taxAmount?.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+                        {formatAmount(item.taxAmount, "en-IN")}
                       </td>
                       <td className="px-3 py-2 text-end font-semibold text-[#1A1210]">
                         <CurrencySymbol className="w-3 h-3 me-1" />
-                        {item.total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+                        {formatAmount(item.total, "en-IN")}
                       </td>
                       <td className="px-2 py-2 text-center">
                         <div className="flex items-center justify-center gap-2">
@@ -862,15 +920,15 @@ export default function SaleModal({
               <span className="text-[#7A6055]">{t("subtotal")}</span>
               <span className="font-semibold">
                 <CurrencySymbol className="w-3 h-3 me-1" />{" "}
-                {subtotalAfterItemDiscount.toLocaleString("en-IN")}
+                {formatAmount(subtotalAfterItemDiscount, "en-IN")}
               </span>
             </div>
             <div className="flex justify-between text-sm items-center">
               <span className="text-[#7A6055]">{t("discountAmount")}</span>
-              <input
+              <AmountInput
                 type="number"
                 min={0}
-                step={1}
+                step={0.001}
                 value={discAmt}
                 onChange={(e) => setDiscAmt(Number(e.target.value))}
                 className="w-24 text-end border rounded px-1"
@@ -880,14 +938,14 @@ export default function SaleModal({
               <span className="text-[#7A6055]">{t("vat")} (Total)</span>
               <span className="font-semibold">
                 <CurrencySymbol className="w-3 h-3 me-1" />
-                {taxAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+                {formatAmount(taxAmount, "en-IN")}
               </span>
             </div>
             <div className="flex justify-between pt-2 border-t border-[#E5DDD5] font-black text-xl">
               <span>{t("grandTotal")}</span>
               <span>
                 <CurrencySymbol className="w-5 h-5 me-1" />{" "}
-                {grandTotal.toLocaleString("en-IN")}
+                {formatAmount(grandTotal, "en-IN")}
               </span>
             </div>
             <div className="flex justify-between text-sm items-center py-1">
@@ -895,12 +953,13 @@ export default function SaleModal({
                 {t("advancePaid")}
                 <CurrencySymbol className="w-3 h-3" />)
               </span>
-              <input
+              <AmountInput
                 type="number"
                 min={0}
                 value={advancePaid}
                 onChange={(e) => updateAdvancePaid(Number(e.target.value))}
                 className="w-24 text-end border rounded px-2 py-1 font-bold text-[#1B3A2D] focus:ring-2 focus:ring-[#C9A84C]/40 outline-none"
+                step={0.001}
               />
             </div>
             <div
@@ -909,7 +968,7 @@ export default function SaleModal({
               <span>{balance < 0 ? "Credit Balance" : "Balance Due"}</span>
               <span>
                 <CurrencySymbol className="w-3 h-3 me-1" />{" "}
-                {Math.abs(balance).toLocaleString("en-IN")}
+                {formatAmount(Math.abs(balance), "en-IN")}
               </span>
             </div>
           </div>

@@ -21,6 +21,7 @@ import PurchaserModal from "@/components/purchasers/PurchaserModal";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import { useLanguage } from "../../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
 
 export default function PurchasersPage() {
   const { t } = useLanguage();
@@ -45,7 +46,7 @@ export default function PurchasersPage() {
     try {
       const params = new URLSearchParams({
         search,
-        withStats: "true"
+        withStats: "true",
       });
       const res = await axios.get(`/api/purchasers?${params}`);
       if (res.data.success) {
@@ -67,7 +68,10 @@ export default function PurchasersPage() {
     setSaving(true);
     try {
       if (editPurchaser) {
-        const res = await axios.put(`/api/purchasers/${editPurchaser._id}`, data);
+        const res = await axios.put(
+          `/api/purchasers/${editPurchaser._id}`,
+          data,
+        );
         if (res.data.success) {
           toast.success("Purchaser updated successfully");
           setModalOpen(false);
@@ -113,7 +117,10 @@ export default function PurchasersPage() {
           <h2 className="text-3xl font-extrabold text-[#1A1210]">
             {t("purchasers") || "Purchasers"}
           </h2>
-          <p className="text-[#7A6055]">{t("managePurchasers") || "Manage purchasers and view their purchase history"}</p>
+          <p className="text-[#7A6055]">
+            {t("managePurchasers") ||
+              "Manage purchasers and view their purchase history"}
+          </p>
         </div>
         {canCreate && (
           <Button
@@ -123,7 +130,8 @@ export default function PurchasersPage() {
               setModalOpen(true);
             }}
           >
-            <Plus size={18} className="me-2" /> {t("addPurchaser") || "Add Purchaser"}
+            <Plus size={18} className="me-2" />{" "}
+            {t("addPurchaser") || "Add Purchaser"}
           </Button>
         )}
       </div>
@@ -144,7 +152,9 @@ export default function PurchasersPage() {
         onClose={() => setDeleteId(null)}
         onConfirm={handleConfirmDelete}
         title={t("deletePurchaser") || "Delete Purchaser"}
-        message={t("areYouSureYouWant") || "Are you sure you want to delete this?"}
+        message={
+          t("areYouSureYouWant") || "Are you sure you want to delete this?"
+        }
         loading={deleting}
       />
 
@@ -157,7 +167,9 @@ export default function PurchasersPage() {
                 size={18}
               />
               <Input
-                placeholder={t("searchByNamePhoneOr") || "Search by name or mobile..."}
+                placeholder={
+                  t("searchByNamePhoneOr") || "Search by name or mobile..."
+                }
                 className="ps-10 border-[#E5DDD5] bg-[#FAF8F6]"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -207,7 +219,7 @@ export default function PurchasersPage() {
                           </td>
                           <td className="py-4 px-6 text-sm font-bold text-[#1A1210]">
                             <CurrencySymbol />{" "}
-                            {(purchaser.monthlyTotal || 0).toLocaleString()}
+                            {formatAmount(purchaser.monthlyTotal || 0, "en-OM")}
                           </td>
                           <td className="py-4 px-6 text-end">
                             <div className="flex justify-end gap-2">
@@ -276,7 +288,9 @@ export default function PurchasersPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between items-center text-sm">
-                <span className="text-[#A89080]">{t("totalPurchasers") || "Total Purchasers"}</span>
+                <span className="text-[#A89080]">
+                  {t("totalPurchasers") || "Total Purchasers"}
+                </span>
                 <span className="font-bold">{purchasers.length}</span>
               </div>
             </CardContent>

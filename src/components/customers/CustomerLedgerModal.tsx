@@ -7,6 +7,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import { useLanguage } from "../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
 
 interface CustomerLedgerModalProps {
   open: boolean;
@@ -54,10 +55,10 @@ export default function CustomerLedgerModal({
 
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text(`OMR ${customer.openingBalance?.toLocaleString()}`, 20, 75);
-    doc.text(`OMR ${customer.totalSales?.toLocaleString() || 0}`, 85, 75);
+    doc.text(`OMR ${formatAmount(customer.openingBalance, "en-OM")}`, 20, 75);
+    doc.text(`OMR ${formatAmount(customer.totalSales, "en-OM") || 0}`, 85, 75);
     doc.setTextColor(201, 168, 76); // #C9A84C
-    doc.text(`OMR ${customer.creditBalance?.toLocaleString()}`, 150, 75);
+    doc.text(`OMR ${formatAmount(customer.creditBalance, "en-OM")}`, 150, 75);
 
     // Table
     const tableData = [...(customer.balanceHistory || [])]
@@ -69,8 +70,8 @@ export default function CustomerLedgerModal({
             ? "Balance Increase"
             : "Payment Received"),
         entry.paymentMethod || "N/A",
-        entry.type === "adjustment" ? `+${entry.amount}` : "-",
-        entry.type === "payment" ? `-${entry.amount}` : "-",
+        entry.type === "adjustment" ? `+${formatAmount(entry.amount)}` : "-",
+        entry.type === "payment" ? `-${formatAmount(entry.amount)}` : "-",
       ]);
 
     autoTable(doc, {
@@ -116,7 +117,7 @@ export default function CustomerLedgerModal({
             </p>
             <p className="text-xl font-bold text-[#1A1210]">
               <CurrencySymbol />{" "}
-              {(customer.openingBalance || 0).toLocaleString()}
+              {formatAmount(customer.openingBalance || 0, "en-OM")}
             </p>
           </div>
           <div className="p-4 rounded-xl bg-[#FAF8F6] border border-[#E5DDD5]">
@@ -124,7 +125,8 @@ export default function CustomerLedgerModal({
               {t("totalSales")}
             </p>
             <p className="text-xl font-bold text-[#1A1210]">
-              <CurrencySymbol /> {(customer.totalSales || 0).toLocaleString()}
+              <CurrencySymbol />{" "}
+              {formatAmount(customer.totalSales || 0, "en-OM")}
             </p>
           </div>
           <div className="p-4 rounded-xl bg-[#1A0F0A] border border-[#1A0F0A] text-white">
@@ -133,7 +135,7 @@ export default function CustomerLedgerModal({
             </p>
             <p className="text-xl font-bold">
               <CurrencySymbol />{" "}
-              {(customer.creditBalance || 0).toLocaleString()}
+              {formatAmount(customer.creditBalance || 0, "en-OM")}
             </p>
           </div>
         </div>
@@ -184,7 +186,8 @@ export default function CustomerLedgerModal({
                     <td className="py-3 px-4 text-end font-bold text-rose-600">
                       {isAdjustment ? (
                         <>
-                          <CurrencySymbol /> {entry.amount.toLocaleString()}
+                          <CurrencySymbol />{" "}
+                          {formatAmount(entry.amount, "en-OM")}
                         </>
                       ) : (
                         "-"
@@ -193,7 +196,8 @@ export default function CustomerLedgerModal({
                     <td className="py-3 px-4 text-end font-bold text-emerald-600">
                       {!isAdjustment ? (
                         <>
-                          <CurrencySymbol /> {entry.amount.toLocaleString()}
+                          <CurrencySymbol />{" "}
+                          {formatAmount(entry.amount, "en-OM")}
                         </>
                       ) : (
                         "-"

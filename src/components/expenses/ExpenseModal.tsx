@@ -178,7 +178,7 @@ export default function ExpenseModal({
                 id="amount"
                 type="number"
                 min="0"
-                step={1}
+                step={0.001}
                 value={formData.amount}
                 onChange={(e) => {
                   setFormData({ ...formData, amount: e.target.value });
@@ -187,6 +187,7 @@ export default function ExpenseModal({
                 error={errors.amount}
                 className="ps-10 border-[#E5DDD5] bg-[#FAF8F6] focus:ring-[#C9A84C]"
                 placeholder="0.00"
+                amount={true}
               />
             </div>
           </div>
@@ -327,7 +328,9 @@ export default function ExpenseModal({
                 }}
                 className="w-full h-10 px-4 rounded-md border border-[#E5DDD5] bg-[#FAF8F6] text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/20"
               >
-                <option value="">{t("selectPurchaser") || "None (Optional)"}</option>
+                <option value="">
+                  {t("selectPurchaser") || "None (Optional)"}
+                </option>
                 {purchasers.map((p) => (
                   <option key={p._id} value={p._id}>
                     {p.name}

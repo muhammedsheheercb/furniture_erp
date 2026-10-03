@@ -21,6 +21,7 @@ import { useDateFilter } from "@/context/DateFilterContext";
 import Pagination from "@/components/ui/Pagination";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
 import { useLanguage } from "../../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function printSale(item: any) {
@@ -184,11 +185,14 @@ export default function InvoicesPage() {
                         </div>
                       </td>
                       <td className="py-4 px-6 text-sm font-bold text-[#1A1210] text-end">
-                        <CurrencySymbol /> {inv.total.toLocaleString()}
+                        <CurrencySymbol /> {formatAmount(inv.total, "en-OM")}
                       </td>
                       <td className="py-4 px-6 text-sm text-rose-600 font-semibold text-end">
                         <CurrencySymbol />{" "}
-                        {(inv.total - (inv.advancePaid || 0)).toLocaleString()}
+                        {formatAmount(
+                          inv.total - (inv.advancePaid || 0),
+                          "en-OM",
+                        )}
                       </td>
                       <td className="py-4 px-6 text-center">
                         {(() => {

@@ -7,6 +7,7 @@ import Supplier from "@/models/Supplier";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import mongoose from "mongoose";
+import { formatAmount } from "@/lib/amounts";
 
 // GET /api/purchases
 export async function GET(req: NextRequest) {
@@ -212,7 +213,7 @@ export async function POST(req: NextRequest) {
               amount: unpaidBalance,
               type: "adjustment",
               paymentMethod: body.paymentType,
-              note: `Purchase #${purchaseNumber} — Balance due (Bill: ${body.total}, Paid: ${body.paidAmount || 0}) OMR`,
+              note: `Purchase #${purchaseNumber} — Balance due (Bill: ${formatAmount(body.total)}, Paid: ${formatAmount(body.paidAmount || 0)}) OMR`,
             },
           },
         },

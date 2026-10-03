@@ -75,12 +75,13 @@ export default function BalanceAdjustmentModal({
         <Input
           label={t("amountOmr")}
           type="number"
-          step={1}
+          step={0.001}
           placeholder={t("eg50000Or25500")}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           required
           hint="Use positive for credit increase, negative for payment/decrease"
+          amount={true}
         />
         <Input
           label={t("descriptionNote")}

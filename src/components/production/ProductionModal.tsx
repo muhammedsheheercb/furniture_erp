@@ -144,8 +144,7 @@ export default function ProductionModal({
           const extra = stored.extraCost || 0;
           const margin = stored.profitMargin ?? 20;
           const total = matCost + labor + extra;
-          const sell =
-            stored.sellingPrice || Math.round(total * (1 + margin / 100));
+          const sell = stored.sellingPrice || total * (1 + margin / 100);
           return {
             materialCost: matCost,
             laborCost: labor,
@@ -198,7 +197,7 @@ export default function ProductionModal({
     const p = { ...s.pricing, [key]: val };
     const total =
       (p.materialCost || 0) + (p.laborCost || 0) + (p.extraCost || 0);
-    const sell = Math.round(total * (1 + (p.profitMargin || 0) / 100));
+    const sell = total * (1 + (p.profitMargin || 0) / 100);
     updateItemState(idx, {
       pricing: { ...p, totalCost: total, sellingPrice: sell },
     });
@@ -236,7 +235,7 @@ export default function ProductionModal({
     );
     const p = { ...s.pricing, materialCost: matCost };
     const total = matCost + (p.laborCost || 0) + (p.extraCost || 0);
-    const sell = Math.round(total * (1 + (p.profitMargin || 0) / 100));
+    const sell = total * (1 + (p.profitMargin || 0) / 100);
 
     setItemStates((prev) =>
       prev.map((item, i) =>
@@ -289,7 +288,7 @@ export default function ProductionModal({
         );
         const p = { ...item.pricing, materialCost: matCost };
         const total = matCost + (p.laborCost || 0) + (p.extraCost || 0);
-        const sell = Math.round(total * (1 + (p.profitMargin || 0) / 100));
+        const sell = total * (1 + (p.profitMargin || 0) / 100);
         return {
           ...item,
           bom: updatedBom,
@@ -331,7 +330,10 @@ export default function ProductionModal({
     if (!deliveryDate) return toast.error("Please set a target delivery date");
     if (!selectedWorker)
       return toast.error("Please assign a production worker");
-    if (itemStates.some(it => !it.bom || it.bom.length === 0)) return toast.error("Please add materials to the BOM before starting work.");
+    if (itemStates.some((it) => !it.bom || it.bom.length === 0))
+      return toast.error(
+        "Please add materials to the BOM before starting work.",
+      );
 
     for (let i = 0; i < itemStates.length; i++) {
       const item = itemStates[i];
@@ -382,7 +384,9 @@ export default function ProductionModal({
   const hasStockError = itemStates.some((item) =>
     item.bom.some((b: any) => b.batchNumber && b.quantity > b.availableQty),
   );
-  const hasEmptyBOM = itemStates.some((item) => !item.bom || item.bom.length === 0);
+  const hasEmptyBOM = itemStates.some(
+    (item) => !item.bom || item.bom.length === 0,
+  );
   const currentItem = itemStates[activeItemIdx];
   const lbl = "block text-xs font-semibold text-[#7A6055] mb-1";
   const inp =
@@ -684,7 +688,8 @@ export default function ProductionModal({
                               m._id.toString() === row.materialId?.toString(),
                           );
                           const batches = (mat?.batches || []).filter(
-                            (batch: any) => Math.floor(Number(batch.quantity) || 0) >= 1,
+                            (batch: any) =>
+                              Math.floor(Number(batch.quantity) || 0) >= 1,
                           );
                           return (
                             <tr key={bIdx} className="hover:bg-[#FAF8F6]">
@@ -779,10 +784,9 @@ export default function ProductionModal({
                                           matCost +
                                           (p.laborCost || 0) +
                                           (p.extraCost || 0);
-                                        const sell = Math.round(
+                                        const sell =
                                           total *
-                                            (1 + (p.profitMargin || 0) / 100),
-                                        );
+                                          (1 + (p.profitMargin || 0) / 100);
                                         return {
                                           ...it,
                                           bom: updatedBom,

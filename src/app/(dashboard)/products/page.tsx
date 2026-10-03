@@ -28,6 +28,7 @@ import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import { useDateFilter } from "@/context/DateFilterContext";
 import Pagination from "@/components/ui/Pagination";
 import { useLanguage } from "../../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
 
 export default function ProductsPage() {
   const { t } = useLanguage();
@@ -206,7 +207,7 @@ export default function ProductsPage() {
         p.category,
         p.quantity || 0,
         p.unit,
-        p.salesAmount || 0,
+        formatAmount(p.salesAmount || 0).replace(/,/g, ""),
       ].join(","),
     );
 
@@ -435,7 +436,10 @@ export default function ProductsPage() {
                               </td>
                               <td className="py-4 px-6 text-sm font-bold text-[#1A1210]">
                                 <CurrencySymbol className="w-3 h-3 me-1" />{" "}
-                                {(product.salesAmount || 0).toLocaleString()}
+                                {formatAmount(
+                                  product.salesAmount || 0,
+                                  "en-OM",
+                                )}
                               </td>
                               <td className="py-4 px-6 text-end">
                                 <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -506,20 +510,22 @@ export default function ProductsPage() {
                                                 </td>
                                                 <td className="py-2 px-4 text-end">
                                                   <CurrencySymbol className="w-3 h-3 me-1" />{" "}
-                                                  {(
+                                                  {formatAmount(
                                                     b.salePrice ||
-                                                    product.salesAmount ||
-                                                    0
-                                                  ).toLocaleString()}
+                                                      product.salesAmount ||
+                                                      0,
+                                                    "en-OM",
+                                                  )}
                                                 </td>
                                                 <td className="py-2 px-4 text-end font-bold text-[#1B3A2D]">
                                                   <CurrencySymbol className="w-3 h-3 me-1" />{" "}
-                                                  {(
+                                                  {formatAmount(
                                                     b.quantity *
-                                                    (b.salePrice ||
-                                                      product.salesAmount ||
-                                                      0)
-                                                  ).toLocaleString()}
+                                                      (b.salePrice ||
+                                                        product.salesAmount ||
+                                                        0),
+                                                    "en-OM",
+                                                  )}
                                                 </td>
                                               </tr>
                                             ),
@@ -537,16 +543,17 @@ export default function ProductsPage() {
                                             <td className="py-2 px-4 text-end">
                                               {t("avg")}
                                               <CurrencySymbol className="w-3 h-3 me-1" />{" "}
-                                              {Math.round(
+                                              {formatAmount(
                                                 product.salesAmount || 0,
                                               )}
                                             </td>
                                             <td className="py-2 px-4 text-end text-[#1B3A2D]">
                                               <CurrencySymbol className="w-3 h-3 me-1" />{" "}
-                                              {(
+                                              {formatAmount(
                                                 product.quantity *
-                                                (product.salesAmount || 0)
-                                              ).toLocaleString()}
+                                                  (product.salesAmount || 0),
+                                                "en-OM",
+                                              )}
                                             </td>
                                           </tr>
                                         </tfoot>
@@ -643,11 +650,11 @@ export default function ProductsPage() {
                             </td>
                             <td className="py-4 px-6 text-end font-semibold text-[#7A6055]">
                               <CurrencySymbol className="w-3 h-3 me-1" />
-                              {(item.price || 0).toLocaleString()}
+                              {formatAmount(item.price || 0, "en-OM")}
                             </td>
                             <td className="py-4 px-6 text-end font-extrabold text-[#1B3A2D]">
                               <CurrencySymbol className="w-3 h-3 me-1" />
-                              {(item.total || 0).toLocaleString()}
+                              {formatAmount(item.total || 0, "en-OM")}
                             </td>
                           </tr>
                         ))
@@ -735,11 +742,11 @@ export default function ProductsPage() {
                             </td>
                             <td className="py-4 px-6 text-end font-semibold text-[#7A6055]">
                               <CurrencySymbol className="w-3 h-3 me-1" />
-                              {(item.price || 0).toLocaleString()}
+                              {formatAmount(item.price || 0, "en-OM")}
                             </td>
                             <td className="py-4 px-6 text-end font-extrabold text-rose-700">
                               <CurrencySymbol className="w-3 h-3 me-1" />
-                              {(item.total || 0).toLocaleString()}
+                              {formatAmount(item.total || 0, "en-OM")}
                             </td>
                             <td className="py-4 px-6 text-sm text-[#7A6055] italic">
                               {item.reason}

@@ -2,7 +2,10 @@
 import { InputHTMLAttributes, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
+import { AmountInput } from "./AmountInput";
+
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  amount?: boolean;
   label?: string;
   error?: string;
   hint?: string;
@@ -14,6 +17,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   (
     {
+      amount,
       label,
       error,
       hint,
@@ -26,6 +30,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     },
     ref,
   ) => {
+    const InputElement = amount ? AmountInput : "input";
     const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
     return (
       <div className={cn("flex flex-col gap-1", wrapperClassName)}>
@@ -44,7 +49,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               {leftIcon}
             </span>
           )}
-          <input
+          <InputElement
             ref={ref}
             id={inputId}
             className={cn(

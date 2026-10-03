@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { CheckCircle2, Banknote, Landmark, CreditCard } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
+import { AmountInput } from "@/components/ui/AmountInput";
 
 interface CustomerBalanceModalProps {
   open: boolean;
@@ -87,7 +89,7 @@ export default function CustomerBalanceModal({
     }
     if (pay > selectedBalance) {
       toast.error(
-        `Amount cannot exceed balance of ${selectedBalance.toLocaleString()}`,
+        `Amount cannot exceed balance of ${formatAmount(selectedBalance, "en-OM")}`,
       );
       return;
     }
@@ -172,7 +174,7 @@ export default function CustomerBalanceModal({
                   color: "#935116",
                 }}
               >
-                <CurrencySymbol /> {totalOutstanding.toLocaleString()}
+                <CurrencySymbol /> {formatAmount(totalOutstanding, "en-OM")}
               </p>
             </div>
             <p
@@ -303,7 +305,7 @@ export default function CustomerBalanceModal({
                             : ""}{" "}
                           {t("total")}
                           <CurrencySymbol />
-                          {s.total.toLocaleString()}
+                          {formatAmount(s.total, "en-OM")}
                         </p>
                       </div>
                     </div>
@@ -328,7 +330,7 @@ export default function CustomerBalanceModal({
                           color: "#e53e3e",
                         }}
                       >
-                        <CurrencySymbol /> {bal.toLocaleString()}
+                        <CurrencySymbol /> {formatAmount(bal, "en-OM")}
                       </p>
                     </div>
                   </button>
@@ -382,7 +384,7 @@ export default function CustomerBalanceModal({
                     color: "#1a1a1a",
                   }}
                 >
-                  <CurrencySymbol /> {selectedSale.total.toLocaleString()}
+                  <CurrencySymbol /> {formatAmount(selectedSale.total, "en-OM")}
                 </p>
               </div>
               <div
@@ -415,7 +417,7 @@ export default function CustomerBalanceModal({
                   }}
                 >
                   <CurrencySymbol />{" "}
-                  {(selectedSale.advancePaid || 0).toLocaleString()}
+                  {formatAmount(selectedSale.advancePaid || 0, "en-OM")}
                 </p>
               </div>
               <div
@@ -447,7 +449,7 @@ export default function CustomerBalanceModal({
                     color: "#C0392B",
                   }}
                 >
-                  <CurrencySymbol /> {selectedBalance.toLocaleString()}
+                  <CurrencySymbol /> {formatAmount(selectedBalance, "en-OM")}
                 </p>
               </div>
             </div>
@@ -518,17 +520,17 @@ export default function CustomerBalanceModal({
                   }}
                 >
                   {t("max")}
-                  {selectedBalance.toLocaleString()})
+                  {formatAmount(selectedBalance, "en-OM")})
                 </span>
               </label>
-              <input
+              <AmountInput
                 type="number"
-                placeholder={`Enter amount (max ${selectedBalance.toLocaleString()})`}
+                placeholder={`Enter amount (max ${formatAmount(selectedBalance, "en-OM")})`}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 min={0.01}
                 max={selectedBalance}
-                step={1}
+                step={0.001}
                 autoFocus
                 style={{
                   width: "100%",
@@ -613,7 +615,7 @@ export default function CustomerBalanceModal({
                   }}
                 >
                   <CurrencySymbol />{" "}
-                  {Math.max(0, afterPayment).toLocaleString()}
+                  {formatAmount(Math.max(0, afterPayment), "en-OM")}
                   {afterPayment <= 0 && (
                     <span
                       style={{

@@ -28,6 +28,7 @@ import { formatCurrency, formatDateInput } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "../../../../../context/LanguageContext";
+import { AmountInput } from "@/components/ui/AmountInput";
 
 interface CartItem extends ISaleItem {
   _itemRef?: IItem;
@@ -255,7 +256,7 @@ export default function EditSalePage() {
               (updated.price as any) === "" ? 0 : Number(updated.price);
             const newD =
               (updated.discount as any) === "" ? 0 : Number(updated.discount);
-            updated.total = Number((newQ * newP - newD).toFixed(3));
+            updated.total = newQ * newP - newD;
           } else if ("total" in updates) {
             const newT =
               (updated.total as any) === "" ? 0 : Number(updated.total);
@@ -264,7 +265,7 @@ export default function EditSalePage() {
             const currentD =
               (updated.discount as any) === "" ? 0 : Number(updated.discount);
             if (currentQ > 0) {
-              updated.price = Number(((newT + currentD) / currentQ).toFixed(3));
+              updated.price = (newT + currentD) / currentQ;
             }
           }
         }
@@ -475,6 +476,8 @@ export default function EditSalePage() {
             value={advancePaid}
             onChange={(e) => setAdvancePaid(Number(e.target.value))}
             placeholder="0"
+            amount={true}
+            step={0.001}
           />
           <div className="flex items-center gap-2 mt-7">
             <span className="text-sm font-medium text-gray-500">
@@ -566,9 +569,9 @@ export default function EditSalePage() {
                       />
                     </td>
                     <td className="td text-end">
-                      <input
+                      <AmountInput
                         type="number"
-                        step={1}
+                        step={0.001}
                         value={c.price}
                         disabled={c.isFOC}
                         onChange={(e) =>
@@ -631,9 +634,9 @@ export default function EditSalePage() {
                           {t("free")}
                         </span>
                       ) : (
-                        <input
+                        <AmountInput
                           type="number"
-                          step={1}
+                          step={0.001}
                           value={c.total}
                           onChange={(e) =>
                             updateItem(idx, { total: e.target.value })

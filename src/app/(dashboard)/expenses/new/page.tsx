@@ -93,7 +93,7 @@ export default function NewExpensePage() {
             label={t("amountOmr")}
             type="number"
             min={0}
-            step={1}
+            step={0.001}
             value={form.amount}
             onChange={(e) => {
               const val = e.target.value;
@@ -105,6 +105,7 @@ export default function NewExpensePage() {
             }}
             required
             leftIcon={<CreditCard size={16} />}
+            amount={true}
           />
           {/* date */}
           <Input

@@ -28,6 +28,7 @@ import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import Pagination from "@/components/ui/Pagination";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
 import { useLanguage } from "../../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function printSale(item: any) {
@@ -246,7 +247,6 @@ export default function SalesPage() {
         onValueChange={setActiveTab}
       >
         <TabsList className="bg-[#FAF8F6] border border-[#E5DDD5] p-1 h-12">
-
           <TabsTrigger
             value="orders"
             className="data-[state=active]:bg-white data-[state=active]:text-[#C9A84C] data-[state=active]:shadow-sm px-6"
@@ -283,8 +283,6 @@ export default function SalesPage() {
               </div>
             ) : (
               <>
-
-
                 {/* ── Active Sales Orders ───────────────────────────── */}
                 <TabsContent value="orders" className="m-0">
                   <div className="overflow-x-auto">
@@ -386,13 +384,13 @@ export default function SalesPage() {
                                 {/* Total */}
                                 <td className="py-4 px-6 text-sm font-bold text-[#1A1210]">
                                   <CurrencySymbol />{" "}
-                                  {item.total.toLocaleString()}
+                                  {formatAmount(item.total, "en-OM")}
                                 </td>
 
                                 {/* Advance */}
                                 <td className="py-4 px-6 text-sm text-emerald-700 font-semibold">
                                   <CurrencySymbol />{" "}
-                                  {(item.advancePaid || 0).toLocaleString()}
+                                  {formatAmount(item.advancePaid || 0, "en-OM")}
                                 </td>
 
                                 {/* Balance */}
@@ -405,7 +403,7 @@ export default function SalesPage() {
                                     }
                                   >
                                     <CurrencySymbol />{" "}
-                                    {Math.max(0, bal).toLocaleString()}
+                                    {formatAmount(Math.max(0, bal), "en-OM")}
                                   </span>
                                 </td>
 
@@ -583,7 +581,8 @@ export default function SalesPage() {
                                 )}
                               </td>
                               <td className="py-4 px-6 text-sm font-bold text-[#1A1210]">
-                                <CurrencySymbol /> {item.total.toLocaleString()}
+                                <CurrencySymbol />{" "}
+                                {formatAmount(item.total, "en-OM")}
                               </td>
                               <td className="py-4 px-6 text-center">
                                 <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[10px] uppercase font-bold">

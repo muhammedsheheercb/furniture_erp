@@ -23,6 +23,7 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import Pagination from "@/components/ui/Pagination";
 import { useLanguage } from "../../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
 
 export default function PurchasesPage() {
   const { t } = useLanguage();
@@ -239,7 +240,8 @@ export default function PurchasesPage() {
                           {po.supplierName}
                           {po.purchaserName && (
                             <div className="text-xs font-normal text-[#7A6055] mt-0.5">
-                              {t("purchaser") || "Purchaser"}: {po.purchaserName}
+                              {t("purchaser") || "Purchaser"}:{" "}
+                              {po.purchaserName}
                             </div>
                           )}
                         </td>
@@ -247,7 +249,7 @@ export default function PurchasesPage() {
                           {format(new Date(po.date), "dd MMM yyyy")}
                         </td>
                         <td className="py-4 px-6 text-sm font-bold text-[#1A1210]">
-                          <CurrencySymbol /> {po.total.toLocaleString()}
+                          <CurrencySymbol /> {formatAmount(po.total, "en-OM")}
                         </td>
                         <td className="py-4 px-6">
                           <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100">

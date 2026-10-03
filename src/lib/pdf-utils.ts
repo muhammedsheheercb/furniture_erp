@@ -4,11 +4,11 @@ import enTranslations from "../locales/en.json";
 import arTranslations from "../locales/ar.json";
 
 const t = (key: string) => {
-  const isArabic = typeof window !== "undefined" && document.documentElement.lang === "ar";
+  const isArabic =
+    typeof window !== "undefined" && document.documentElement.lang === "ar";
   if (isArabic) return (arTranslations as any)[key] || key;
   return (enTranslations as any)[key] || key;
 };
-
 
 export interface InvoiceItem {
   itemName: string;
@@ -85,21 +85,28 @@ const containsArabic = (text: string) => {
 };
 
 export const generateInvoicePDF = (data: InvoiceData) => {
-  const isArabic = typeof window !== "undefined" && document.documentElement.lang === "ar";
+  const isArabic =
+    typeof window !== "undefined" && document.documentElement.lang === "ar";
   const dir = isArabic ? "rtl" : "ltr";
-    const itemDiscountAmount = data.items.reduce((s, i) => s + (i.discount || 0), 0);
-    const grossSubtotal = data.items.reduce((s, i) => s + i.price * i.quantity, 0);
-    const discountedSubtotal = data.items.reduce(
-        (s, i) => s + Math.max(0, i.price * i.quantity - (i.discount || 0)),
-        0,
-    );
-    const taxAmount = data.items.reduce((s, i) => s + (i.taxAmount || 0), 0);
-    const extraDiscountAmount = Math.max(0, data.discount || 0);
-    const calculatedTotal = Math.max(
-        0,
-        discountedSubtotal + taxAmount - extraDiscountAmount,
-    );
-    const totalDiscount = itemDiscountAmount + extraDiscountAmount;
+  const itemDiscountAmount = data.items.reduce(
+    (s, i) => s + (i.discount || 0),
+    0,
+  );
+  const grossSubtotal = data.items.reduce(
+    (s, i) => s + i.price * i.quantity,
+    0,
+  );
+  const discountedSubtotal = data.items.reduce(
+    (s, i) => s + Math.max(0, i.price * i.quantity - (i.discount || 0)),
+    0,
+  );
+  const taxAmount = data.items.reduce((s, i) => s + (i.taxAmount || 0), 0);
+  const extraDiscountAmount = Math.max(0, data.discount || 0);
+  const calculatedTotal = Math.max(
+    0,
+    discountedSubtotal + taxAmount - extraDiscountAmount,
+  );
+  const totalDiscount = itemDiscountAmount + extraDiscountAmount;
   const hasDiscount = totalDiscount > 0;
 
   const html = `
@@ -178,7 +185,7 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                                 <div style="font-size: 11px; color: #6C757D">${item.itemNumber || ""}</div>
                             </td>
                             <td style="padding: 12px; text-align: center; border: 1px solid #DEE2E6; font-weight: 500">${item.quantity}</td>
-                            <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6">${item.isFOC ? "0.00" : formatCurrency(item.price)}</td>
+                            <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6">${item.isFOC ? formatCurrency(0) : formatCurrency(item.price)}</td>
                             ${hasDiscount ? `<td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6; color: #DC3545">- ${formatCurrency(item.discount || 0)}</td>` : ""}
                             <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6">${formatCurrency(Math.max(0, item.price * item.quantity - (item.discount || 0)))}</td>
                             <td style="padding: 12px; text-align: right; border: 1px solid #DEE2E6">${formatCurrency(item.taxAmount || 0)}</td>
@@ -251,31 +258,32 @@ export const generateInvoicePDF = (data: InvoiceData) => {
 };
 
 export const generateQuotationPDF = (data: any) => {
-  const isArabic = typeof window !== "undefined" && document.documentElement.lang === "ar";
+  const isArabic =
+    typeof window !== "undefined" && document.documentElement.lang === "ar";
   const dir = isArabic ? "rtl" : "ltr";
-    const grossSubtotal = data.items.reduce(
-        (s: number, i: any) => s + i.price * i.quantity,
-        0,
-    );
-    const discountedSubtotal = data.items.reduce(
-        (s: number, i: any) =>
-            s + Math.max(0, i.price * i.quantity - (i.discount || 0)),
-        0,
-    );
-  const totalItemDiscount = data.items.reduce(
-        (s: number, i: any) => s + (i.discount || 0),
+  const grossSubtotal = data.items.reduce(
+    (s: number, i: any) => s + i.price * i.quantity,
     0,
   );
-    const extraDiscountAmount = Math.max(0, data.discount || 0);
-    const taxAmount = data.items.reduce(
-        (s: number, i: any) => s + (i.taxAmount || 0),
-        0,
-    );
+  const discountedSubtotal = data.items.reduce(
+    (s: number, i: any) =>
+      s + Math.max(0, i.price * i.quantity - (i.discount || 0)),
+    0,
+  );
+  const totalItemDiscount = data.items.reduce(
+    (s: number, i: any) => s + (i.discount || 0),
+    0,
+  );
+  const extraDiscountAmount = Math.max(0, data.discount || 0);
+  const taxAmount = data.items.reduce(
+    (s: number, i: any) => s + (i.taxAmount || 0),
+    0,
+  );
   const totalDiscountAmount = totalItemDiscount + extraDiscountAmount;
-    const calculatedTotal = Math.max(
-        0,
-        discountedSubtotal + taxAmount - extraDiscountAmount,
-    );
+  const calculatedTotal = Math.max(
+    0,
+    discountedSubtotal + taxAmount - extraDiscountAmount,
+  );
   const hasAnyDiscount = totalDiscountAmount > 0;
 
   const html = `
@@ -410,7 +418,8 @@ export const generateQuotationPDF = (data: any) => {
 };
 
 export const generateProductionJobCardPDF = (data: any) => {
-  const isArabic = typeof window !== "undefined" && document.documentElement.lang === "ar";
+  const isArabic =
+    typeof window !== "undefined" && document.documentElement.lang === "ar";
   const dir = isArabic ? "rtl" : "ltr";
 
   const html = `
@@ -497,7 +506,8 @@ export const generateProductionJobCardPDF = (data: any) => {
 };
 
 export const generateDeliveryChallanPDF = (data: any) => {
-  const isArabic = typeof window !== "undefined" && document.documentElement.lang === "ar";
+  const isArabic =
+    typeof window !== "undefined" && document.documentElement.lang === "ar";
   const dir = isArabic ? "rtl" : "ltr";
   const balanceDue = (data.grandTotal || 0) - (data.advancePaid || 0);
 

@@ -7,6 +7,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import { useLanguage } from "../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
 
 interface SupplierBalanceModalProps {
   open: boolean;
@@ -35,7 +36,7 @@ export default function SupplierBalanceModal({
           .min(0.01, "Amount must be greater than 0")
           .max(
             supplierBalance,
-            `Amount cannot exceed the payable balance of ${supplierBalance}`,
+            `Amount cannot exceed the payable balance of ${formatAmount(supplierBalance)}`,
           ),
         adjustType: z.enum(["add", "subtract"]),
         paymentMethod: z.enum(["cash", "bank", "credit"]),
@@ -105,7 +106,7 @@ export default function SupplierBalanceModal({
         <div className="bg-[#FAF8F6] p-4 rounded-lg border border-[#E5DDD5] mb-4">
           <p className="text-sm text-[#7A6055]">{t("payableBalance")}</p>
           <p className="text-2xl font-bold text-[#1A1210]">
-            <CurrencySymbol /> {supplierBalance.toLocaleString()}
+            <CurrencySymbol /> {formatAmount(supplierBalance, "en-OM")}
           </p>
         </div>
 
@@ -113,10 +114,11 @@ export default function SupplierBalanceModal({
           <Input
             label={t("amount")}
             type="number"
-            step={1}
+            step={0.001}
             required
             error={errors.adjustAmount?.message}
             {...register("adjustAmount")}
+            amount={true}
           />
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">{t("paymentMethod")}</label>

@@ -29,6 +29,7 @@ import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import Pagination from "@/components/ui/Pagination";
 import { useDateFilter } from "@/context/DateFilterContext";
 import { useLanguage } from "../../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
 
 export default function CustomersPage() {
   const { t } = useLanguage();
@@ -307,7 +308,10 @@ export default function CustomersPage() {
                               className={`text-sm font-bold ${(customer.creditBalance || 0) > 0 ? "text-rose-600" : "text-emerald-600"}`}
                             >
                               <CurrencySymbol />{" "}
-                              {(customer.creditBalance || 0).toLocaleString()}
+                              {formatAmount(
+                                customer.creditBalance || 0,
+                                "en-OM",
+                              )}
                             </span>
                           </td>
                           <td className="py-4 px-6 text-end">
@@ -396,7 +400,7 @@ export default function CustomersPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                <CurrencySymbol /> {totalReceivables.toLocaleString()}
+                <CurrencySymbol /> {formatAmount(totalReceivables, "en-OM")}
               </div>
               <p className="text-xs text-rose-400 mt-1">
                 {customers.filter((c) => (c.creditBalance || 0) > 0).length}{" "}

@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/Badge";
 import Spinner from "@/components/ui/Spinner";
 import Pagination from "@/components/ui/Pagination";
 import { useLanguage } from "../../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
 
 export default function ExpensesPage() {
   const { t } = useLanguage();
@@ -180,7 +181,7 @@ export default function ExpensesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-black text-rose-600 drop-shadow-sm">
-              <CurrencySymbol /> {totalAmount.toLocaleString()}
+              <CurrencySymbol /> {formatAmount(totalAmount, "en-OM")}
             </div>
             <p className="text-xs text-[#A89080] mt-2 flex items-center gap-1 font-medium">
               <TrendingDown size={14} className="text-emerald-500" />{" "}
@@ -211,13 +212,25 @@ export default function ExpensesPage() {
               >
                 <option value="">{t("allCategories")}</option>
                 <option value="Labor">{t("labor") || "Labor"}</option>
-                <option value="Electricity">{t("electricity") || "Electricity"}</option>
-                <option value="Transport">{t("transport") || "Transport"}</option>
+                <option value="Electricity">
+                  {t("electricity") || "Electricity"}
+                </option>
+                <option value="Transport">
+                  {t("transport") || "Transport"}
+                </option>
                 <option value="Rent">{t("rent") || "Rent"}</option>
-                <option value="Marketing">{t("marketing") || "Marketing"}</option>
-                <option value="Maintenance">{t("maintenance") || "Maintenance"}</option>
-                <option value="Office Supplies">{t("officeSupplies") || "Office Supplies"}</option>
-                <option value="Petrol Expense">{t("petrolExpense") || "Petrol Expense"}</option>
+                <option value="Marketing">
+                  {t("marketing") || "Marketing"}
+                </option>
+                <option value="Maintenance">
+                  {t("maintenance") || "Maintenance"}
+                </option>
+                <option value="Office Supplies">
+                  {t("officeSupplies") || "Office Supplies"}
+                </option>
+                <option value="Petrol Expense">
+                  {t("petrolExpense") || "Petrol Expense"}
+                </option>
                 <option value="Other">{t("other") || "Other"}</option>
               </select>
             </div>
@@ -283,14 +296,15 @@ export default function ExpensesPage() {
                           </div>
                           {exp.purchaserName && (
                             <div className="text-[10px] text-[#A89080] mt-0.5">
-                              {t("purchaser") || "Purchaser"}: {exp.purchaserName}
+                              {t("purchaser") || "Purchaser"}:{" "}
+                              {exp.purchaserName}
                             </div>
                           )}
                         </td>
                         <td className="py-4 px-6 text-end">
                           <div className="text-sm font-black text-rose-600">
                             <CurrencySymbol className="w-3 h-3 inline me-0.5" />
-                            {exp.amount.toLocaleString()}
+                            {formatAmount(exp.amount, "en-OM")}
                           </div>
                           <div className="text-[10px] text-[#A89080] capitalize">
                             {exp.paymentType}

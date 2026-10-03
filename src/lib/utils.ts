@@ -1,3 +1,4 @@
+import { formatAmount } from "./amounts";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -5,15 +6,8 @@ export const cn = (...inputs: ClassValue[]) => {
   return twMerge(clsx(inputs));
 };
 
-export const formatCurrency = (amount: number): string => {
-  return (
-    "OMR " +
-    (amount || 0).toLocaleString("en-OM", {
-      minimumFractionDigits: 3,
-      maximumFractionDigits: 3,
-    })
-  );
-};
+export const formatCurrency = (amount: number): string =>
+  "OMR " + formatAmount(amount);
 
 export const formatDate = (date: Date | string): string => {
   if (!date) return "-";

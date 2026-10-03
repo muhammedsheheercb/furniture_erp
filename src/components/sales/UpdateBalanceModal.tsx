@@ -8,6 +8,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { Banknote, CreditCard, Landmark } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
 
 interface UpdateBalanceModalProps {
   open: boolean;
@@ -57,7 +58,7 @@ export default function UpdateBalanceModal({
     }
     if (paymentAmount > balance) {
       toast.error(
-        `Amount cannot exceed remaining balance of ${balance.toLocaleString()}`,
+        `Amount cannot exceed remaining balance of ${formatAmount(balance, "en-OM")}`,
       );
       return;
     }
@@ -113,7 +114,7 @@ export default function UpdateBalanceModal({
               {t("orderTotal")}
             </p>
             <p className="text-base font-bold text-[#1a1a1a]">
-              <CurrencySymbol /> {sale.total.toLocaleString()}
+              <CurrencySymbol /> {formatAmount(sale.total, "en-OM")}
             </p>
           </div>
           <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
@@ -121,7 +122,7 @@ export default function UpdateBalanceModal({
               {t("paidSoFar")}
             </p>
             <p className="text-base font-bold text-emerald-700">
-              <CurrencySymbol /> {totalPaid.toLocaleString()}
+              <CurrencySymbol /> {formatAmount(totalPaid, "en-OM")}
             </p>
           </div>
           <div className="p-3 rounded-xl bg-rose-50 border border-rose-100">
@@ -129,7 +130,7 @@ export default function UpdateBalanceModal({
               {t("outstanding")}
             </p>
             <p className="text-base font-bold text-rose-600">
-              <CurrencySymbol /> {balance.toLocaleString()}
+              <CurrencySymbol /> {formatAmount(balance, "en-OM")}
             </p>
           </div>
         </div>
@@ -180,12 +181,14 @@ export default function UpdateBalanceModal({
               <Input
                 label={t("amountToReceive")}
                 type="number"
-                placeholder={`Max: ${balance.toLocaleString()}`}
+                placeholder={`Max: ${formatAmount(balance, "en-OM")}`}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 min="0"
                 max={balance}
                 autoFocus
+                amount={true}
+                step={0.001}
               />
             </form>
 
@@ -199,7 +202,7 @@ export default function UpdateBalanceModal({
                   className={`font-bold ${afterPayment <= 0 ? "text-emerald-600" : "text-rose-600"}`}
                 >
                   <CurrencySymbol />{" "}
-                  {Math.max(0, afterPayment).toLocaleString()}
+                  {formatAmount(Math.max(0, afterPayment), "en-OM")}
                   {afterPayment <= 0 && (
                     <span className="ms-1 text-xs">{t("fullyPaid")}</span>
                   )}

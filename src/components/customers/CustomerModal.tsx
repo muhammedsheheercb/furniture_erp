@@ -42,6 +42,7 @@ export default function CustomerModal({
   const isEdit = !!customer;
   const {
     register,
+    watch,
     handleSubmit,
     reset,
     formState: { errors },
@@ -141,10 +142,12 @@ export default function CustomerModal({
           <Input
             label={isEdit ? "Current Balance (INR)" : "Opening Balance (INR)"}
             type="number"
-            step={1}
+            step={0.001}
             placeholder="0.000"
             error={errors.balance?.message}
             {...register("balance")}
+            value={watch("balance") ?? ""}
+            amount={true}
           />
         </div>
         {isEdit && (

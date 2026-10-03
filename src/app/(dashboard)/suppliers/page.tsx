@@ -29,6 +29,7 @@ import CurrencySymbol from "@/components/ui/CurrencySymbol";
 import Pagination from "@/components/ui/Pagination";
 import { useDateFilter } from "@/context/DateFilterContext";
 import { useLanguage } from "../../../context/LanguageContext";
+import { formatAmount } from "@/lib/amounts";
 
 export default function SuppliersPage() {
   const { t } = useLanguage();
@@ -308,7 +309,7 @@ export default function SuppliersPage() {
                           </td>
                           <td className="py-4 px-6 text-sm font-bold text-[#1A1210]">
                             <CurrencySymbol />{" "}
-                            {(supplier.creditBalance || 0).toLocaleString()}
+                            {formatAmount(supplier.creditBalance || 0, "en-OM")}
                           </td>
                           <td className="py-4 px-6 text-end">
                             <div className="flex justify-end gap-2">
@@ -396,7 +397,7 @@ export default function SuppliersPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                <CurrencySymbol /> {totalPayables.toLocaleString()}
+                <CurrencySymbol /> {formatAmount(totalPayables, "en-OM")}
               </div>
               <p className="text-xs text-amber-400 mt-1">
                 {t("outstandingTo")}

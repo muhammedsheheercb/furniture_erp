@@ -9,6 +9,7 @@ import Button from "@/components/ui/Button";
 import SearchSelect from "@/components/ui/SearchSelect";
 import { IItem, UnitType } from "@/types";
 import { useLanguage } from "../../context/LanguageContext";
+import { AmountInput } from "@/components/ui/AmountInput";
 
 const FURNITURE_CATEGORIES = [
   "Sofa & Seating",
@@ -375,12 +376,13 @@ export default function ItemModal({
           >
             <div>
               <label style={labelStyle}>{t("purchasePrice")}</label>
-              <input
+              <AmountInput
                 type="number"
-                step={1}
+                step={0.001}
                 placeholder="0.000"
                 style={inputStyle}
                 {...register("purchaseAmount")}
+                value={watch("purchaseAmount") ?? ""}
               />
               {errors.purchaseAmount && (
                 <p style={{ fontSize: 12, color: "#C0392B", marginTop: 4 }}>
@@ -390,12 +392,13 @@ export default function ItemModal({
             </div>
             <div>
               <label style={labelStyle}>{t("sellingPrice")}</label>
-              <input
+              <AmountInput
                 type="number"
-                step={1}
+                step={0.001}
                 placeholder="0.000"
                 style={inputStyle}
                 {...register("salesAmount")}
+                value={watch("salesAmount") ?? ""}
               />
               {errors.salesAmount && (
                 <p style={{ fontSize: 12, color: "#C0392B", marginTop: 4 }}>
