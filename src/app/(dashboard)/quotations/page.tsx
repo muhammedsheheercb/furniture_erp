@@ -202,31 +202,6 @@ export default function QuotationsPage() {
 
   const { startDate, endDate } = useDateFilter();
 
-  if (status === "loading")
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Spinner />
-      </div>
-    );
-
-  if (!canView) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <XCircle size={48} className="text-rose-500" />
-        <h2 className="text-2xl font-bold text-[#1A1210]">
-          {t("accessDenied")}
-        </h2>
-        <p className="text-[#7A6055]">{t("youDontHavePermissionTo")}</p>
-        <button
-          onClick={() => router.push("/")}
-          className="px-6 py-2 bg-[#2C1810] text-white rounded-lg"
-        >
-          {t("goHome")}
-        </button>
-      </div>
-    );
-  }
-
   const [quotations, setQuotations] = useState<IQuotation[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -268,9 +243,11 @@ export default function QuotationsPage() {
     status: QuotationStatus;
   } | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError("");
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -281,13 +258,21 @@ export default function QuotationsPage() {
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
       });
-      const res = await fetch(`/api/quotations?${params}`);
+      const res = await fetch(`/api/quotations?${params}`, {
+        cache: "no-store",
+      });
       const data = await res.json();
-      if (data.success) {
-        setQuotations(data.data);
-        setTotal(data.total);
-        setTotalPages(data.totalPages);
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Unable to load quotations");
       }
+      setQuotations(data.data);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
+    } catch (error) {
+      console.error("Failed to load quotations", error);
+      setLoadError(
+        error instanceof Error ? error.message : "Unable to load quotations",
+      );
     } finally {
       setLoading(false);
     }
@@ -306,9 +291,11 @@ export default function QuotationsPage() {
   };
 
   useEffect(() => {
-    load();
-    fetchCustomers();
-  }, [load]);
+    if (status === "authenticated" && canView) {
+      void load();
+      void fetchCustomers();
+    }
+  }, [load, status, canView]);
   useEffect(() => {
     setPage(1);
   }, [search, statusFilter, deliveryFilter]);
@@ -634,6 +621,31 @@ export default function QuotationsPage() {
     reject: quotations.filter((q) => q.status === "reject").length,
   };
 
+  if (status === "loading")
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Spinner />
+      </div>
+    );
+
+  if (!canView) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <XCircle size={48} className="text-rose-500" />
+        <h2 className="text-2xl font-bold text-[#1A1210]">
+          {t("accessDenied")}
+        </h2>
+        <p className="text-[#7A6055]">{t("youDontHavePermissionTo")}</p>
+        <button
+          onClick={() => router.push("/")}
+          className="px-6 py-2 bg-[#2C1810] text-white rounded-lg"
+        >
+          {t("goHome")}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="page-container">
       {/* Header */}
@@ -840,6 +852,23 @@ export default function QuotationsPage() {
                   style={{ textAlign: "center", padding: "48px 0" }}
                 >
                   <Spinner />
+                </td>
+              </tr>
+            ) : loadError ? (
+              <tr>
+                <td
+                  colSpan={10}
+                  style={{ textAlign: "center", padding: "48px 16px" }}
+                >
+                  <p style={{ color: "#9F1239", margin: "0 0 12px" }}>
+                    {loadError}
+                  </p>
+                  <button
+                    onClick={() => void load()}
+                    className="px-4 py-2 rounded-lg bg-[#2C1810] text-white"
+                  >
+                    Retry
+                  </button>
                 </td>
               </tr>
             ) : quotations.length === 0 ? (
