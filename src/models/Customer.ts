@@ -80,12 +80,6 @@ const CustomerSchema = new Schema<ICustomerDocument>(
 
 CustomerSchema.index({ name: "text", customerNumber: "text", mobile: "text" });
 
-// Schema Version: 1.0.2 - Full financial Ledger integration
-// Force re-registration to pick up new schema fields in Next.js dev mode
-if (process.env.NODE_ENV === "development") {
-  delete (mongoose.models as any).Customer;
-}
-
 const Customer: Model<ICustomerDocument> =
   mongoose.models.Customer ||
   mongoose.model<ICustomerDocument>("Customer", CustomerSchema);

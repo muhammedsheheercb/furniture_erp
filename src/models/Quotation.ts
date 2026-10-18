@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import "@/models/Customer";
 
 export interface IQuotationDocument extends Document {
   quotationNumber: string;
