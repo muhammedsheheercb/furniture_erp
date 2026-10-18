@@ -49,6 +49,22 @@ export async function PUT(
     const { id } = await params;
     const body = await req.json();
 
+    // The edit form can include empty strings for optional ObjectId fields.
+    // Mongoose cannot cast "" to an ObjectId, so normalize those values to
+    // null (which clears the optional reference) before updating.
+    if (body.customerId === "") body.customerId = null;
+    if (Array.isArray(body.items)) {
+      body.items = body.items.map((item: any) => {
+        if (item?.itemId === "") item.itemId = null;
+        if (Array.isArray(item?.bom)) {
+          item.bom = item.bom.map((entry: any) =>
+            entry?.materialId === "" ? { ...entry, materialId: null } : entry,
+          );
+        }
+        return item;
+      });
+    }
+
     const updated = await Quotation.findByIdAndUpdate(
       id,
       { ...body, updatedBy: (session.user as any)?.id },
