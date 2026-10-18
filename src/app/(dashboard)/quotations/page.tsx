@@ -1302,39 +1302,6 @@ export default function QuotationsPage() {
                     letterSpacing: "0.04em",
                   }}
                 >
-                  {t("customerName")}
-                </label>
-                <input
-                  value={form.customerName}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, customerName: e.target.value }))
-                  }
-                  required
-                  style={{
-                    width: "100%",
-                    height: 40,
-                    border: "1.5px solid #E5DDD5",
-                    borderRadius: 8,
-                    padding: "0 12px",
-                    fontSize: 13,
-                    color: "#1A1210",
-                    outline: "none",
-                    background: "#FAF8F6",
-                  }}
-                  placeholder={t("customerName")}
-                />
-              </div>
-              <div>
-                <label
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "#5A4035",
-                    display: "block",
-                    marginBottom: 6,
-                    letterSpacing: "0.04em",
-                  }}
-                >
                   {t("mobile")}
                 </label>
                 <input
