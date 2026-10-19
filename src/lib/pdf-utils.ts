@@ -44,7 +44,12 @@ export interface InvoiceData {
   deliveryDate?: string | Date;
   customerMobile?: string;
   createdBy?: string;
+  termsAndConditions?: string;
 }
+
+const companyLogo = `<img src="/images/logo.webp" alt="Diamond Home" style="width: 82px; height: 82px; object-fit: contain;" />`;
+const defaultPaymentTerms = "1. 50% advance payment is required to confirm the order.\n2. This quotation is valid for one week from the quotation date.\n3. 40% is due when materials are purchased.\n4. The remaining 10% is due at delivery.";
+const escapeHtml = (value: unknown) => String(value ?? "").replace(/[&<>\"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char] || char);
 
 const printHtml = (html: string) => {
   const iframe = document.createElement("iframe");
@@ -58,11 +63,13 @@ const printHtml = (html: string) => {
       <html>
         <head>
           <title></title>
+          <base href="${window.location.origin}/" />
           <style>
             @media print {
               @page { margin: 0; }
               html, body { margin: 0; }
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .quotation-print-page { min-height: 100vh; }
             }
           </style>
         </head>
@@ -70,11 +77,26 @@ const printHtml = (html: string) => {
       </html>
     `);
     doc.close();
-    setTimeout(() => {
+    const printWhenReady = () => {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
       setTimeout(() => document.body.removeChild(iframe), 1000);
-    }, 250);
+    };
+    const images = Array.from(doc.images);
+    if (images.length && images.some((image) => !image.complete)) {
+      Promise.all(
+        images.map((image) =>
+          image.complete
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                image.onload = () => resolve();
+                image.onerror = () => resolve();
+              }),
+        ),
+      ).then(() => setTimeout(printWhenReady, 100));
+    } else {
+      setTimeout(printWhenReady, 250);
+    }
   }
 };
 
@@ -108,12 +130,13 @@ export const generateInvoicePDF = (data: InvoiceData) => {
   );
   const totalDiscount = itemDiscountAmount + extraDiscountAmount;
   const hasDiscount = totalDiscount > 0;
+  const invoiceTerms = data.termsAndConditions || defaultPaymentTerms;
 
   const html = `
         <div style="font-family: Arial, sans-serif; padding: 40px; color: #333; direction: ${dir}; text-align: ${isArabic ? "right" : "left"}">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #3F51B5; padding-bottom: 20px; margin-bottom: 30px">
-                <div>
-                    <h1 style="margin: 0; color: #3F51B5; font-size: 28px">DIAMOND HOME</h1>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3F51B5; padding-bottom: 20px; margin-bottom: 30px">
+                <div style="display:flex; align-items:center; gap:14px">
+                    ${companyLogo}<div><h1 style="margin: 0; color: #3F51B5; font-size: 28px">DIAMOND HOME</h1>
                     <h2 style="margin: 5px 0 0; color: #666; font-size: 18px; text-transform: uppercase; letter-spacing: 2px">${data.isTaxInvoice ? t("taxInvoice") : `${data.type} Invoice`}</h2>
                     ${
                       data.isTaxInvoice
@@ -123,7 +146,7 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                     </div>`
                         : ""
                     }
-                </div>
+                </div></div>
                 <div style="text-align: right">
                     <p style="margin: 0; font-weight: bold; color: #3F51B5">${t("invoiceNumber")}: ${data.number}</p>
                     <p style="margin: 5px 0 0; font-size: 14px; color: #999">${t("date")}: ${formatDate(data.date)}</p>
@@ -245,11 +268,16 @@ export const generateInvoicePDF = (data: InvoiceData) => {
                 </div>
             </div>
 
-            <div style="margin-top: 60px; border-top: 1px solid #E9ECEF; padding-top: 20px; display: flex; justify-content: flex-end; align-items: flex-end;">
+            <div style="page-break-before: always; break-before: page; min-height: 850px; padding-top: 40px">
+              <div style="display:flex; align-items:center; gap:14px; border-bottom:2px solid #3F51B5; padding-bottom:16px">${companyLogo}<h2 style="color:#3F51B5">Terms and Conditions</h2></div>
+              <div style="white-space:pre-wrap; line-height:1.8; font-size:15px; margin-top:32px">${escapeHtml(invoiceTerms)}</div>
+              <div style="margin-top: 300px; border-top: 1px solid #E9ECEF; padding-top: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div style="text-align: center; width: 190px;"><div style="height:55px; border-bottom:1px solid #333; margin-bottom:5px"></div><p style="font-size:10px;color:#6C757D;margin:0">Customer Signature</p></div>
                 <div style="text-align: center; width: 150px;">
-                    <div style="border-bottom: 1px solid #333; margin-bottom: 5px;"></div>
+                    <div style="height:55px; border-bottom: 1px solid #333; margin-bottom: 5px;"></div>
                     <p style="font-size: 10px; color: #6C757D; margin: 0;">${t("authorizedSignature")}</p>
                 </div>
+              </div>
             </div>
         </div>
     `;
@@ -287,12 +315,12 @@ export const generateQuotationPDF = (data: any) => {
   const hasAnyDiscount = totalDiscountAmount > 0;
 
   const html = `
-        <div style="font-family: Arial, sans-serif; padding: 40px; color: #333; direction: ${dir}; text-align: ${isArabic ? "right" : "left"}">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #8B5E3C; padding-bottom: 20px; margin-bottom: 30px">
-                <div>
-                    <h1 style="margin: 0; color: #8B5E3C; font-size: 28px">DIAMOND HOME</h1>
+        <div class="quotation-print-page" style="font-family: Arial, sans-serif; padding: 40px; min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; color: #333; direction: ${dir}; text-align: ${isArabic ? "right" : "left"}">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #8B5E3C; padding-bottom: 20px; margin-bottom: 30px">
+                <div style="display:flex; align-items:center; gap:14px">
+                    ${companyLogo}<div><h1 style="margin: 0; color: #8B5E3C; font-size: 28px">DIAMOND HOME</h1>
                     <h2 style="margin: 5px 0 0; color: #666; font-size: 18px; text-transform: uppercase; letter-spacing: 2px">${t("furnitureQuotation")}</h2>
-                </div>
+                </div></div>
                 <div style="text-align: right">
                     <p style="margin: 0; font-weight: bold; color: #8B5E3C">${t("quotationNumber")}: ${data.quotationNumber}</p>
                     <p style="margin: 5px 0 0; font-size: 14px; color: #999">${t("date")}: ${formatDate(data.date)}</p>
@@ -394,22 +422,18 @@ export const generateQuotationPDF = (data: any) => {
                 </div>
             </div>
 
-            ${
-              data.notes
-                ? `
-            <div style="background: #FAF8F6; padding: 20px; border-radius: 12px; border-left: 4px solid #8B5E3C">
-                <h3 style="margin: 0 0 10px; font-size: 12px; text-transform: uppercase; color: #8B5E3C">${t("notesConditions")}</h3>
-                <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #444; white-space: pre-wrap">${data.notes}</p>
-            </div>
-            `
-                : ""
-            }
-
-            <div style="margin-top: 60px; border-top: 1px solid #F0EAE3; padding-top: 20px; display: flex; justify-content: flex-end; align-items: flex-end;">
-                <div style="text-align: center; width: 150px;">
-                    <div style="border-bottom: 1px solid #333; margin-bottom: 5px;"></div>
-                    <p style="font-size: 10px; color: #A89080; margin: 0;">${t("authorizedSignature")}</p>
-                </div>
+            <div style="margin-top:auto;padding-top:20px;display:flex;flex-direction:column;justify-content:flex-end;flex:1;break-inside:avoid">
+              ${data.notes ? `<div style="margin:0 0 10px;background:#FAF8F6;padding:10px;border-radius:8px;white-space:pre-wrap"><strong>${t("notesConditions")}:</strong> ${escapeHtml(data.notes)}</div>` : ""}
+              <div style="background:#FAF8F6;padding:12px;border-radius:12px;border:1px solid #E5DDD5;break-inside:avoid">
+                  <h3 style="margin:0 0 8px;color:#8B5E3C">Terms and conditions</h3>
+                  <p style="margin:0;font-size:12px;line-height:1.5;white-space:pre-wrap">${escapeHtml(data.termsAndConditions || defaultPaymentTerms)}</p>
+              </div>
+              <div style="margin-top:18px;">
+              <div style="border-top:1px solid #F0EAE3;padding-top:14px;display:flex;justify-content:space-between;align-items:flex-end">
+              <div style="text-align:center;width:190px"><div style="height:38px;border-bottom:1px solid #333;margin-bottom:5px"></div><p style="font-size:10px;color:#A89080;margin:0">Customer Signature</p></div>
+              <div style="text-align:center;width:150px"><div style="height:38px;border-bottom:1px solid #333;margin-bottom:5px"></div><p style="font-size:10px;color:#A89080;margin:0">${t("authorizedSignature")}</p></div>
+              </div>
+              </div>
             </div>
         </div>
     `;

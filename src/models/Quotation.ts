@@ -43,6 +43,7 @@ export interface IQuotationDocument extends Document {
   deliveryDate?: Date;
   deliveredDate?: Date;
   notes?: string;
+  termsAndConditions?: string;
   validUntil?: Date;
   date: Date;
   convertedToSaleId?: mongoose.Types.ObjectId;
@@ -134,6 +135,7 @@ const QuotationSchema = new Schema<IQuotationDocument>(
     deliveryDate: { type: Date },
     deliveredDate: { type: Date },
     notes: { type: String, trim: true },
+    termsAndConditions: { type: String, trim: true },
     validUntil: { type: Date },
     date: { type: Date, required: true, default: Date.now },
     convertedToSaleId: { type: Schema.Types.ObjectId, ref: "Sale" },

@@ -221,12 +221,27 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
     const { creditBalance, balanceHistory, ...safeBody } = await req.json();
+    const mobile = String(safeBody.mobile || "").trim();
+    if (!mobile) {
+      return NextResponse.json(
+        { success: false, error: "Mobile number is required" },
+        { status: 400 },
+      );
+    }
+    const existingMobile = await Customer.findOne({ mobile }).select("_id").lean();
+    if (existingMobile) {
+      return NextResponse.json(
+        { success: false, error: "A customer with this mobile number already exists" },
+        { status: 409 },
+      );
+    }
     const customerNumber =
       safeBody.customerNumber || generateUniqueNumber("CUST");
     const openingBalance = Number(safeBody.openingBalance || 0);
 
     const customer = await Customer.create({
       ...safeBody,
+      mobile,
       customerNumber,
       openingBalance,
       creditBalance: openingBalance,
@@ -255,6 +270,12 @@ export async function POST(req: NextRequest) {
     );
   } catch (err: unknown) {
     console.error("[POST /api/customers]", err);
+    if (err && typeof err === "object" && "code" in err && err.code === 11000) {
+      return NextResponse.json(
+        { success: false, error: "A customer with this mobile number already exists" },
+        { status: 409 },
+      );
+    }
     const msg = err instanceof Error ? err.message : "Server error";
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }

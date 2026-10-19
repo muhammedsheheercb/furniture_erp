@@ -214,6 +214,7 @@ export interface IQuotation {
   deliveryDate?: string;
   deliveredDate?: string;
   notes?: string;
+  termsAndConditions?: string;
   validUntil?: string;
   date: Date;
   createdAt: Date;
@@ -238,6 +239,7 @@ export interface IQuotationForm {
   deliveryStatus: DeliveryStatus;
   deliveryDate?: string;
   notes?: string;
+  termsAndConditions?: string;
   validUntil?: string;
   date: string;
 }

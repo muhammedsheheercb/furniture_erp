@@ -49,6 +49,30 @@ import { formatAmount } from "@/lib/amounts";
 import { AmountInput } from "@/components/ui/AmountInput";
 
 const LIMIT = 15;
+const localDateString = (date: Date) => {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 10);
+};
+const datePlusDays = (date: string, days: number) => {
+  const value = new Date(`${date}T00:00:00`);
+  value.setDate(value.getDate() + days);
+  return localDateString(value);
+};
+const DEFAULT_QUOTATION_TERMS = "1. 50% advance payment is required to confirm the order.\n2. This quotation is valid for one week from the quotation date.\n3. 40% is due when materials are purchased.\n4. The remaining 10% is due at delivery.";
+const createInitialItem = (): IQuotationItem => ({
+  itemName: "",
+  description: "",
+  unit: "pcs",
+  quantity: 1,
+  price: 0,
+  discount: 0,
+  color: "",
+  material: "",
+  size: "",
+  subtotal: 0,
+  taxAmount: 0,
+  total: 0,
+});
 const UNITS: UnitType[] = [
   "pcs",
   "meters",
@@ -167,8 +191,9 @@ const emptyForm = (): IQuotationForm => ({
   deliveryStatus: "pending",
   deliveryDate: "",
   notes: "",
-  validUntil: "",
-  date: new Date().toISOString().split("T")[0] ?? "",
+  termsAndConditions: DEFAULT_QUOTATION_TERMS,
+  validUntil: datePlusDays(localDateString(new Date()), 7),
+  date: localDateString(new Date()),
 });
 
 function calcTotals(items: IQuotationItem[], taxPct: number, discPct: number) {
@@ -229,7 +254,9 @@ export default function QuotationsPage() {
 
   const [customers, setCustomers] = useState<ICustomer[]>([]);
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
-  const [fetchingCustomers, setFetchingCustomers] = useState(false);
+  const [customerLookupMessage, setCustomerLookupMessage] = useState("");
+  const [lookingUpCustomer, setLookingUpCustomer] = useState(false);
+  const customerLookupTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [saleModalOpen, setSaleModalOpen] = useState(false);
   const [convertingQuotation, setConvertingQuotation] =
@@ -279,14 +306,11 @@ export default function QuotationsPage() {
   }, [page, search, statusFilter, deliveryFilter, startDate, endDate]);
 
   const fetchCustomers = async () => {
-    setFetchingCustomers(true);
     try {
       const res = await axios.get("/api/customers?limit=1000");
       if (res.data.success) setCustomers(res.data.data);
     } catch (err) {
       console.error("Failed to fetch customers", err);
-    } finally {
-      setFetchingCustomers(false);
     }
   };
 
@@ -336,23 +360,8 @@ export default function QuotationsPage() {
     setItemModalOpen(true);
   };
 
-  const addBlankItem = () => {
-    const newItem: IQuotationItem = {
-      itemName: "",
-      description: "",
-      unit: "pcs",
-      quantity: 1,
-      price: 0,
-      discount: 0,
-      color: "",
-      material: "",
-      size: "",
-      subtotal: 0,
-      taxAmount: 0,
-      total: 0,
-    };
-    recalc([...form.items, newItem], taxPct, discPct);
-  };
+  const addBlankItem = () =>
+    recalc([...form.items, createInitialItem()], taxPct, discPct);
 
   const handleItemModalSubmit = (item: IQuotationItem) => {
     if (editingItemIdx !== null) {
@@ -423,9 +432,12 @@ export default function QuotationsPage() {
       total: q.total,
       status: q.status,
       deliveryStatus: q.deliveryStatus,
-      deliveryDate: q.deliveryDate ? q.deliveryDate.split("T")[0] : "",
+      deliveryDate: q.deliveryDate ? new Date(q.deliveryDate).toISOString().split("T")[0] : "",
       notes: q.notes || "",
-      validUntil: q.validUntil ? q.validUntil.split("T")[0] : "",
+      termsAndConditions: q.termsAndConditions || DEFAULT_QUOTATION_TERMS,
+      validUntil: q.validUntil
+        ? new Date(q.validUntil).toISOString().split("T")[0]
+        : datePlusDays(q.date ? (new Date(q.date).toISOString().split("T")[0] || localDateString(new Date())) : localDateString(new Date()), 7),
       date: q.date
         ? (new Date(q.date).toISOString().split("T")[0] ?? "")
         : (new Date().toISOString().split("T")[0] ?? ""),
@@ -442,6 +454,8 @@ export default function QuotationsPage() {
 
     if (!form.date) return toast.error("Date is required");
     if (!form.validUntil) return toast.error("Valid Until date is required");
+    if (form.validUntil < form.date)
+      return toast.error("Valid Until cannot be before the quotation date");
     if (form.items.length === 0)
       return toast.error("Please add at least one product");
 
@@ -478,6 +492,7 @@ export default function QuotationsPage() {
           setTimeout(() => {
             generateQuotationPDF({
               ...data.data,
+              termsAndConditions: data.data.termsAndConditions || form.termsAndConditions,
               createdBy: session?.user?.name,
             });
           }, 500);
@@ -593,6 +608,45 @@ export default function QuotationsPage() {
       }
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to create customer");
+    }
+  };
+
+  const lookupCustomerByMobile = async (mobile: string) => {
+    const normalized = mobile.trim();
+    if (normalized.length < 8) {
+      setCustomerLookupMessage("");
+      setLookingUpCustomer(false);
+      return;
+    }
+    const localMatch = customers.find((customer) => customer.mobile?.trim() === normalized);
+    if (localMatch) {
+      setForm((f) => ({
+        ...f,
+        customerId: localMatch._id,
+        customerName: localMatch.name,
+        customerMobile: localMatch.mobile || normalized,
+        customerAddress: localMatch.address || "",
+      }));
+      setCustomerLookupMessage("Customer details filled from saved customer");
+      return;
+    }
+    setLookingUpCustomer(true);
+    try {
+      const response = await axios.get(`/api/customers/by-mobile?mobile=${encodeURIComponent(normalized)}`);
+      if ((form.customerMobile || "").trim() !== normalized) return;
+      const match = response.data.data as ICustomer | null;
+      if (match) {
+        setCustomers((current) => current.some((customer) => customer._id === match._id) ? current : [...current, match]);
+        setForm((f) => ({ ...f, customerId: match._id, customerName: match.name, customerMobile: match.mobile || normalized, customerAddress: match.address || "" }));
+        setCustomerLookupMessage("Customer details filled from saved customer");
+      } else {
+        setForm((f) => ({ ...f, customerId: undefined }));
+        setCustomerLookupMessage("No saved customer found for this number; enter the customer name");
+      }
+    } catch {
+      if ((form.customerMobile || "").trim() === normalized) setCustomerLookupMessage("Could not look up this mobile number");
+    } finally {
+      setLookingUpCustomer(false);
     }
   };
 
@@ -1306,9 +1360,19 @@ export default function QuotationsPage() {
                 </label>
                 <input
                   value={form.customerMobile}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, customerMobile: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setForm((f) => ({ ...f, customerMobile: value, customerId: undefined }));
+                    setCustomerLookupMessage("");
+                    if (customerLookupTimer.current) clearTimeout(customerLookupTimer.current);
+                    if (value.trim().length >= 8) {
+                      customerLookupTimer.current = setTimeout(() => void lookupCustomerByMobile(value), 350);
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (customerLookupTimer.current) clearTimeout(customerLookupTimer.current);
+                    void lookupCustomerByMobile(e.target.value);
+                  }}
                   required
                   style={{
                     width: "100%",
@@ -1323,6 +1387,16 @@ export default function QuotationsPage() {
                   }}
                   placeholder={t("mobileNumber")}
                 />
+                {(lookingUpCustomer || customerLookupMessage) && (
+                  <div style={{ marginTop: 5, fontSize: 11, color: "#7A6055" }}>
+                    {lookingUpCustomer ? "Looking up customer…" : customerLookupMessage}
+                  </div>
+                )}
+                {form.customerName && (form.customerMobile || "").trim().length >= 8 && (
+                  <div style={{ marginTop: 5, fontSize: 12, fontWeight: 700, color: "#1E8449" }}>
+                    Customer: {form.customerName}
+                  </div>
+                )}
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
                 <label
@@ -1374,7 +1448,11 @@ export default function QuotationsPage() {
                   type="date"
                   value={form.date}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, date: e.target.value }))
+                    setForm((f) => ({
+                      ...f,
+                      date: e.target.value,
+                      validUntil: datePlusDays(e.target.value, 7),
+                    }))
                   }
                   required
                   style={{
@@ -1406,6 +1484,7 @@ export default function QuotationsPage() {
                 <input
                   type="date"
                   value={form.validUntil}
+                  min={form.date}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, validUntil: e.target.value }))
                   }
@@ -1888,7 +1967,6 @@ export default function QuotationsPage() {
                   <button
                     type="button"
                     onClick={() => removeItem(idx)}
-                    disabled={form.items.length === 1}
                     style={{
                       height: 24,
                       width: 24,
@@ -1900,7 +1978,6 @@ export default function QuotationsPage() {
                       background: "#FDEDEC",
                       color: "#C0392B",
                       cursor: "pointer",
-                      opacity: form.items.length === 1 ? 0.3 : 1,
                     }}
                     className="md:!h-9 md:!w-[30px] md:!rounded-lg md:!mt-0"
                   >
@@ -2183,6 +2260,18 @@ export default function QuotationsPage() {
             />
           </div>
 
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#5A4035", display: "block", marginBottom: 6 }}>
+              Terms and conditions
+            </label>
+            <textarea
+              value={(form as any).termsAndConditions || ""}
+              onChange={(e) => setForm((f) => ({ ...f, termsAndConditions: e.target.value } as IQuotationForm))}
+              rows={5}
+              style={{ width: "100%", border: "1.5px solid #E5DDD5", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1A1210", outline: "none", background: "#FAF8F6", resize: "vertical" }}
+            />
+          </div>
+
           {/* Actions */}
           <div
             style={{
@@ -2304,6 +2393,9 @@ export default function QuotationsPage() {
                     {formatDate(viewingQuotation.deliveryDate)}
                   </div>
                 )}
+                <div style={{ fontSize: 12, color: "#7A6055" }}>
+                  Valid until: {viewingQuotation.validUntil ? formatDate(viewingQuotation.validUntil) : "—"}
+                </div>
               </div>
               <div>
                 <div
@@ -2624,6 +2716,7 @@ export default function QuotationsPage() {
                 onClick={() =>
                   generateQuotationPDF({
                     ...viewingQuotation,
+                    termsAndConditions: viewingQuotation.termsAndConditions || DEFAULT_QUOTATION_TERMS,
                     createdBy: viewingQuotation.createdBy?.name,
                   })
                 }

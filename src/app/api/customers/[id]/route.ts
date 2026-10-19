@@ -137,6 +137,20 @@ export async function PUT(req: NextRequest, { params }: Params) {
         { status: 404 },
       );
 
+    if (updates.mobile !== undefined) {
+      updates.mobile = String(updates.mobile).trim();
+      const duplicateMobile = await Customer.findOne({
+        mobile: updates.mobile,
+        _id: { $ne: customer._id },
+      }).select("_id").lean();
+      if (duplicateMobile) {
+        return NextResponse.json(
+          { success: false, error: "A customer with this mobile number already exists" },
+          { status: 409 },
+        );
+      }
+    }
+
     // 1. Handle Opening Balance Correction
     if (
       openingBalance !== undefined &&
@@ -181,6 +195,12 @@ export async function PUT(req: NextRequest, { params }: Params) {
     return NextResponse.json({ success: true, data: customer });
   } catch (err: unknown) {
     console.error("[PUT /api/customers/:id]", err);
+    if (err && typeof err === "object" && "code" in err && err.code === 11000) {
+      return NextResponse.json(
+        { success: false, error: "A customer with this mobile number already exists" },
+        { status: 409 },
+      );
+    }
     const msg = err instanceof Error ? err.message : "Server error";
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }

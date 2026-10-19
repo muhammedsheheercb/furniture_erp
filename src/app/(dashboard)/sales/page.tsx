@@ -51,6 +51,7 @@ function printSale(item: any) {
     deliveryAddress: item.deliveryAddress,
     deliveryDate: item.deliveryDate,
     createdBy: item.createdBy?.name,
+    termsAndConditions: item.termsAndConditions,
   });
 }
 

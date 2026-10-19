@@ -339,6 +339,7 @@ export default function EditSalePage() {
           customerAddress: customerAddress,
           deliveryAddress: deliveryAddress,
           deliveryDate: deliveryDate,
+          termsAndConditions: "1. 50% advance payment is required to confirm the order.\n2. This quotation is valid for one week from the quotation date.\n3. 40% is due when materials are purchased.\n4. The remaining 10% is due at delivery.",
         });
       }
       router.push("/sales");
