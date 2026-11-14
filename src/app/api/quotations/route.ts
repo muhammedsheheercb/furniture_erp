@@ -8,6 +8,36 @@ function genQuotationNumber(seq: number) {
   return `QT-${String(seq).padStart(5, "0")}`;
 }
 
+/**
+ * Allocate the next number atomically. The counter is advanced to at least
+ * the current quotation count first, which also repairs counters initialized
+ * before this endpoint was deployed (and after deletions/reseed operations).
+ */
+async function nextQuotationNumber() {
+  const counterCollection = Quotation.db.collection<{ _id: string; seq?: number }>(
+    "counters",
+  );
+  const existingCount = await Quotation.countDocuments();
+
+  await counterCollection.updateOne(
+    { _id: "quotationNumber" },
+    { $max: { seq: existingCount } },
+    { upsert: true },
+  );
+
+  const counter = await counterCollection.findOneAndUpdate(
+    { _id: "quotationNumber" },
+    { $inc: { seq: 1 } },
+    { returnDocument: "after" },
+  );
+
+  if (!counter || typeof counter.seq !== "number") {
+    throw new Error("Unable to allocate a quotation number");
+  }
+
+  return genQuotationNumber(counter.seq);
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -92,14 +122,25 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const body = await req.json();
 
-    const count = await Quotation.countDocuments();
-    const quotationNumber = genQuotationNumber(count + 1);
+    let quotation;
+    // A counter seeded from the quotation count can lag behind after a
+    // deleted/reseeded database. If the unique index catches that case (or
+    // a request already in flight during deployment), advance and retry.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const quotationNumber = await nextQuotationNumber();
+      try {
+        quotation = await Quotation.create({
+          ...body,
+          quotationNumber,
+          createdBy: (session.user as any)?.id,
+        });
+        break;
+      } catch (err: any) {
+        if (err?.code !== 11000 || attempt === 2) throw err;
+      }
+    }
 
-    const quotation = await Quotation.create({
-      ...body,
-      quotationNumber,
-      createdBy: (session.user as any)?.id,
-    });
+    if (!quotation) throw new Error("Unable to create quotation");
 
     return NextResponse.json(
       { success: true, data: quotation },
